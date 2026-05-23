@@ -1,0 +1,16 @@
+{
+  "modalities": {
+    "llm": {},
+    "image": {},
+    "video": {},
+    "audio": {}
+  },
+  "requests": {
+    "timeoutSeconds": 120,
+    "maxRetries": 2,
+    "maxConcurrency": 4
+  },
+  "diagnostics": {
+    "logLevel": "off"
+  }
+}

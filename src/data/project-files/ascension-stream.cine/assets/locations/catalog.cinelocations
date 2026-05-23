@@ -1,0 +1,77 @@
+[
+  {
+    "id": "loc-apartment-01",
+    "name": "Arcology Spire - Upper Strata",
+    "tags": "sci-fi,exterior,night,rain,megacity",
+    "icon": "fa-city",
+    "mediaRefs": {
+      "images": [
+        "assets/locations/loc-apartment-01/refs/look-01.jpg"
+      ],
+      "audio": [
+        "assets/locations/loc-apartment-01/refs/rain-window-ambience.wav"
+      ]
+    },
+    "generatedRefs": {
+      "stills": [
+        "assets/locations/loc-apartment-01/generated/concept-01.png"
+      ]
+    },
+    "usageRefs": [
+      "scene01"
+    ]
+  },
+  {
+    "id": "loc-city-streets-01",
+    "name": "Sky-Bridge Network",
+    "tags": "sci-fi,exterior,neon,continuous",
+    "icon": "fa-bridge",
+    "mediaRefs": {
+      "images": [
+        "assets/locations/loc-city-streets-01/refs/neon-reference-01.jpg"
+      ],
+      "audio": [
+        "assets/locations/loc-city-streets-01/refs/city-rain-bed.wav"
+      ]
+    },
+    "generatedRefs": {
+      "video": [
+        "assets/locations/loc-city-streets-01/generated/drive-preview-01.mp4"
+      ]
+    },
+    "usageRefs": [
+      "scene02"
+    ]
+  },
+  {
+    "id": "loc-warehouse-01",
+    "name": "Control Nexus",
+    "tags": "sci-fi,interior,screens,command",
+    "icon": "fa-display",
+    "mediaRefs": {
+      "images": [
+        "assets/locations/loc-warehouse-01/refs/warehouse-ref-01.jpg"
+      ],
+      "audio": [
+        "assets/locations/loc-warehouse-01/refs/warehouse-drips.wav"
+      ]
+    },
+    "generatedRefs": {
+      "stills": [
+        "assets/locations/loc-warehouse-01/generated/frame-idea-01.png"
+      ]
+    },
+    "usageRefs": [
+      "scene03"
+    ]
+  },
+  {
+    "id": "loc-precinct-rooftop-01",
+    "name": "Arcology Receiving Spire",
+    "tags": "sci-fi,exterior,docking,finale",
+    "icon": "fa-landmark",
+    "usageRefs": [
+      "scene04"
+    ]
+  }
+]

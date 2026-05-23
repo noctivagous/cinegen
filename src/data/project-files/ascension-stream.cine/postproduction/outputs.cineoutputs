@@ -1,0 +1,16 @@
+[
+  {
+    "id": "out-master-v1",
+    "kind": "video",
+    "label": "Master export v1",
+    "path": "postproduction/outputs/master-v1.mp4",
+    "status": "placeholder"
+  },
+  {
+    "id": "out-audio-stems-v1",
+    "kind": "audio",
+    "label": "Audio stems v1",
+    "path": "postproduction/outputs/audio-stems-v1.zip",
+    "status": "placeholder"
+  }
+]

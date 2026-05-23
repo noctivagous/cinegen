@@ -1,0 +1,41 @@
+[
+  {
+    "id": "wardrobe-marcus-trench-01",
+    "name": "Kai Courier Rig",
+    "characterId": "char-kai",
+    "desc": "Streamlined courier suit with subtle implant glow points; wet and dry variants for rain-soaked sky-bridge",
+    "mediaRefs": {
+      "images": [
+        "assets/wardrobe/wardrobe-marcus-trench-01/refs/trench-dry.jpg",
+        "assets/wardrobe/wardrobe-marcus-trench-01/refs/trench-wet.jpg"
+      ]
+    },
+    "generatedRefs": {
+      "stills": [
+        "assets/wardrobe/wardrobe-marcus-trench-01/generated/turnaround-01.png"
+      ]
+    },
+    "usageRefs": [
+      "scene01",
+      "scene02",
+      "scene04"
+    ]
+  },
+  {
+    "id": "wardrobe-elena-jacket-01",
+    "name": "Mira Command Look",
+    "characterId": "char-mira",
+    "desc": "Composed executive attire with silver neural crown for Control Nexus",
+    "mediaRefs": {
+      "images": [
+        "assets/wardrobe/wardrobe-elena-jacket-01/refs/jacket-ref-01.jpg"
+      ]
+    },
+    "generatedRefs": {
+      "stills": []
+    },
+    "usageRefs": [
+      "scene03"
+    ]
+  }
+]

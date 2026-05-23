@@ -1,0 +1,611 @@
+{
+  "shot-list": {
+    "layout": "shot-table",
+    "icon": "fa-list-check",
+    "desc": "Coverage shots aggregated from scenes",
+    "addLabel": "Add Shot"
+  },
+  "footage-bin": {
+    "layout": "grid",
+    "icon": "fa-photo-film",
+    "desc": "Generated and imported video footage",
+    "addLabel": "Import Footage",
+    "items": [
+      {
+        "name": "Scene 01 - Arcology Spire Takes",
+        "desc": "Master and coverage clips for opening sky-bridge sequence.",
+        "icon": "fa-photo-film",
+        "tags": [
+          "scene-01"
+        ],
+        "status": "approved"
+      },
+      {
+        "name": "Scene 04 - Receiving Spire Finale",
+        "desc": "Docking approach, alignment pause, and golden upload surge.",
+        "icon": "fa-photo-film",
+        "tags": [
+          "scene-04"
+        ],
+        "status": "in-progress"
+      }
+    ]
+  },
+  "audio-bin": {
+    "layout": "list",
+    "icon": "fa-music",
+    "desc": "Dialogue, SFX, and score assets",
+    "addLabel": "Import Audio",
+    "items": [
+      {
+        "name": "Controlled Rain Bed",
+        "desc": "Rain and city ambience for spire and sky-bridge exteriors.",
+        "icon": "fa-cloud-rain",
+        "status": "approved"
+      },
+      {
+        "name": "Grid Pulse FX",
+        "desc": "Rhythmic city-light breath and HUD fractal bloom composite.",
+        "icon": "fa-bolt",
+        "status": "pending"
+      }
+    ]
+  },
+  "graphics-bin": {
+    "layout": "grid",
+    "icon": "fa-image",
+    "desc": "Titles, lower thirds, and graphic overlays",
+    "addLabel": "Add Graphic",
+    "items": [
+      {
+        "name": "Main Title Card",
+        "desc": "ASCENSION STREAM title treatment for opening sequence.",
+        "icon": "fa-heading",
+        "status": "in-progress"
+      },
+      {
+        "name": "End Credits Template",
+        "desc": "Standard credit roll layout for final export.",
+        "icon": "fa-list",
+        "status": "pending"
+      }
+    ]
+  },
+  "prop-library": {
+    "layout": "grid",
+    "icon": "fa-boxes-stacked",
+    "desc": "All production props and references",
+    "addLabel": "Add Prop",
+    "items": [
+      {
+        "name": "Courier Pod",
+        "desc": "Hover pod with shifting data-skin; hero vehicle for pursuit and dock.",
+        "icon": "fa-shuttle-space",
+        "tags": [
+          "hero-prop",
+          "kai"
+        ],
+        "status": "approved"
+      },
+      {
+        "name": "Ascension Protocol Payload",
+        "desc": "Golden forearm implant stream for executive-tier upload.",
+        "icon": "fa-microchip",
+        "tags": [
+          "hero-prop",
+          "kai"
+        ],
+        "status": "approved"
+      }
+    ]
+  },
+  "set-dressing": {
+    "layout": "grid",
+    "icon": "fa-couch",
+    "desc": "Background set dressing and environmental details",
+    "addLabel": "Add Set Piece",
+    "items": [
+      {
+        "name": "Sky-Bridge Dressing Package",
+        "desc": "Translucent bridge rails, rain sheets, neon arch glow for scenes 01–02.",
+        "icon": "fa-cloud-rain",
+        "status": "approved"
+      },
+      {
+        "name": "Control Nexus Feed Wall",
+        "desc": "Multi-screen command wall and interface glow for scene 03.",
+        "icon": "fa-thumbtack",
+        "status": "in-progress"
+      }
+    ]
+  },
+  "hero-props": {
+    "layout": "grid",
+    "icon": "fa-star",
+    "desc": "Interactive hero props requiring continuity tracking",
+    "addLabel": "Add Hero Prop",
+    "items": [
+      {
+        "name": "Neural HUD Overlay",
+        "desc": "Temple-touch interface; golden code and organic fractal glitch.",
+        "icon": "fa-usb",
+        "status": "approved"
+      },
+      {
+        "name": "Ascension Payload Insert",
+        "desc": "Forearm implant golden stream for docking upload in scene 04.",
+        "icon": "fa-image",
+        "status": "pending"
+      }
+    ]
+  },
+  "outfit-sets": {
+    "layout": "grid",
+    "icon": "fa-vest",
+    "desc": "Complete wardrobe looks per character and scene range",
+    "addLabel": "Add Outfit Set",
+    "items": [
+      {
+        "name": "Kai - Courier Core Look",
+        "desc": "Streamlined courier rig with implant glow points for exterior scenes.",
+        "icon": "fa-user-secret",
+        "status": "approved"
+      },
+      {
+        "name": "Mira - Command Look",
+        "desc": "Composed executive attire with silver neural crown for Control Nexus.",
+        "icon": "fa-user",
+        "status": "approved"
+      }
+    ]
+  },
+  "clothing-items": {
+    "layout": "grid",
+    "icon": "fa-shirt",
+    "desc": "Individual garments for wardrobe assembly",
+    "addLabel": "Add Garment",
+    "items": [
+      {
+        "name": "Kai Courier Rig",
+        "desc": "Primary courier suit used in pursuit and dock scenes.",
+        "icon": "fa-shirt",
+        "status": "approved"
+      },
+      {
+        "name": "Mira Command Attire",
+        "desc": "Composed executive look with silver neural crown for Control Nexus.",
+        "icon": "fa-shirt",
+        "status": "approved"
+      }
+    ]
+  },
+  "accessories": {
+    "layout": "grid",
+    "icon": "fa-hat-cowboy",
+    "desc": "Character accessories and wearable props",
+    "addLabel": "Add Accessory",
+    "items": [
+      {
+        "name": "Kai Forearm Implant",
+        "desc": "Visible payload interface for Ascension Protocol upload.",
+        "icon": "fa-vest",
+        "status": "approved"
+      },
+      {
+        "name": "Mira Silver Neural Crown",
+        "desc": "Command crown worn in Control Nexus scene 03.",
+        "icon": "fa-bag-shopping",
+        "status": "approved"
+      }
+    ]
+  },
+  "hairstyles": {
+    "layout": "grid",
+    "icon": "fa-scissors",
+    "desc": "Hairstyle references for character continuity",
+    "addLabel": "Add Hairstyle",
+    "items": [
+      {
+        "name": "Kai - Sharp Crop",
+        "desc": "Clean executive-tier courier styling with subtle implant glow.",
+        "icon": "fa-user-secret",
+        "status": "approved"
+      },
+      {
+        "name": "Mira - Controlled Updo",
+        "desc": "Composed handler styling under silver neural crown.",
+        "icon": "fa-user",
+        "status": "in-progress"
+      }
+    ]
+  },
+  "wardrobe-continuity": {
+    "layout": "continuity",
+    "icon": "fa-link",
+    "desc": "Scene-by-scene wardrobe continuity tracking",
+    "columns": [
+      "Scene",
+      "Kai",
+      "Mira"
+    ],
+    "rows": [
+      [
+        "01",
+        "Courier rig (wet)",
+        "-"
+      ],
+      [
+        "02",
+        "Courier rig",
+        "-"
+      ],
+      [
+        "03",
+        "-",
+        "Command look + crown"
+      ],
+      [
+        "04",
+        "Courier rig (dry)",
+        "-"
+      ]
+    ]
+  },
+  "wardrobe-library": {
+    "layout": "grid",
+    "icon": "fa-vest",
+    "desc": "Wardrobe sets and continuity variants",
+    "addLabel": "Add Wardrobe Item",
+    "items": [
+      {
+        "name": "Kai Wardrobe Set",
+        "desc": "Courier rig plus Mira command look for Control Nexus.",
+        "icon": "fa-vest",
+        "status": "approved"
+      },
+      {
+        "name": "Mira Wardrobe Set",
+        "desc": "Command look and silver neural crown for scene 03.",
+        "icon": "fa-vest",
+        "status": "approved"
+      }
+    ]
+  },
+  "set-builds": {
+    "layout": "grid",
+    "icon": "fa-building",
+    "desc": "Constructed sets and stage build references",
+    "addLabel": "Add Set Build",
+    "items": [
+      {
+        "name": "Arcology Spire Stage Build",
+        "desc": "Translucent sky-bridge deck with controlled rain and neon practicals.",
+        "icon": "fa-warehouse",
+        "status": "approved"
+      },
+      {
+        "name": "Receiving Spire Stage Build",
+        "desc": "Docking port practicals and tower glow for finale closeups.",
+        "icon": "fa-building",
+        "status": "in-progress"
+      }
+    ]
+  },
+  "location-continuity": {
+    "layout": "continuity",
+    "icon": "fa-link",
+    "desc": "Environment and time-of-day continuity by scene",
+    "columns": [
+      "Scene",
+      "Location",
+      "I/E",
+      "Time"
+    ],
+    "rows": [
+      [
+        "01",
+        "Arcology Spire - Upper Strata",
+        "EXT",
+        "NIGHT"
+      ],
+      [
+        "02",
+        "Sky-Bridge Network",
+        "EXT",
+        "CONTINUOUS"
+      ],
+      [
+        "03",
+        "Control Nexus",
+        "INT",
+        "SIMULTANEOUS"
+      ],
+      [
+        "04",
+        "Arcology Receiving Spire",
+        "EXT",
+        "NIGHT"
+      ]
+    ]
+  },
+  "vehicles": {
+    "layout": "grid",
+    "icon": "fa-car",
+    "desc": "Vehicle catalog and usage references",
+    "addLabel": "Add Vehicle",
+    "items": [
+      {
+        "name": "Courier Pod",
+        "desc": "Executive-tier hover pod with data-skin surface.",
+        "icon": "fa-car",
+        "status": "approved"
+      },
+      {
+        "name": "Receiving Spire Dock Ring",
+        "desc": "Docking port glow and upload surge practicals for finale.",
+        "icon": "fa-building",
+        "status": "approved"
+      }
+    ]
+  },
+  "vehicle-states": {
+    "layout": "grid",
+    "icon": "fa-gears",
+    "desc": "Per-scene vehicle appearance states",
+    "addLabel": "Add Vehicle State",
+    "items": [
+      {
+        "name": "Courier Pod - Synced Pursuit",
+        "desc": "Pod locked to Kai's movement on sky-bridge network, data ribbons trailing.",
+        "icon": "fa-shuttle-space",
+        "status": "approved"
+      },
+      {
+        "name": "Courier Pod - Soft Vector Drift",
+        "desc": "Deliberate fractional off-vector pause before clean dock in scene 04.",
+        "icon": "fa-car",
+        "status": "approved"
+      }
+    ]
+  },
+  "color-palettes": {
+    "layout": "grid",
+    "icon": "fa-droplet",
+    "desc": "Color palettes and LUT references",
+    "addLabel": "Add Palette",
+    "items": [
+      {
+        "name": "Neon Megacity Night",
+        "desc": "Cool rain, chrome highlights, golden HUD accents on exteriors.",
+        "icon": "fa-droplet",
+        "status": "approved"
+      },
+      {
+        "name": "Organic Bloom Pulse",
+        "desc": "Brief warm shift when grid breath and HUD fractal merge at climax.",
+        "icon": "fa-droplet",
+        "status": "approved"
+      }
+    ]
+  },
+  "visual-style": {
+    "layout": "grid",
+    "icon": "fa-eye",
+    "desc": "Look bible, visual rules, and style descriptors",
+    "addLabel": "Add Visual Style Entry",
+    "items": [
+      {
+        "name": "Sleek Corporate Futurism",
+        "desc": "Perfect surfaces, controlled rain, executive-tier polish.",
+        "icon": "fa-eye",
+        "status": "approved"
+      },
+      {
+        "name": "Atmospheric Allegory",
+        "desc": "Hard neon edge light on sky-bridge exteriors; soft fill in Control Nexus.",
+        "icon": "fa-eye",
+        "status": "approved"
+      }
+    ]
+  },
+  "textures": {
+    "layout": "grid",
+    "icon": "fa-layer-group",
+    "desc": "Texture and material references for environments",
+    "addLabel": "Add Texture",
+    "items": [
+      {
+        "name": "Worn Metal Panels",
+        "desc": "Glass and chrome arcology surfaces with rain sheen.",
+        "icon": "fa-layer-group",
+        "status": "approved"
+      },
+      {
+        "name": "HUD Data Skin",
+        "desc": "Golden code stream and organic fractal overlay textures.",
+        "icon": "fa-layer-group",
+        "status": "approved"
+      }
+    ]
+  },
+  "arch-refs": {
+    "layout": "grid",
+    "icon": "fa-landmark",
+    "desc": "Architectural and historical reference library",
+    "addLabel": "Add Reference",
+    "items": [
+      {
+        "name": "Industrial Space Habitat Architecture",
+        "desc": "Reference set for megacity arcology and sky-bridge architecture.",
+        "icon": "fa-landmark",
+        "status": "approved"
+      },
+      {
+        "name": "Megacity Verticality Reference",
+        "desc": "Tower scale, sky-bridge networks, and under-sprawl haze.",
+        "icon": "fa-landmark",
+        "status": "approved"
+      }
+    ]
+  },
+  "prod-sound": {
+    "layout": "list",
+    "icon": "fa-microphone",
+    "desc": "On-set and location sound recordings",
+    "addLabel": "Add Recording",
+    "items": [
+      {
+        "name": "Controlled Rain - Upper Strata",
+        "desc": "Rain sheet and wind bed for scenes 01 and 02.",
+        "icon": "fa-cloud-rain",
+        "status": "approved"
+      },
+      {
+        "name": "Sky-Bridge Footfalls",
+        "desc": "Light steps on translucent deck during pursuit sequence.",
+        "icon": "fa-shoe-prints",
+        "status": "approved"
+      }
+    ]
+  },
+  "adr-loop-group": {
+    "layout": "list",
+    "icon": "fa-user",
+    "desc": "Automated dialogue replacement and loop group sessions",
+    "addLabel": "Add ADR Item",
+    "items": [
+      {
+        "name": "Mira Voice ADR",
+        "desc": "V.O. and on-camera line cleanup; quieter beat on final heartbeat dip.",
+        "icon": "fa-user",
+        "status": "pending"
+      },
+      {
+        "name": "City Grid Loop Group",
+        "desc": "Distant megacity beds and subtle grid pulse under pursuit.",
+        "icon": "fa-user",
+        "status": "pending"
+      }
+    ]
+  },
+  "foley": {
+    "layout": "list",
+    "icon": "fa-shoe-prints",
+    "desc": "Foley cues and performance-driven sound effects",
+    "addLabel": "Add Foley Cue",
+    "items": [
+      {
+        "name": "Temple Touch HUD Cue",
+        "desc": "Interface bloom and fractal snap for overlay glitch beat.",
+        "icon": "fa-envelope-open",
+        "status": "approved"
+      },
+      {
+        "name": "Docking Surge",
+        "desc": "Resolution beat foley for golden data upload at receiving spire.",
+        "icon": "fa-link",
+        "status": "approved"
+      }
+    ]
+  },
+  "sound-design-sfx": {
+    "layout": "list",
+    "icon": "fa-bolt",
+    "desc": "Sound design and SFX libraries",
+    "addLabel": "Add SFX Item",
+    "items": [
+      {
+        "name": "Quantum Tunnel Rush",
+        "desc": "Neon streak whoosh for sky-bridge pursuit inserts.",
+        "icon": "fa-car",
+        "status": "approved"
+      },
+      {
+        "name": "Static Layer",
+        "desc": "Blend of grid pulse and HUD fractal bloom for climax.",
+        "icon": "fa-bolt",
+        "status": "in-progress"
+      }
+    ]
+  },
+  "music-score": {
+    "layout": "list",
+    "icon": "fa-music",
+    "desc": "Music cues, score tracks, and composition notes",
+    "addLabel": "Add Cue",
+    "items": [
+      {
+        "name": "Main Theme - Ascension Stream",
+        "desc": "Primary motif for title and resolution.",
+        "icon": "fa-music",
+        "status": "in-progress"
+      },
+      {
+        "name": "Hollow Pursuit Underscore",
+        "desc": "Tension bed as status climb starts to feel empty mid-film.",
+        "icon": "fa-music",
+        "status": "pending"
+      }
+    ]
+  },
+  "temp-mix-stems": {
+    "layout": "list",
+    "icon": "fa-sliders",
+    "desc": "Temporary mix versions and stem deliverables",
+    "addLabel": "Add Mix Version",
+    "items": [
+      {
+        "name": "Temp Mix v0.1",
+        "desc": "Rough assembly balance for editorial review.",
+        "icon": "fa-sliders",
+        "status": "in-progress"
+      },
+      {
+        "name": "Dialogue Stem Export",
+        "desc": "Isolated dialogue stem for pass 2 mix.",
+        "icon": "fa-user",
+        "status": "pending"
+      }
+    ]
+  },
+  "audio-mix": {
+    "layout": "list",
+    "icon": "fa-wave-square",
+    "desc": "Assembly and final mix deliverables",
+    "addLabel": "Add Mix Pass",
+    "items": [
+      {
+        "name": "Dialogue Mix Pass 1",
+        "desc": "Balancing and cleanup for scenes 01-04.",
+        "icon": "fa-wave-square",
+        "status": "in-progress"
+      },
+      {
+        "name": "Final Stereo Mix",
+        "desc": "Master stereo deliverable target.",
+        "icon": "fa-sliders",
+        "status": "pending"
+      }
+    ]
+  },
+  "color-grade": {
+    "layout": "list",
+    "icon": "fa-palette",
+    "desc": "Color pipeline passes and exports",
+    "addLabel": "Add Grade Pass",
+    "items": [
+      {
+        "name": "Primary Grade - Exposure",
+        "desc": "Normalize exposure and contrast across sequence.",
+        "icon": "fa-sliders",
+        "status": "in-progress"
+      },
+      {
+        "name": "Master Export Grade",
+        "desc": "Final look pass before delivery exports.",
+        "icon": "fa-palette",
+        "status": "pending"
+      }
+    ]
+  }
+}

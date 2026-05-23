@@ -1,0 +1,62 @@
+[
+  {
+    "id": "prop-flashlight-01",
+    "name": "Courier Pod",
+    "desc": "Sleek hover pod with shifting data-skin; syncs to Kai's movement",
+    "icon": "fa-shuttle-space",
+    "mediaRefs": {
+      "images": [
+        "assets/props/prop-flashlight-01/refs/flashlight-ref-01.jpg"
+      ]
+    },
+    "generatedRefs": {
+      "stills": [
+        "assets/props/prop-flashlight-01/generated/flashlight-clean-pass.png"
+      ]
+    },
+    "usageRefs": [
+      "scene01",
+      "scene02",
+      "scene04"
+    ]
+  },
+  {
+    "id": "prop-envelope-01",
+    "name": "Ascension Protocol Payload",
+    "desc": "Golden data stream in forearm implant; executive-tier upload package",
+    "icon": "fa-microchip",
+    "mediaRefs": {
+      "images": [
+        "assets/props/prop-envelope-01/refs/envelope-ref-01.jpg"
+      ]
+    },
+    "generatedRefs": {
+      "stills": [
+        "assets/props/prop-envelope-01/generated/envelope-insert-01.png"
+      ]
+    },
+    "usageRefs": [
+      "scene01",
+      "scene04"
+    ]
+  },
+  {
+    "id": "prop-usb-01",
+    "name": "Neural HUD Overlay",
+    "desc": "Temple-touch interface; golden code fractals into organic patterns",
+    "icon": "fa-eye",
+    "mediaRefs": {
+      "images": [
+        "assets/props/prop-usb-01/refs/usb-ref-01.jpg"
+      ]
+    },
+    "generatedRefs": {
+      "stills": []
+    },
+    "usageRefs": [
+      "scene02",
+      "scene03",
+      "scene04"
+    ]
+  }
+]

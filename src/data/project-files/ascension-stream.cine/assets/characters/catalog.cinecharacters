@@ -1,0 +1,28 @@
+[
+  {
+    "id": "char-kai",
+    "name": "Kai (32)",
+    "type": "actor",
+    "desc": "Executive-tier courier, sharp features, seamless neural implants, god-like efficiency masking a quiet internal shift",
+    "icon": "fa-user-secret",
+    "usageRefs": [
+      "scene01",
+      "scene02",
+      "scene03",
+      "scene04"
+    ]
+  },
+  {
+    "id": "char-mira",
+    "name": "Mira (38)",
+    "type": "actor",
+    "desc": "Composed handler with silver neural crown; voice in Kai's overlay and physical presence in Control Nexus",
+    "icon": "fa-microphone",
+    "usageRefs": [
+      "scene01",
+      "scene02",
+      "scene03",
+      "scene04"
+    ]
+  }
+]

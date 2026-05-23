@@ -1,0 +1,13 @@
+[
+  {
+    "id": "veh-courier-pod-01",
+    "name": "Courier Pod",
+    "desc": "Executive-tier hover pod; data-skin surface syncs to pilot movement",
+    "icon": "fa-shuttle-space",
+    "usageRefs": [
+      "scene01",
+      "scene02",
+      "scene04"
+    ]
+  }
+]

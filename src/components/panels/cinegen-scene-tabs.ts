@@ -1,0 +1,278 @@
+import { classMap } from 'lit/directives/class-map.js';
+import { html, nothing } from 'lit';
+import { customElement, state } from 'lit/decorators.js';
+import { CgLightElement } from '@/components/lit-base';
+import { emitWorkspaceSceneTab } from '@/events/shell-events';
+import type { SceneDetail } from '@/workspace/scene-types';
+import { workspaceState } from '@/workspace/workspace-state';
+import { escHtml } from '@/utils/html';
+
+const SCENE_TAB_LABELS = [
+  'OVERVIEW',
+  'MASTER SHOT',
+  'COVERAGE',
+  'B-ROLL',
+  'PICKUPS',
+  'NOTES',
+] as const;
+
+@customElement('cinegen-scene-tabs')
+export class CinegenSceneTabs extends CgLightElement {
+  @state() private _tabIndex = 0;
+  @state() private _scene: SceneDetail | null = null;
+  @state() private _sceneId: string | null = null;
+
+  connectedCallback(): void {
+    this.classList.add('flex', 'flex-col', 'flex-1', 'min-h-0');
+    super.connectedCallback();
+  }
+
+  setScene(sceneId: string | null, scene: SceneDetail | null): void {
+    this._sceneId = sceneId;
+    this._scene = scene;
+    this._tabIndex = 0;
+    workspaceState.activeSceneTab = 0;
+    this.requestUpdate();
+  }
+
+  switchTab(tabIndex: number): void {
+    if (tabIndex < 0 || tabIndex >= SCENE_TAB_LABELS.length) return;
+    this._tabIndex = tabIndex;
+    workspaceState.activeSceneTab = tabIndex;
+    emitWorkspaceSceneTab({ tabIndex, sceneId: this._sceneId });
+    this.requestUpdate();
+  }
+
+  get activeTabIndex(): number {
+    return this._tabIndex;
+  }
+
+  private _overviewHtml(scene: SceneDetail) {
+    const master = scene.master;
+    const coverageRows = scene.coverage.length
+      ? scene.coverage.map(
+          (shot) => html`
+            <li class="scene-overview-list-item">
+              <span class="scene-overview-list-primary">${escHtml(shot.type)}</span>
+              <span class="scene-overview-list-meta"
+                >${escHtml(shot.label)} · ${escHtml(shot.duration)}${shot.bestTake
+                  ? ' · ★ best'
+                  : ''}</span
+              >
+            </li>
+          `
+        )
+      : html`<li class="scene-overview-empty">No coverage shots yet.</li>`;
+
+    const brollRows = scene.broll.length
+      ? scene.broll.map(
+          (b) => html`
+            <li class="scene-overview-list-item">
+              <span class="scene-overview-list-primary">${escHtml(b.label)}</span>
+              <span class="scene-overview-list-meta">${escHtml(b.duration)}</span>
+            </li>
+          `
+        )
+      : html`<li class="scene-overview-empty">No B-Roll yet.</li>`;
+
+    const pickupRows = scene.pickups.length
+      ? scene.pickups.map(
+          (p) => html`
+            <li class="scene-overview-list-item">
+              <span class="scene-overview-list-primary">${escHtml(p.label)}</span>
+              <span class="scene-overview-list-meta">${escHtml(p.duration)}</span>
+            </li>
+          `
+        )
+      : html`<li class="scene-overview-empty">No pickups scheduled.</li>`;
+
+    const notesPreview = (scene.notes || '').trim();
+    const notesBody = notesPreview
+      ? html`<p class="scene-overview-notes">${escHtml(notesPreview)}</p>`
+      : html`<p class="scene-overview-empty">No scene notes.</p>`;
+
+    return html`
+      <div class="scene-overview">
+        <section
+          class="scene-overview-section"
+          role="button"
+          tabindex="0"
+          @click=${() => this.switchTab(1)}
+          @keydown=${(e: KeyboardEvent) => this._overviewKey(e, 1)}
+        >
+          <h3 class="scene-overview-heading"><i class="fa-solid fa-film"></i> Master Shot</h3>
+          <p class="scene-overview-lead">${escHtml(master.label)}</p>
+          <p class="scene-overview-meta">
+            ${escHtml(master.duration)} · ${escHtml(master.status)}
+          </p>
+          <p class="scene-overview-detail">${escHtml(master.prompt)}</p>
+        </section>
+        <section
+          class="scene-overview-section"
+          role="button"
+          tabindex="0"
+          @click=${() => this.switchTab(2)}
+          @keydown=${(e: KeyboardEvent) => this._overviewKey(e, 2)}
+        >
+          <h3 class="scene-overview-heading">
+            <i class="fa-solid fa-camera"></i> Coverage
+            <span class="scene-overview-count">${scene.coverage.length}</span>
+          </h3>
+          <ul class="scene-overview-list">${coverageRows}</ul>
+        </section>
+        <section
+          class="scene-overview-section"
+          role="button"
+          tabindex="0"
+          @click=${() => this.switchTab(3)}
+          @keydown=${(e: KeyboardEvent) => this._overviewKey(e, 3)}
+        >
+          <h3 class="scene-overview-heading">
+            <i class="fa-solid fa-video"></i> B-Roll
+            <span class="scene-overview-count">${scene.broll.length}</span>
+          </h3>
+          <ul class="scene-overview-list">${brollRows}</ul>
+        </section>
+        <section
+          class="scene-overview-section"
+          role="button"
+          tabindex="0"
+          @click=${() => this.switchTab(4)}
+          @keydown=${(e: KeyboardEvent) => this._overviewKey(e, 4)}
+        >
+          <h3 class="scene-overview-heading">
+            <i class="fa-solid fa-rotate"></i> Pickups
+            <span class="scene-overview-count">${scene.pickups.length}</span>
+          </h3>
+          <ul class="scene-overview-list">${pickupRows}</ul>
+        </section>
+        <section
+          class="scene-overview-section"
+          role="button"
+          tabindex="0"
+          @click=${() => this.switchTab(5)}
+          @keydown=${(e: KeyboardEvent) => this._overviewKey(e, 5)}
+        >
+          <h3 class="scene-overview-heading"><i class="fa-solid fa-note-sticky"></i> Notes</h3>
+          ${notesBody}
+        </section>
+      </div>
+    `;
+  }
+
+  private _overviewKey(e: KeyboardEvent, tab: number): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      this.switchTab(tab);
+    }
+  }
+
+  private _tabPanel(scene: SceneDetail) {
+    switch (this._tabIndex) {
+      case 0:
+        return this._overviewHtml(scene);
+      case 1:
+        return html`
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="text-lg font-bold">${escHtml(scene.master.label)}</div>
+              <div class="text-xs text-emerald-400">
+                ${escHtml(scene.master.duration)} • ${escHtml(scene.master.status)}
+              </div>
+              <p class="text-[var(--text-dim)] mt-2">${escHtml(scene.master.prompt)}</p>
+            </div>
+            <div class="frame-image w-80 flex-col justify-center">
+              <i class="fa-solid fa-film text-6xl mb-4"></i>
+              <button data-ws-action="regenerateMaster" class="toolbar-btn btn-ai text-xs">
+                Regenerate Master
+              </button>
+            </div>
+          </div>
+        `;
+      case 2:
+        return html`
+          <div class="grid grid-cols-2 gap-4">
+            ${scene.coverage.map(
+              (shot) => html`
+                <div data-ws-inspect-shot=${String(shot.id)} class="storyboard-frame p-2">
+                  <div class="frame-image"><i class="fa-solid fa-camera"></i></div>
+                  <div class="frame-label">
+                    <div class="scene-ref">${escHtml(shot.type ?? '')}</div>
+                    <div>${escHtml(shot.label)} • ${escHtml(shot.duration)}</div>
+                    ${shot.bestTake
+                      ? html`<span class="text-emerald-400 text-[10px]">★ BEST TAKE</span>`
+                      : nothing}
+                  </div>
+                </div>
+              `
+            )}
+          </div>
+        `;
+      case 3:
+        return scene.broll.length
+          ? html`
+              <div class="storyboard-grid">
+                ${scene.broll.map(
+                  (b) => html`
+                    <div class="storyboard-frame">
+                      <div class="frame-image"><i class="fa-solid fa-video"></i></div>
+                      <div class="frame-label">${escHtml(b.label)}</div>
+                    </div>
+                  `
+                )}
+              </div>
+            `
+          : html`<p class="text-[var(--text-dim)]">
+              No B-Roll yet.
+              <button data-ws-action="addBroll" class="underline">Generate AI B-Roll</button>
+            </p>`;
+      case 4:
+        return html`
+          <p class="text-[var(--text-dim)]">
+            Pickups are targeted re-generations for continuity fixes.
+          </p>
+          <button data-ws-action="addPickup" class="toolbar-btn btn-ai mt-4">
+            Create new pickup shot
+          </button>
+        `;
+      case 5:
+        return html`
+          <textarea class="w-full h-64 bg-[#1f1f1f] p-3 text-xs">${escHtml(scene.notes)}</textarea>
+        `;
+      default:
+        return nothing;
+    }
+  }
+
+  render() {
+    return html`
+      <div class="tab-bar px-2">
+        ${SCENE_TAB_LABELS.map(
+          (label, i) => html`
+            <button
+              type="button"
+              id=${`scene-tab-${i}`}
+              class=${classMap({ 'tab-btn': true, active: i === this._tabIndex })}
+              data-ws-scene-tab=${String(i)}
+              @click=${() => this.switchTab(i)}
+            >
+              ${label}
+            </button>
+          `
+        )}
+      </div>
+      <div
+        id="scene-tab-content"
+        class="flex-1 overflow-auto p-4 bg-[var(--bg-inset)] scene-tab-content-host"
+      >
+        ${this._scene ? this._tabPanel(this._scene) : nothing}
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'cinegen-scene-tabs': CinegenSceneTabs;
+  }
+}

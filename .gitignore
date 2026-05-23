@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment / API keys
+.env
+.env.*
+!.env.example
+!**/.env.example
+backends/.env
+
+# Server runtime stores (created on first use)
+server/keys.json
+server/routing.json
+server/app-state.json
+
+# Vite
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (legacy proxy scripts if added)
+__pycache__/
+*.py[cod]
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript / tooling caches
+*.tsbuildinfo
+.cache/
+coverage/

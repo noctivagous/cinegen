@@ -1,0 +1,24 @@
+[
+  {
+    "id": "imp-rain-atmo-001",
+    "kind": "audio",
+    "label": "Controlled rain bed",
+    "path": "assets/locations/loc-city-streets-01/refs/city-rain-bed.wav",
+    "related": {
+      "locationId": "loc-city-streets-01"
+    },
+    "origin": "imported",
+    "status": "placeholder"
+  },
+  {
+    "id": "imp-spire-amb-001",
+    "kind": "audio",
+    "label": "Upper strata ambience",
+    "path": "assets/locations/loc-apartment-01/refs/rain-window-ambience.wav",
+    "related": {
+      "locationId": "loc-apartment-01"
+    },
+    "origin": "imported",
+    "status": "placeholder"
+  }
+]

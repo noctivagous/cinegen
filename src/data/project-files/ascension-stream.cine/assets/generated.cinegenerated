@@ -1,0 +1,26 @@
+[
+  {
+    "id": "gen-shot-sc01-master-v1",
+    "kind": "video",
+    "label": "Scene 01 master pass",
+    "path": "production/scenes/scene01/generated/master-v1.mp4",
+    "related": {
+      "sceneId": "scene01",
+      "locationId": "loc-apartment-01"
+    },
+    "origin": "generated",
+    "status": "placeholder"
+  },
+  {
+    "id": "gen-shot-sc03-master-v1",
+    "kind": "video",
+    "label": "Scene 03 master pass",
+    "path": "production/scenes/scene03/generated/master-v1.mp4",
+    "related": {
+      "sceneId": "scene03",
+      "locationId": "loc-warehouse-01"
+    },
+    "origin": "generated",
+    "status": "placeholder"
+  }
+]

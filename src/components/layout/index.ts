@@ -1,0 +1,7 @@
+import './cinegen-app';
+import './cinegen-inspector-shell';
+import './cinegen-model-status-bar';
+import './cinegen-project-sidebar';
+import './cinegen-status-bar';
+import './cinegen-toolbar';
+import './cinegen-overview-preview';

@@ -1,0 +1,128 @@
+{
+  "scene01": {
+    "title": "Scene 01 - Arcology Spire",
+    "locationIds": [
+      "loc-apartment-01"
+    ],
+    "characterIds": [
+      "char-kai",
+      "char-mira"
+    ],
+    "propIds": [
+      "prop-flashlight-01",
+      "prop-envelope-01"
+    ],
+    "wardrobeIds": [
+      "wardrobe-marcus-trench-01"
+    ],
+    "master": {
+      "label": "Master Shot",
+      "duration": "75s",
+      "status": "rendered",
+      "prompt": "Wide night exterior, rain over gleaming arcology spire, translucent sky-bridge, courier pod with shifting data-skin, golden HUD code in air",
+      "outputPath": "production/scenes/scene01/generated/master-v1.mp4"
+    },
+    "coverage": [
+      {
+        "id": 1,
+        "type": "Wide Establishing",
+        "label": "EXT. ARCOLOGY SPIRE - WIDE",
+        "duration": "20s",
+        "bestTake": true
+      },
+      {
+        "id": 2,
+        "type": "Insert",
+        "label": "CU - Temple Touch / Golden Code",
+        "duration": "8s"
+      }
+    ],
+    "broll": [],
+    "pickups": [],
+    "notes": "Open on controlled rain and megacity scale. Mira V.O. confirms payload. Kai: Running."
+  },
+  "scene02": {
+    "title": "Scene 02 - Sky-Bridge Network",
+    "locationIds": [
+      "loc-city-streets-01"
+    ],
+    "characterIds": [
+      "char-kai",
+      "char-mira"
+    ],
+    "propIds": [
+      "prop-flashlight-01",
+      "prop-usb-01"
+    ],
+    "wardrobeIds": [
+      "wardrobe-marcus-trench-01"
+    ],
+    "master": {
+      "label": "Master Shot",
+      "duration": "90s",
+      "status": "queued",
+      "prompt": "Continuous neon sky-bridge pursuit, quantum tunnel streaks, city lights pulse once like breathing, HUD code fractals organic then snaps rigid",
+      "outputPath": "production/scenes/scene02/generated/master-v1.mp4"
+    },
+    "coverage": [],
+    "broll": [],
+    "pickups": [],
+    "notes": "God-like efficiency then hesitation. Grid breathes; overlay glitches. Recognition, not fear."
+  },
+  "scene03": {
+    "title": "Scene 03 - Control Nexus",
+    "locationIds": [
+      "loc-warehouse-01"
+    ],
+    "characterIds": [
+      "char-mira",
+      "char-kai"
+    ],
+    "propIds": [
+      "prop-usb-01"
+    ],
+    "wardrobeIds": [
+      "wardrobe-elena-jacket-01"
+    ],
+    "master": {
+      "label": "Master Shot",
+      "duration": "45s",
+      "status": "rendered",
+      "prompt": "Control nexus interior, Mira at multi-feed interface, silver neural crown, intercut Kai on sky-bridge as city lights breathe deeper",
+      "outputPath": "production/scenes/scene03/generated/master-v1.mp4"
+    },
+    "coverage": [],
+    "broll": [],
+    "pickups": [],
+    "notes": "Simultaneous with pursuit. Beautiful cage realization. Minimal dialogue."
+  },
+  "scene04": {
+    "title": "Scene 04 - Receiving Spire",
+    "locationIds": [
+      "loc-precinct-rooftop-01"
+    ],
+    "characterIds": [
+      "char-kai",
+      "char-mira"
+    ],
+    "propIds": [
+      "prop-flashlight-01",
+      "prop-envelope-01",
+      "prop-usb-01"
+    ],
+    "wardrobeIds": [
+      "wardrobe-marcus-trench-01"
+    ],
+    "master": {
+      "label": "Master Shot",
+      "duration": "90s",
+      "status": "queued",
+      "prompt": "Docking spire finale, lights and data merge in one organic pattern, deliberate one-second pause off optimal vector, clean dock, golden upload surge",
+      "outputPath": "production/scenes/scene04/generated/master-v1.mp4"
+    },
+    "coverage": [],
+    "broll": [],
+    "pickups": [],
+    "notes": "Climax: alignment not rebellion. Kai smiles. City acknowledges. FADE OUT."
+  }
+}

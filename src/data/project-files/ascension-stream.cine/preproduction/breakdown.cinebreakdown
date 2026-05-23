@@ -1,0 +1,46 @@
+[
+  {
+    "scene": "1",
+    "int_ext": "EXT.",
+    "location": "ARCOLOGY SPIRE - UPPER STRATA",
+    "time": "NIGHT",
+    "characters": "KAI, MIRA (V.O.)",
+    "props": "Courier pod, neural HUD overlay, Ascension Protocol payload",
+    "wardrobe": "Kai courier rig (wet variant)",
+    "sfx": "Controlled rain sheets, wind on sky-bridge, data-stream ribbons",
+    "notes": "Establish megacity scale and flawless corporate run. Golden code in vision."
+  },
+  {
+    "scene": "2",
+    "int_ext": "EXT.",
+    "location": "SKY-BRIDGE NETWORK",
+    "time": "CONTINUOUS",
+    "characters": "KAI, MIRA (V.O.)",
+    "props": "Courier pod, HUD overlay",
+    "wardrobe": "Kai courier rig",
+    "sfx": "Neon rush, grid pulse/breath, fractal UI bloom",
+    "notes": "Pursuit peak then hollow shift. City lights breathe once."
+  },
+  {
+    "scene": "3",
+    "int_ext": "INT.",
+    "location": "CONTROL NEXUS",
+    "time": "SIMULTANEOUS",
+    "characters": "MIRA, KAI (intercut)",
+    "props": "Multi-feed interface, HUD ghost at frame edge",
+    "wardrobe": "Mira command look with silver neural crown",
+    "sfx": "Interface ambience, synced grid pulse",
+    "notes": "Cross-cut handler and runner. Cage metaphor lands quietly."
+  },
+  {
+    "scene": "4",
+    "int_ext": "EXT.",
+    "location": "ARCOLOGY RECEIVING SPIRE",
+    "time": "NIGHT",
+    "characters": "KAI, MIRA (V.O.)",
+    "props": "Courier pod, forearm payload stream",
+    "wardrobe": "Kai courier rig",
+    "sfx": "Docking tone, golden data surge, final slow city pulse",
+    "notes": "Deliberate unrecorded pause. Delivery completes. Internal shift."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "scene": "01",
+    "label": "Arcology Spire Opening",
+    "duration": "1m 15s"
+  },
+  {
+    "id": 2,
+    "scene": "02",
+    "label": "Sky-Bridge Pursuit",
+    "duration": "1m 30s"
+  },
+  {
+    "id": 3,
+    "scene": "03",
+    "label": "Control Nexus",
+    "duration": "45s"
+  },
+  {
+    "id": 4,
+    "scene": "04",
+    "label": "Receiving Spire Finale",
+    "duration": "1m 30s"
+  }
+]

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineGen</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/CineGenBaseGUI.css">
+<link rel="stylesheet" href="css/CineGenBaseGUI-controls-extra.css">
+
+</head>
+<body>
+<cinegen-app>
+  <cinegen-toolbar></cinegen-toolbar>
+
+  <!-- Main Content Area (min-h-0 / min-w-0 so flex children shrink; inspector stays in viewport) -->
+  <div id="main-shell-row" class="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+    <cinegen-project-sidebar></cinegen-project-sidebar>
+    <cg-split-divider id="project-sidebar-divider" resize-target="sidebar" label="Resize project sidebar"></cg-split-divider>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col min-h-0 min-w-0 bevel-flat" id="main-workspace-container">
+      <cinegen-workspace class="flex-1 flex flex-col min-h-0">
+
+        <cinegen-preprod-workspace></cinegen-preprod-workspace>
+
+        <cinegen-breakdown-view></cinegen-breakdown-view>
+        <cinegen-scene-detail-view></cinegen-scene-detail-view>
+        <cinegen-timeline-view></cinegen-timeline-view>
+        <cinegen-location-scout-view></cinegen-location-scout-view>
+        <cinegen-assets-view></cinegen-assets-view>
+        <cinegen-camera-lighting-view></cinegen-camera-lighting-view>
+        <cinegen-casting-view></cinegen-casting-view>
+        <cinegen-chip-global-view></cinegen-chip-global-view>
+        <cinegen-overview-view></cinegen-overview-view>
+        <cinegen-asset-detail-view></cinegen-asset-detail-view>
+        <cinegen-workspace-empty></cinegen-workspace-empty>
+
+      </cinegen-workspace>
+    </div>
+
+    <!-- New: Right Inspector Panel -->
+    <cg-split-divider id="inspector-split-divider" resize-target="inspector" label="Resize inspector panel"></cg-split-divider>
+    <cinegen-inspector-shell></cinegen-inspector-shell>
+  </div>
+
+  <cinegen-status-bar></cinegen-status-bar>
+
+  <cinegen-app-modals></cinegen-app-modals>
+  <cinegen-setup-assistant-modal></cinegen-setup-assistant-modal>
+  <cinegen-console></cinegen-console>
+</cinegen-app>
+
+<script type="module" src="/src/main.ts"></script>
+
+
+</body>
+</html>
