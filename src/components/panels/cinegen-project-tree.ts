@@ -7,7 +7,7 @@ import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
 import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
-import { getSectionShortcutChip } from '@/keybindings/init-keybindings';
+import { getHierarchySectionShortcutChip } from '@/keybindings/hierarchy-keybindings';
 import {
   getProjectTreeChildren,
   getSelectedTreeName,
@@ -152,7 +152,7 @@ export class CinegenProjectTree extends CgLightElement {
               >${labelText}</span
             >`}
         ${level === 0 && section
-          ? html`<span class="tree-shortcut-chip">${getSectionShortcutChip(node.name)}</span>`
+          ? html`<span class="tree-shortcut-chip">${getHierarchySectionShortcutChip(node.name)}</span>`
           : nothing}
       </div>
     `;

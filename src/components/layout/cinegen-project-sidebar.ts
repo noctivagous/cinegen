@@ -7,6 +7,7 @@ import {
   getTreeSectionKeyForNode,
   handleTreeNodeSelect,
 } from '@/tree/project-tree-service';
+import { getHierarchySectionShortcutChip } from '@/keybindings/hierarchy-keybindings';
 import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
 import type { TreeNode } from '@/tree/tree-types';
 import { filterVisibleNodes } from '@/services/section-visibility-service';
@@ -103,6 +104,9 @@ export class CinegenProjectSidebar extends CgLightElement {
             >
               <i class="fa-solid ${node.icon || 'fa-folder'}"></i>
               <span class="hierarchy-grid-label">${node.name}</span>
+              ${sectionKey
+                ? html`<span class="tree-shortcut-chip">${getHierarchySectionShortcutChip(node.name)}</span>`
+                : nothing}
             </button>
           `;
         })}
@@ -136,6 +140,9 @@ export class CinegenProjectSidebar extends CgLightElement {
               >
                 <i class="fa-solid ${node.icon || 'fa-folder'}"></i>
                 <span class="hierarchy-grid-label">${node.name}</span>
+                ${sectionKey
+                  ? html`<span class="tree-shortcut-chip">${getHierarchySectionShortcutChip(node.name)}</span>`
+                  : nothing}
               </button>
               ${children.length
                 ? html`

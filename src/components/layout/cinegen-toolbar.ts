@@ -1,6 +1,7 @@
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
+import { getPrevisTimelineShortcutChip } from '@/keybindings/previs-keybindings';
 
 /** Main application toolbar (projects, settings, layout toggles). */
 @customElement('cinegen-toolbar')
@@ -221,6 +222,7 @@ export class CinegenToolbar extends CgLightElement {
           id="wizards-split"
           menu-id="wizards-menu"
           menu-wide
+          variant="btn-ai"
           main-title="Wizards — guided project setup"
         >
           <span slot="main"><i class="fa-solid fa-wand-magic-sparkles"></i> Wizards</span>
@@ -316,7 +318,7 @@ export class CinegenToolbar extends CgLightElement {
           type="button"
           id="previs-timeline-toggle-btn"
           class="toolbar-btn"
-          title="Expand or collapse Previs timeline drawer"
+          title=${`Expand or collapse Previs timeline drawer (${getPrevisTimelineShortcutChip()})`}
           aria-pressed="false"
         >
           <i class="fa-solid fa-wave-square"></i> Previs

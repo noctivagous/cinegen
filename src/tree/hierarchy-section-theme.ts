@@ -15,7 +15,7 @@ export interface HierarchySectionTheme {
   treeNames: string[];
 }
 
-/** Display order for shortcuts (Ctrl/Cmd+1…n) and grid layout */
+/** Display order for shortcuts (Alt+1…n) and grid layout */
 export const HIERARCHY_SECTIONS: HierarchySectionTheme[] = [
   {
     key: 'preprod',

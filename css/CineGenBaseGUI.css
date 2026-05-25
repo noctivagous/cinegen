@@ -192,8 +192,8 @@ cinegen-toolbar .toolbar-btn.btn-ai:hover {
 }
 
 cinegen-toolbar .toolbar-btn.btn-ai:active,
-cinegen-toolbar #ai-assist-split.toolbar-split--open .toolbar-split-main.btn-ai,
-cinegen-toolbar #ai-assist-split.toolbar-split--open .toolbar-split-trigger.btn-ai {
+cinegen-toolbar .toolbar-split--open .toolbar-split-main.btn-ai,
+cinegen-toolbar .toolbar-split--open .toolbar-split-trigger.btn-ai {
   background: linear-gradient(
     to bottom,
     color-mix(in srgb, var(--accent-ai) 94%, #000) 0%,
@@ -282,6 +282,9 @@ cinegen-toolbar .toolbar-btn--setup-incomplete:active {
 cg-toolbar-split {
   display: inline-flex;
   vertical-align: middle;
+  min-width: 0;
+  flex-shrink: 1;
+  max-width: 100%;
 }
 
 .toolbar-split {
@@ -289,10 +292,37 @@ cg-toolbar-split {
   display: inline-flex;
   align-items: stretch;
   margin: 2px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .toolbar-split .toolbar-btn {
   margin: 0;
+}
+
+.toolbar-split-main,
+.toolbar-split-unified {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.toolbar-split-main-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbar-split-main-label > i {
+  flex-shrink: 0;
+}
+
+.toolbar-split-unified .toolbar-split-unified-caret {
+  flex-shrink: 0;
 }
 
 .toolbar-split-main {
@@ -324,8 +354,8 @@ cg-toolbar-split {
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7);
 }
 
-#ai-assist-split.toolbar-split--open .toolbar-split-main.btn-ai,
-#ai-assist-split.toolbar-split--open .toolbar-split-trigger.btn-ai {
+.toolbar-split--open .toolbar-split-main.btn-ai,
+.toolbar-split--open .toolbar-split-trigger.btn-ai {
   background: linear-gradient(to bottom, var(--accent-ai) 0%, var(--accent-ai-light) 100%);
   border-color: var(--accent-ai-border);
   border-top-color: var(--accent-ai-highlight);
@@ -2155,6 +2185,7 @@ cg-modal-shell cinegen-ai-provider-info {
 }
 
 .hierarchy-grid-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2234,6 +2265,14 @@ cg-modal-shell cinegen-ai-provider-info {
   word-break: break-word;
 }
 
+.hierarchy-grid-item .tree-shortcut-chip,
+.hierarchy-grid-plus-head .tree-shortcut-chip {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  margin-left: 0;
+}
+
 /* Grid+ — top-level cards with a two-column child button grid (next tree level) */
 .hierarchy-grid-plus {
   align-items: start;
@@ -2252,6 +2291,7 @@ cg-modal-shell cinegen-ai-provider-info {
 }
 
 .hierarchy-grid-plus-head {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4200,20 +4240,30 @@ cinegen-storyboard-pane .storyboard-toolbar-actions .toolbar-btn {
   --previs-track-music-clip-text: color-mix(in srgb, var(--previs-track-music-clip-accent) 40%, #f2faf2);
   --previs-bevel-raised-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.5);
   --previs-playhead: #ff3333;
-  position: relative;
-  z-index: 40;
-  flex-shrink: 0;
+  --previs-status-bar-height: calc(22px * var(--status-bar-scale, 1));
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--previs-status-bar-height);
+  z-index: 45;
   border-top: 1px solid var(--previs-border-dark);
   background: var(--previs-bg-inset);
   min-height: 28px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  pointer-events: none;
 }
 
-/* Collapsed: dock head only. Expanded: head + overlay stack upward from the status bar. */
+cinegen-previs-timeline-dock.previs-timeline-dock .previs-drawer-unit {
+  pointer-events: auto;
+}
+
+/* Collapsed: dock head only. Expanded: overlay stacks upward above the head (overlay drawer). */
 .previs-drawer-unit {
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
+  align-items: stretch;
   min-height: 28px;
+  max-height: calc(100vh - 34px - var(--previs-status-bar-height));
 }
 
 .previs-drawer-unit.is-open {
@@ -4235,16 +4285,13 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
   left: 0;
   right: 0;
   top: 34px;
-  bottom: calc(22px * var(--status-bar-scale, 1));
+  bottom: var(--previs-status-bar-height);
   z-index: 999;
+  max-height: none;
   min-height: 0;
   height: auto;
   display: flex;
   flex-direction: column;
-}
-
-.previs-drawer-unit.is-open {
-  flex: 0 0 auto;
 }
 
 .previs-drawer-unit.is-open.is-fullscreen .previs-drawer-overlay {
@@ -4277,8 +4324,14 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
   flex: 1 1 auto;
   align-items: center;
   justify-content: flex-start;
+  gap: 6px;
   min-width: 0;
   padding-top: 2px;
+}
+
+.previs-timeline-dock .previs-dock-head-main .tree-shortcut-chip {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .previs-timeline-dock .previs-drawer-head-actions {
@@ -4329,6 +4382,7 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
   background: var(--previs-bg-inset);
   box-shadow: var(--previs-shadow-inset);
   border-top: 1px solid var(--previs-border-dark);
+  border-bottom: none;
 }
 
 .previs-drawer-overlay.is-open {

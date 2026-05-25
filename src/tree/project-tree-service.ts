@@ -285,7 +285,7 @@ export function updateProjectTreeHeader(): void {
   icon.setAttribute('aria-hidden', 'true');
   el.appendChild(icon);
   const nameEl = document.createElement('span');
-  nameEl.className = 'truncate min-w-0 flex-1';
+  nameEl.className = 'panel-header-title-text';
   nameEl.textContent = projectData.name || 'UNTITLED';
   el.appendChild(nameEl);
 
@@ -293,7 +293,7 @@ export function updateProjectTreeHeader(): void {
   const aspect = settings.aspectRatio ? String(settings.aspectRatio) : '';
   if (aspect) {
     const aspectEl = document.createElement('span');
-    aspectEl.className = 'project-tree-header-aspect shrink-0';
+    aspectEl.className = 'project-tree-header-aspect panel-header-title-suffix';
     aspectEl.textContent = aspect;
     aspectEl.title = 'Aspect ratio';
     el.appendChild(aspectEl);

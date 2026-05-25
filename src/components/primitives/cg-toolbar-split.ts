@@ -117,7 +117,8 @@ export class CgToolbarSplit extends CgLightElement {
       const caret = this.unified
         ? '<i class="fa-solid fa-caret-down toolbar-split-unified-caret" aria-hidden="true"></i>'
         : '';
-      const content = this.unified ? `${this._mainHtml}${caret}` : this._mainHtml;
+      const label = `<span class="toolbar-split-main-label">${this._mainHtml}</span>`;
+      const content = this.unified ? `${label}${caret}` : label;
       if (mainBtn.innerHTML !== content) mainBtn.innerHTML = content;
     }
 

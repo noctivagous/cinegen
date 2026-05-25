@@ -2,6 +2,7 @@ import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import '@/components/primitives/cg-split-divider';
+import { getPrevisTimelineShortcutChip } from '@/keybindings/previs-keybindings';
 import {
   clearPrevisFullscreenPaneLayout,
   preparePrevisFullscreenLayout,
@@ -141,6 +142,7 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
             <span class="previs-dock-title"
               ><i class="fa-solid fa-wave-square"></i> PREVIS TIMELINE (Draft Timing)</span
             >
+            <span class="tree-shortcut-chip">${getPrevisTimelineShortcutChip()}</span>
           </div>
           <div class="previs-drawer-head-actions">
             <button
