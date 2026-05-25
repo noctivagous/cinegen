@@ -2,21 +2,13 @@ import { positionMenuWithinViewport } from '@/services/context-menu-position';
 import { closeAllToolbarSplitMenus } from '@/services/toolbar-split-service';
 import { escHtml as escapeHtml } from '@/utils/html';
 
-// ==================== EXTENDED DATA STRUCTURES ====================
-/** Top-level sidebar sections → color theme key (see .tree-section-* in CSS) */
-/** Tree depth (data-tree-depth): 0 = section header, 1+ = nested; each level darkens via --tree-tone-l* in CSS */
-const TREE_SECTION_BY_NAME = {
-  'Pre-Production': 'preprod',
-  'Production Design': 'design',
-  'Sound Department': 'sound',
-  'Scenes': 'scenes',
-  'Assembly': 'assembly',
-  'Global Assets': 'global'
-};
+import {
+  TREE_SECTION_BY_NAME,
+  WORKSPACE_SECTION_CLASSES,
+} from '@/tree/hierarchy-section-theme';
 
-const WORKSPACE_SECTION_CLASSES = Object.values(TREE_SECTION_BY_NAME).map(
-  (key) => `workspace-section-${key}`
-);
+// ==================== EXTENDED DATA STRUCTURES ====================
+/** Tree depth (data-tree-depth): 0 = section header, 1+ = nested; each level darkens via --tree-tone-l* in CSS */
 
 // Project seed data: projectRegistry, projectData, currentSceneData, storyboardFrames,
 // timelineClips, locationLibrary, assetLibrary, breakdownData — loaded from projectData.js

@@ -1,6 +1,6 @@
 import { registerKeybinding, handleKeydown } from '@/keybindings/keybinding-registry';
 // import { toggleConsoleDrawer } from '@/console/console-service';
-import { TREE_SECTION_BY_NAME } from '@/tree/tree-constants';
+import { HIERARCHY_SECTIONS } from '@/tree/hierarchy-section-theme';
 import { handleTreeNodeSelect } from '@/tree/project-tree-service';
 
 function platformCombo(base: string): string {
@@ -17,7 +17,7 @@ function selectTreeSectionByName(name: string): void {
 }
 
 export function initKeybindings(): void {
-  const sections = Object.keys(TREE_SECTION_BY_NAME);
+  const sections = HIERARCHY_SECTIONS.map((s) => s.treeNames[0]);
 
   // registerKeybinding({
   //   id: 'console-toggle',
@@ -63,8 +63,7 @@ export function initKeybindings(): void {
 }
 
 export function getSectionShortcutChip(name: string): string {
-  const sections = Object.keys(TREE_SECTION_BY_NAME);
-  const idx = sections.indexOf(name);
+  const idx = HIERARCHY_SECTIONS.findIndex((s) => s.treeNames.includes(name));
   if (idx < 0) return '';
   const num = idx + 1;
   const isMac = navigator.platform.toLowerCase().includes('mac');

@@ -9,6 +9,7 @@
 import type { TreeNode } from '@/tree/tree-types';
 import { projectData } from '@/data/project-data';
 import { storageService } from '@/services/persistence';
+import { sectionKeyForTopLevelName } from '@/tree/hierarchy-section-theme';
 
 const STORAGE_KEY = 'cinegen-section-visibility';
 
@@ -84,15 +85,7 @@ export function getSectionRootNode(sectionKey: string | null): TreeNode | null {
 }
 
 function _nameToKey(name: string): string | null {
-  const map: Record<string, string> = {
-    'Pre-Production': 'preprod',
-    'Production Design': 'design',
-    'Sound Department': 'sound',
-    Scenes: 'scenes',
-    Assembly: 'assembly',
-    'Global Assets': 'global',
-  };
-  return map[name] || null;
+  return sectionKeyForTopLevelName(name);
 }
 
 export function buildCheckboxTreeNodes(sectionKey: string | null): import('@/components/primitives/cg-checkbox-tree').CheckboxTreeNode[] {

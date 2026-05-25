@@ -1,3 +1,7 @@
+import { applyHierarchySectionCssVars } from '@/tree/hierarchy-section-theme';
+
+applyHierarchySectionCssVars();
+
 import '@/tailwind.css';
 import '@/components/primitives/index';
 import '@/components/layout/index';

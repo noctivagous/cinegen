@@ -1,6 +1,7 @@
-import { assetDetailData, projectData } from '@/data/project-data';
+import { assetDetailData } from '@/data/project-data';
 import type { TreeNode } from '@/tree/tree-types';
 import { isNodeVisible } from '@/services/section-visibility-service';
+import { getTreeSectionKeyForNode } from '@/tree/project-tree-service';
 
 export type OverviewListItem = {
   name: string;
@@ -8,15 +9,6 @@ export type OverviewListItem = {
   status?: string | null;
   desc?: string;
   tags?: string[];
-};
-
-const SECTION_NAME_KEY: Record<string, string> = {
-  'Pre-Production': 'preprod',
-  'Production Design': 'design',
-  'Sound Department': 'sound',
-  Scenes: 'scenes',
-  Assembly: 'assembly',
-  'Global Assets': 'global',
 };
 
 export function overviewVisibleChildren(node: TreeNode): TreeNode[] {
@@ -34,22 +26,9 @@ export function overviewVisibleChildren(node: TreeNode): TreeNode[] {
   return result;
 }
 
-function nodeContains(parent: TreeNode, target: TreeNode): boolean {
-  if (parent === target) return true;
-  for (const child of parent.children || []) {
-    if (nodeContains(child, target)) return true;
-  }
-  return false;
-}
-
 export function overviewSectionKeyForNode(node: TreeNode | null): string | null {
   if (!node) return null;
-  if (SECTION_NAME_KEY[node.name]) return SECTION_NAME_KEY[node.name];
-  for (const top of (projectData.children || []) as TreeNode[]) {
-    if (top.type === 'tree-divider') continue;
-    if (nodeContains(top, node)) return SECTION_NAME_KEY[top.name] || null;
-  }
-  return null;
+  return getTreeSectionKeyForNode(node);
 }
 
 export function overviewAccentClass(node: TreeNode, sectionKey?: string | null): string {

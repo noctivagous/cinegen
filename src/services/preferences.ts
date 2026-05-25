@@ -34,6 +34,8 @@ export interface CineGenPreferences {
   storyboardViewMode: 'shots' | 'sequence';
   /** Storyboard thumbnail scale (0.5–2). */
   storyboardThumbnailScale: number;
+  /** Project hierarchy sidebar: tree, top-level grid, or grid with nested child buttons. */
+  projectHierarchyViewMode: 'tree' | 'grid' | 'grid-plus';
   /** Last selected project hierarchy node name, keyed by project id. */
   projectTreeSelectedByProjectId?: Record<string, string>;
 }
@@ -55,6 +57,7 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   statusBarScale: 1.1,
   storyboardViewMode: 'shots',
   storyboardThumbnailScale: 1,
+  projectHierarchyViewMode: 'tree',
 };
 
 export function loadPreferences(): CineGenPreferences {

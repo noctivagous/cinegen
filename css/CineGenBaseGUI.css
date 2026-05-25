@@ -19,17 +19,25 @@
   --accent-ai-highlight: #5a7090;
   --selected-bg: #4d4d4d;
   --font-scene-list: 'Source Sans 3', 'Segoe UI', 'Lucida Grande', sans-serif;
-  /* Project hierarchy section colors (toplevel header / tree item) */
+  /* Project hierarchy section colors — canonical hex in hierarchy-section-theme.ts; mirrored here for first paint */
   --tree-section-preprod: #b8d8f4;
   --tree-section-preprod-item: #8eb8dc;
+  --tree-section-cinematography: #f4b8b8;
+  --tree-section-cinematography-item: #dc8e8e;
   --tree-section-design: #f0c898;
   --tree-section-design-item: #d4a870;
+  --tree-section-casting: #e8c0d8;
+  --tree-section-casting-item: #c898b8;
   --tree-section-sound: #d4b8f0;
   --tree-section-sound-item: #b098d8;
+  --tree-section-post: #f0a8b0;
+  --tree-section-post-item: #d88898;
+  --tree-section-assembly: var(--tree-section-post);
+  --tree-section-assembly-item: var(--tree-section-post-item);
+  --tree-section-ai-director: #a8b8d8;
+  --tree-section-ai-director-item: #7a8cb8;
   --tree-section-scenes: #98e0b8;
   --tree-section-scenes-item: #78c098;
-  --tree-section-assembly: #f0a8b0;
-  --tree-section-assembly-item: #d88898;
   --tree-section-global: #b0b0b0;
   --tree-section-global-item: #909090;
   /* Hierarchy depth: each nested level mixes more black into the section item tone (see --tree-tone-l*) */
@@ -78,6 +86,12 @@ body {
   border: 1px solid var(--border-dark);
   border-top-color: var(--border-light);
   border-left-color: var(--border-light);
+  border-bottom-color: #080808;
+  border-right-color: #0c0c0c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.38);
 }
 
 /* Toolbar Buttons - Beveled Nuke/Flame Style */
@@ -510,13 +524,42 @@ cg-toolbar-split {
   border-left-color: var(--tree-section-sound-item);
 }
 
-#guide-menu [data-guide-theme="assembly"] {
-  color: var(--tree-section-assembly);
+#guide-menu [data-guide-theme="cinematography"] {
+  color: var(--tree-section-cinematography);
 }
+#guide-menu [data-guide-theme="cinematography"]:hover {
+  color: #fcd0d0;
+  background: rgba(220, 142, 142, 0.16);
+  border-left-color: var(--tree-section-cinematography-item);
+}
+
+#guide-menu [data-guide-theme="casting"] {
+  color: var(--tree-section-casting);
+}
+#guide-menu [data-guide-theme="casting"]:hover {
+  color: #f8d0e8;
+  background: rgba(200, 152, 184, 0.16);
+  border-left-color: var(--tree-section-casting-item);
+}
+
+#guide-menu [data-guide-theme="post"],
+#guide-menu [data-guide-theme="assembly"] {
+  color: var(--tree-section-post);
+}
+#guide-menu [data-guide-theme="post"]:hover,
 #guide-menu [data-guide-theme="assembly"]:hover {
   color: #f8c0c8;
   background: rgba(216, 136, 152, 0.16);
-  border-left-color: var(--tree-section-assembly-item);
+  border-left-color: var(--tree-section-post-item);
+}
+
+#guide-menu [data-guide-theme="ai-director"] {
+  color: var(--tree-section-ai-director);
+}
+#guide-menu [data-guide-theme="ai-director"]:hover {
+  color: #c8d4f0;
+  background: rgba(122, 140, 184, 0.18);
+  border-left-color: var(--tree-section-ai-director-item);
 }
 
 /* Unified modal shell (cg-modal-shell) */
@@ -1845,43 +1888,75 @@ cg-modal-shell cinegen-ai-provider-info {
   opacity: 0.92;
 }
 
-/* Section hues + depth tones (L0 lightest → L4 darkest within each section) */
-#project-hierarchy-sidebar .tree-section-preprod {
+/* Section hues + depth tones (L0 lightest → L4 darkest); shared by tree rows and grid tiles */
+#project-hierarchy-sidebar .tree-section-preprod,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-preprod {
   --tree-tone-l0: var(--tree-section-preprod);
   --tree-tone-l1: var(--tree-section-preprod-item);
   --tree-tone-l2: color-mix(in srgb, var(--tree-section-preprod-item) var(--tree-depth-mix-l2), #000);
   --tree-tone-l3: color-mix(in srgb, var(--tree-section-preprod-item) var(--tree-depth-mix-l3), #000);
   --tree-tone-l4: color-mix(in srgb, var(--tree-section-preprod-item) var(--tree-depth-mix-l4), #000);
 }
-#project-hierarchy-sidebar .tree-section-design {
+#project-hierarchy-sidebar .tree-section-cinematography,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-cinematography {
+  --tree-tone-l0: var(--tree-section-cinematography);
+  --tree-tone-l1: var(--tree-section-cinematography-item);
+  --tree-tone-l2: color-mix(in srgb, var(--tree-section-cinematography-item) var(--tree-depth-mix-l2), #000);
+  --tree-tone-l3: color-mix(in srgb, var(--tree-section-cinematography-item) var(--tree-depth-mix-l3), #000);
+  --tree-tone-l4: color-mix(in srgb, var(--tree-section-cinematography-item) var(--tree-depth-mix-l4), #000);
+}
+#project-hierarchy-sidebar .tree-section-design,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-design {
   --tree-tone-l0: var(--tree-section-design);
   --tree-tone-l1: var(--tree-section-design-item);
   --tree-tone-l2: color-mix(in srgb, var(--tree-section-design-item) var(--tree-depth-mix-l2), #000);
   --tree-tone-l3: color-mix(in srgb, var(--tree-section-design-item) var(--tree-depth-mix-l3), #000);
   --tree-tone-l4: color-mix(in srgb, var(--tree-section-design-item) var(--tree-depth-mix-l4), #000);
 }
-#project-hierarchy-sidebar .tree-section-sound {
+#project-hierarchy-sidebar .tree-section-casting,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-casting {
+  --tree-tone-l0: var(--tree-section-casting);
+  --tree-tone-l1: var(--tree-section-casting-item);
+  --tree-tone-l2: color-mix(in srgb, var(--tree-section-casting-item) var(--tree-depth-mix-l2), #000);
+  --tree-tone-l3: color-mix(in srgb, var(--tree-section-casting-item) var(--tree-depth-mix-l3), #000);
+  --tree-tone-l4: color-mix(in srgb, var(--tree-section-casting-item) var(--tree-depth-mix-l4), #000);
+}
+#project-hierarchy-sidebar .tree-section-sound,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-sound {
   --tree-tone-l0: var(--tree-section-sound);
   --tree-tone-l1: var(--tree-section-sound-item);
   --tree-tone-l2: color-mix(in srgb, var(--tree-section-sound-item) var(--tree-depth-mix-l2), #000);
   --tree-tone-l3: color-mix(in srgb, var(--tree-section-sound-item) var(--tree-depth-mix-l3), #000);
   --tree-tone-l4: color-mix(in srgb, var(--tree-section-sound-item) var(--tree-depth-mix-l4), #000);
 }
-#project-hierarchy-sidebar .tree-section-scenes {
+#project-hierarchy-sidebar .tree-section-post,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-post,
+#project-hierarchy-sidebar .tree-section-assembly,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-assembly {
+  --tree-tone-l0: var(--tree-section-post);
+  --tree-tone-l1: var(--tree-section-post-item);
+  --tree-tone-l2: color-mix(in srgb, var(--tree-section-post-item) var(--tree-depth-mix-l2), #000);
+  --tree-tone-l3: color-mix(in srgb, var(--tree-section-post-item) var(--tree-depth-mix-l3), #000);
+  --tree-tone-l4: color-mix(in srgb, var(--tree-section-post-item) var(--tree-depth-mix-l4), #000);
+}
+#project-hierarchy-sidebar .tree-section-ai-director,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-ai-director {
+  --tree-tone-l0: var(--tree-section-ai-director);
+  --tree-tone-l1: var(--tree-section-ai-director-item);
+  --tree-tone-l2: color-mix(in srgb, var(--tree-section-ai-director-item) var(--tree-depth-mix-l2), #000);
+  --tree-tone-l3: color-mix(in srgb, var(--tree-section-ai-director-item) var(--tree-depth-mix-l3), #000);
+  --tree-tone-l4: color-mix(in srgb, var(--tree-section-ai-director-item) var(--tree-depth-mix-l4), #000);
+}
+#project-hierarchy-sidebar .tree-section-scenes,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-scenes {
   --tree-tone-l0: var(--tree-section-scenes);
   --tree-tone-l1: var(--tree-section-scenes-item);
   --tree-tone-l2: color-mix(in srgb, var(--tree-section-scenes-item) var(--tree-depth-mix-l2), #000);
   --tree-tone-l3: color-mix(in srgb, var(--tree-section-scenes-item) var(--tree-depth-mix-l3), #000);
   --tree-tone-l4: color-mix(in srgb, var(--tree-section-scenes-item) var(--tree-depth-mix-l4), #000);
 }
-#project-hierarchy-sidebar .tree-section-assembly {
-  --tree-tone-l0: var(--tree-section-assembly);
-  --tree-tone-l1: var(--tree-section-assembly-item);
-  --tree-tone-l2: color-mix(in srgb, var(--tree-section-assembly-item) var(--tree-depth-mix-l2), #000);
-  --tree-tone-l3: color-mix(in srgb, var(--tree-section-assembly-item) var(--tree-depth-mix-l3), #000);
-  --tree-tone-l4: color-mix(in srgb, var(--tree-section-assembly-item) var(--tree-depth-mix-l4), #000);
-}
-#project-hierarchy-sidebar .tree-section-global {
+#project-hierarchy-sidebar .tree-section-global,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-global {
   --tree-tone-l0: var(--tree-section-global);
   --tree-tone-l1: var(--tree-section-global-item);
   --tree-tone-l2: color-mix(in srgb, var(--tree-section-global-item) var(--tree-depth-mix-l2), #000);
@@ -2012,6 +2087,8 @@ cg-modal-shell cinegen-ai-provider-info {
   display: flex;
   gap: 3px;
   flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 /* Sidebar view buttons — compact ov-mode-btn variant */
@@ -2021,7 +2098,10 @@ cg-modal-shell cinegen-ai-provider-info {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 60px;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: 72px;
   height: 46px;
   background: linear-gradient(180deg, #353535 0%, #2a2a2a 100%);
   border: 1px solid #444;
@@ -2116,15 +2196,164 @@ cg-modal-shell cinegen-ai-provider-info {
   transform: translateY(1px);
 }
 
+#project-hierarchy-sidebar .hierarchy-grid-item[class*="tree-section-"] {
+  color: var(--tree-tone-l0);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--tree-tone-l0) 24%, #484848) 0%,
+    color-mix(in srgb, var(--tree-tone-l1) 16%, #323232) 100%
+  );
+  border-top-color: color-mix(in srgb, var(--tree-tone-l0) 42%, var(--border-light));
+  border-left-color: color-mix(in srgb, var(--tree-tone-l0) 38%, var(--border-light));
+  border-bottom-color: color-mix(in srgb, var(--tree-tone-l1) 48%, #080808);
+  border-right-color: color-mix(in srgb, var(--tree-tone-l1) 40%, #0c0c0c);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.75);
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-item[class*="tree-section-"]:hover {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--tree-tone-l0) 32%, #525252) 0%,
+    color-mix(in srgb, var(--tree-tone-l1) 22%, #3c3c3c) 100%
+  );
+  color: var(--tree-tone-l0);
+}
+
 .hierarchy-grid-item i {
   font-size: 18px;
-  opacity: 0.85;
-  color: var(--text-highlight);
+  opacity: 0.92;
+  color: inherit;
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-item[class*="tree-section-"] i {
+  color: var(--tree-tone-l1);
 }
 
 .hierarchy-grid-label {
   line-height: 1.2;
   word-break: break-word;
+}
+
+/* Grid+ — top-level cards with a two-column child button grid (next tree level) */
+.hierarchy-grid-plus {
+  align-items: start;
+}
+
+.hierarchy-grid-plus-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  cursor: default;
+}
+
+.hierarchy-grid-plus-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 8px 10px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: none;
+  text-shadow: inherit;
+}
+
+.hierarchy-grid-plus-head:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hierarchy-grid-plus-head:active {
+  background: rgba(0, 0, 0, 0.2);
+  transform: none;
+  padding: 13px 8px 9px;
+}
+
+.hierarchy-grid-plus-head i {
+  font-size: 18px;
+  opacity: 0.92;
+}
+
+.hierarchy-grid-plus-children {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.hierarchy-grid-plus-child {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  margin: 0;
+  padding: 5px 4px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+.hierarchy-grid-plus-child i {
+  font-size: 11px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.hierarchy-grid-plus-child-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"] {
+  color: var(--tree-tone-l0);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--tree-tone-l0) 24%, #484848) 0%,
+    color-mix(in srgb, var(--tree-tone-l1) 16%, #323232) 100%
+  );
+  border-top-color: color-mix(in srgb, var(--tree-tone-l0) 42%, var(--border-light));
+  border-left-color: color-mix(in srgb, var(--tree-tone-l0) 38%, var(--border-light));
+  border-bottom-color: color-mix(in srgb, var(--tree-tone-l1) 48%, #080808);
+  border-right-color: color-mix(in srgb, var(--tree-tone-l1) 40%, #0c0c0c);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.75);
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"] .hierarchy-grid-plus-head i {
+  color: var(--tree-tone-l1);
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"] .hierarchy-grid-plus-child {
+  color: var(--tree-tone-l1);
+  border-top-color: color-mix(in srgb, var(--tree-tone-l0) 28%, #585858);
+  border-left-color: color-mix(in srgb, var(--tree-tone-l0) 24%, #585858);
+}
+
+#project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"] .hierarchy-grid-plus-child i {
+  color: color-mix(in srgb, var(--tree-tone-l1) 88%, #fff);
 }
 
 .tree-label-folder {
@@ -2350,17 +2579,27 @@ cg-panel-header.panel-header > .panel-header-actions {
 #main-workspace-container.workspace-section-preprod {
   --workspace-header-tint: var(--tree-section-preprod-item);
 }
+#main-workspace-container.workspace-section-cinematography {
+  --workspace-header-tint: var(--tree-section-cinematography-item);
+}
 #main-workspace-container.workspace-section-design {
   --workspace-header-tint: var(--tree-section-design-item);
+}
+#main-workspace-container.workspace-section-casting {
+  --workspace-header-tint: var(--tree-section-casting-item);
 }
 #main-workspace-container.workspace-section-sound {
   --workspace-header-tint: var(--tree-section-sound-item);
 }
+#main-workspace-container.workspace-section-post,
+#main-workspace-container.workspace-section-assembly {
+  --workspace-header-tint: var(--tree-section-post-item);
+}
+#main-workspace-container.workspace-section-ai-director {
+  --workspace-header-tint: var(--tree-section-ai-director-item);
+}
 #main-workspace-container.workspace-section-scenes {
   --workspace-header-tint: var(--tree-section-scenes-item);
-}
-#main-workspace-container.workspace-section-assembly {
-  --workspace-header-tint: var(--tree-section-assembly-item);
 }
 #main-workspace-container.workspace-section-global {
   --workspace-header-tint: var(--tree-section-global-item);
@@ -2369,17 +2608,27 @@ cg-panel-header.panel-header > .panel-header-actions {
 #main-workspace-container.workspace-section-preprod .workspace-panel-title {
   color: var(--tree-section-preprod-item);
 }
+#main-workspace-container.workspace-section-cinematography .workspace-panel-title {
+  color: var(--tree-section-cinematography-item);
+}
 #main-workspace-container.workspace-section-design .workspace-panel-title {
   color: var(--tree-section-design-item);
+}
+#main-workspace-container.workspace-section-casting .workspace-panel-title {
+  color: var(--tree-section-casting-item);
 }
 #main-workspace-container.workspace-section-sound .workspace-panel-title {
   color: var(--tree-section-sound-item);
 }
+#main-workspace-container.workspace-section-post .workspace-panel-title,
+#main-workspace-container.workspace-section-assembly .workspace-panel-title {
+  color: var(--tree-section-post-item);
+}
+#main-workspace-container.workspace-section-ai-director .workspace-panel-title {
+  color: var(--tree-section-ai-director-item);
+}
 #main-workspace-container.workspace-section-scenes .workspace-panel-title {
   color: var(--tree-section-scenes-item);
-}
-#main-workspace-container.workspace-section-assembly .workspace-panel-title {
-  color: var(--tree-section-assembly-item);
 }
 #main-workspace-container.workspace-section-global .workspace-panel-title {
   color: var(--tree-section-global-item);
@@ -4778,13 +5027,14 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
 
 .split-divider {
   width: 5px;
-  background: linear-gradient(to right, #1a1a1a 0%, #333 50%, #1a1a1a 100%);
+  background: linear-gradient(to right, #000 0%, #111 50%, #000 100%);
+/* background: linear-gradient(to right, #1a1a1a 0%, #333 50%, #1a1a1a 100%);*/
   cursor: col-resize;
   position: relative;
 }
 
 .split-divider:hover {
-  background: linear-gradient(to right, #1a1a1a 0%, #444 50%, #1a1a1a 100%);
+ background: linear-gradient(to right, #1a1a1a 0%, #444 50%, #1a1a1a 100%);
 }
 
 #preprod-script-pane .script-editor-stack {
@@ -6118,17 +6368,25 @@ textarea.treatment-input.treatment-input--notes {
 
 /* Section accent tints on overview cards */
 .overview-card--section-preprod  { border-left-color: color-mix(in srgb, var(--tree-section-preprod-item)  35%, var(--border-dark)); }
+.overview-card--section-cinematography { border-left-color: color-mix(in srgb, var(--tree-section-cinematography-item) 35%, var(--border-dark)); }
 .overview-card--section-design   { border-left-color: color-mix(in srgb, var(--tree-section-design-item)   35%, var(--border-dark)); }
+.overview-card--section-casting  { border-left-color: color-mix(in srgb, var(--tree-section-casting-item)  35%, var(--border-dark)); }
 .overview-card--section-sound    { border-left-color: color-mix(in srgb, var(--tree-section-sound-item)    35%, var(--border-dark)); }
+.overview-card--section-post,
+.overview-card--section-assembly { border-left-color: color-mix(in srgb, var(--tree-section-post-item) 35%, var(--border-dark)); }
+.overview-card--section-ai-director { border-left-color: color-mix(in srgb, var(--tree-section-ai-director-item) 35%, var(--border-dark)); }
 .overview-card--section-scenes   { border-left-color: color-mix(in srgb, var(--tree-section-scenes-item)   35%, var(--border-dark)); }
-.overview-card--section-assembly { border-left-color: color-mix(in srgb, var(--tree-section-assembly-item) 35%, var(--border-dark)); }
 .overview-card--section-global   { border-left-color: color-mix(in srgb, var(--tree-section-global-item)   35%, var(--border-dark)); }
 
 .overview-card--section-preprod  .overview-card-icon { color: var(--tree-section-preprod-item);  }
+.overview-card--section-cinematography .overview-card-icon { color: var(--tree-section-cinematography-item); }
 .overview-card--section-design   .overview-card-icon { color: var(--tree-section-design-item);   }
+.overview-card--section-casting  .overview-card-icon { color: var(--tree-section-casting-item);  }
 .overview-card--section-sound    .overview-card-icon { color: var(--tree-section-sound-item);    }
+.overview-card--section-post .overview-card-icon,
+.overview-card--section-assembly .overview-card-icon { color: var(--tree-section-post-item); }
+.overview-card--section-ai-director .overview-card-icon { color: var(--tree-section-ai-director-item); }
 .overview-card--section-scenes   .overview-card-icon { color: var(--tree-section-scenes-item);   }
-.overview-card--section-assembly .overview-card-icon { color: var(--tree-section-assembly-item); }
 .overview-card--section-global   .overview-card-icon { color: var(--tree-section-global-item);   }
 
 /* ============================================================

@@ -1,3 +1,4 @@
+import { applyHierarchySectionCssVars } from '@/tree/hierarchy-section-theme';
 import {
   installProjectTreeGlobals,
   primePersistedProjectTreeUi,
@@ -5,6 +6,7 @@ import {
 } from '@/tree/project-tree-service';
 
 export function initProjectTree(): void {
+  applyHierarchySectionCssVars();
   installProjectTreeGlobals();
   refreshProjectTree();
   primePersistedProjectTreeUi();

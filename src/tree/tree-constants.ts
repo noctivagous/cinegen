@@ -1,13 +1,11 @@
-/** Top-level sidebar sections → color theme key (see .tree-section-* in CSS). */
-export const TREE_SECTION_BY_NAME: Record<string, string> = {
-  'Pre-Production': 'preprod',
-  'Production Design': 'design',
-  'Sound Department': 'sound',
-  Scenes: 'scenes',
-  Assembly: 'assembly',
-  'Global Assets': 'global',
-};
-
-export function sectionKeyForTopLevelName(name: string): string | null {
-  return TREE_SECTION_BY_NAME[name] ?? null;
-}
+/** @deprecated Import from `@/tree/hierarchy-section-theme` — re-exports for existing imports */
+export {
+  HIERARCHY_SECTIONS,
+  HIERARCHY_SECTION_KEYS,
+  TREE_SECTION_BY_NAME,
+  WORKSPACE_SECTION_CLASSES,
+  sectionKeyForTopLevelName,
+  hierarchySectionByKey,
+  applyHierarchySectionCssVars,
+  type HierarchySectionTheme,
+} from '@/tree/hierarchy-section-theme';

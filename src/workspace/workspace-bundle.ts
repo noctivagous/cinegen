@@ -946,30 +946,17 @@ function _renderNodeView(node) {
 }
 
 /** Best-effort section key lookup by walking top-level section names. */
-const _SECTION_NAME_KEY = {
-  'Pre-Production':    'preprod',
-  'Production Design': 'design',
-  'Sound Department':  'sound',
-  'Scenes':            'scenes',
-  'Assembly':          'assembly',
-  'Global Assets':     'global'
-};
-
 function _sectionKeyForNode(node) {
   if (!node) return null;
-  if (_SECTION_NAME_KEY[node.name]) return _SECTION_NAME_KEY[node.name];
-  if (typeof projectData !== 'undefined' && projectData.children) {
-    for (const top of projectData.children) {
-      if (top.type === 'tree-divider') continue;
-      if (_nodeContains(top, node)) return _SECTION_NAME_KEY[top.name] || null;
-    }
+  if (typeof window.getTreeSectionKeyForNode === 'function') {
+    return window.getTreeSectionKeyForNode(node);
   }
   return null;
 }
 
 function _nodeContains(parent, target) {
   if (parent === target) return true;
-  for (const child of (parent.children || [])) {
+  for (const child of parent.children || []) {
     if (_nodeContains(child, target)) return true;
   }
   return false;

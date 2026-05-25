@@ -6,7 +6,7 @@ import { CgLightElement } from '@/components/lit-base';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
-import { sectionKeyForTopLevelName, TREE_SECTION_BY_NAME } from '@/tree/tree-constants';
+import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
 import { getSectionShortcutChip } from '@/keybindings/init-keybindings';
 import {
   getProjectTreeChildren,
