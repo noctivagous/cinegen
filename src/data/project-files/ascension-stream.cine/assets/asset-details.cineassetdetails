@@ -607,5 +607,123 @@
         "status": "pending"
       }
     ]
+  },
+  "treatment": {
+    "layout": "text",
+    "icon": "fa-file-lines",
+    "desc": "Project logline, synopsis, and treatment notes",
+    "addLabel": "Edit Treatment"
+  },
+  "shot-library": {
+    "layout": "grid",
+    "icon": "fa-camera-retro",
+    "desc": "Saved camera setups and reusable shot configurations",
+    "addLabel": "Add Shot Setup",
+    "items": []
+  },
+  "reference-images": {
+    "layout": "grid",
+    "icon": "fa-image",
+    "desc": "Character and location references for visual consistency",
+    "addLabel": "Add Reference Image",
+    "items": []
+  },
+  "motion-references": {
+    "layout": "grid",
+    "icon": "fa-play",
+    "desc": "Motion reference clips for camera and animation planning",
+    "addLabel": "Add Motion Reference",
+    "items": []
+  },
+  "spatial-annotations": {
+    "layout": "list",
+    "icon": "fa-draw-polygon",
+    "desc": "Per-shot arrows, masks, and blocking annotations",
+    "addLabel": "Add Annotation",
+    "items": []
+  },
+  "set-catalog": {
+    "layout": "grid",
+    "icon": "fa-building",
+    "desc": "Constructed sets with design references",
+    "addLabel": "Add Set",
+    "items": []
+  },
+  "voice-library": {
+    "layout": "list",
+    "icon": "fa-microphone",
+    "desc": "Voice assignments and voice sample references",
+    "addLabel": "Add Voice",
+    "items": []
+  },
+  "casting-suggestions": {
+    "layout": "list",
+    "icon": "fa-wand-magic-sparkles",
+    "desc": "AI-generated character and casting recommendations",
+    "addLabel": "Add Suggestion",
+    "items": []
+  },
+  "color-presets": {
+    "layout": "grid",
+    "icon": "fa-droplet",
+    "desc": "Mood-based grading presets and references",
+    "addLabel": "Add Preset",
+    "items": []
+  },
+  "vfx-cleanup": {
+    "layout": "list",
+    "icon": "fa-wand-magic-sparkles",
+    "desc": "VFX shots and cleanup tasks",
+    "addLabel": "Add VFX Task",
+    "items": []
+  },
+  "outputs": {
+    "layout": "list",
+    "icon": "fa-arrow-up-from-bracket",
+    "desc": "Rendered final outputs and export presets",
+    "addLabel": "Add Output",
+    "items": []
+  },
+  "generation-queue": {
+    "layout": "list",
+    "icon": "fa-list-ol",
+    "desc": "Pending and active generation jobs",
+    "addLabel": "Add Job",
+    "items": []
+  },
+  "review-queue": {
+    "layout": "list",
+    "icon": "fa-check-double",
+    "desc": "Review and approval items",
+    "addLabel": "Add Review Item",
+    "items": []
+  },
+  "cost-tracking": {
+    "layout": "list",
+    "icon": "fa-coins",
+    "desc": "Per-scene and per-provider cost records",
+    "addLabel": "Add Cost Record",
+    "items": []
+  },
+  "model-routing": {
+    "layout": "list",
+    "icon": "fa-arrows-split-up-and-left",
+    "desc": "Model routing rules and fallbacks",
+    "addLabel": "Add Routing Rule",
+    "items": []
+  },
+  "agent-logs": {
+    "layout": "list",
+    "icon": "fa-list-tree",
+    "desc": "Agent decisions, retries, and audit entries",
+    "addLabel": "Add Log Entry",
+    "items": []
+  },
+  "ai-director-settings": {
+    "layout": "form",
+    "icon": "fa-gear",
+    "desc": "AI Director thresholds and budget guardrails",
+    "addLabel": "Update Settings",
+    "items": []
   }
 }

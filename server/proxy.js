@@ -80,6 +80,70 @@ function buildProviders() {
   return { envProviders, storedBySlot };
 }
 
+/** Map backends/.env slot ids to client provider rows (GET /api/settings/keys merge). */
+const ENV_SLOT_VENDOR_META = {
+  openai:     { name: 'OpenAI', providerId: 'openai-compatible' },
+  anthropic:  { name: 'Anthropic (Claude)', providerId: 'anthropic-messages-api' },
+  google:     { name: 'Google AI (Gemini / Veo)', providerId: 'google-gemini-api' },
+  elevenlabs: { name: 'ElevenLabs (Audio)', providerId: 'elevenlabs-api' },
+  fal:        { name: 'fal.ai (Flux / Kling)', providerId: 'fal-ai' },
+  replicate:  { name: 'Replicate', providerId: 'replicate-api' },
+  runway:     { name: 'Runway ML', providerId: 'runway-api' },
+  luma:       { name: 'Luma AI (Dream Machine)', providerId: 'luma-api' },
+  xai:        { name: 'xAI (Grok)', providerId: 'openai-compatible' },
+  together:   { name: 'Together AI', providerId: 'openai-compatible' },
+  groq:       { name: 'Groq', providerId: 'openai-compatible' },
+  mistral:    { name: 'Mistral AI', providerId: 'openai-compatible' },
+  deepseek:   { name: 'DeepSeek', providerId: 'openai-compatible' },
+  custom:     { name: 'Custom', providerId: 'generic-rest' },
+};
+
+function augmentVendorsWithEnvKeys(stored) {
+  const { envProviders } = buildProviders();
+  const vendors = [...(stored.vendors || [])];
+
+  for (const [slotId, envProv] of Object.entries(envProviders)) {
+    if (!envProv.key) continue;
+    const meta = ENV_SLOT_VENDOR_META[slotId];
+    if (!meta) continue;
+
+    let vendor = vendors.find((v) => v.slotId === slotId);
+    if (!vendor) {
+      vendor = {
+        id: `env-${slotId}`,
+        name: meta.name,
+        providerId: meta.providerId,
+        slotId,
+        baseUrl: envProv.baseUrl || '',
+        apiKey: envProv.key,
+        hasServerKey: true,
+      };
+      vendors.push(vendor);
+      continue;
+    }
+
+    vendor.hasServerKey = true;
+    if (!vendor.slotId) vendor.slotId = slotId;
+    if (!vendor.providerId) vendor.providerId = meta.providerId;
+    if (!vendor.name) vendor.name = meta.name;
+    if (!vendor.baseUrl && envProv.baseUrl) vendor.baseUrl = envProv.baseUrl;
+    if (!vendor.apiKey) vendor.apiKey = envProv.key;
+  }
+
+  return { ...stored, vendors };
+}
+
+function maskVendorsForClient(stored) {
+  return {
+    ...stored,
+    vendors: (stored.vendors || []).map((v) => ({
+      ...v,
+      hasServerKey: Boolean(v.hasServerKey || v.apiKey),
+      apiKey: v.apiKey ? '••••••••' : '',
+    })),
+  };
+}
+
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'null,http://localhost,http://127.0.0.1,file://').split(',').map((s) => s.trim());
 
 function corsHeaders(origin) {
@@ -103,15 +167,8 @@ function handleKeyApi(req, res) {
   const method = req.method;
 
   if (method === 'GET') {
-    const stored = loadStoredKeys();
-    const masked = {
-      ...stored,
-      vendors: (stored.vendors || []).map((v) => ({
-        ...v,
-        apiKey: v.apiKey ? '••••••••' : '',
-      })),
-    };
-    json(res, 200, masked);
+    const stored = augmentVendorsWithEnvKeys(loadStoredKeys());
+    json(res, 200, maskVendorsForClient(stored));
     return;
   }
 
@@ -143,15 +200,8 @@ function handleKeyApi(req, res) {
 
         saveStoredKeys(stored);
 
-        // Return masked
-        const masked = {
-          ...stored,
-          vendors: (stored.vendors || []).map((v) => ({
-            ...v,
-            apiKey: v.apiKey ? '••••••••' : '',
-          })),
-        };
-        json(res, 200, masked);
+        const merged = augmentVendorsWithEnvKeys(stored);
+        json(res, 200, maskVendorsForClient(merged));
       } catch (e) {
         json(res, 400, { error: 'Invalid JSON body', detail: e.message });
       }
@@ -475,9 +525,592 @@ export function setupStateWebSocket(server) {
   });
 }
 
+/* ── Agent API handler (/api/agents/*) ───────────────────────────────────── */
+
+/**
+ * Lazy-loaded agent router. Imported on first agent request so the app boots
+ * normally even when no LLM key is configured. Each endpoint returns a clear
+ * error JSON when the Mastra instance is not available.
+ */
+let _agentModule = null;
+async function getAgentModule() {
+  if (!_agentModule) {
+    _agentModule = await import('../../backends/agents/mastra.js');
+  }
+  return _agentModule;
+}
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', () => {
+      try {
+        const text = Buffer.concat(chunks).toString();
+        resolve(text ? JSON.parse(text) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+async function handleAgentApi(req, res) {
+  const origin = req.headers['origin'] || 'null';
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, corsHeaders(origin));
+    res.end();
+    return;
+  }
+
+  const url = req.url || '';
+  // Route: POST /api/agents/script/analyze
+  if (url === '/api/agents/script/analyze' && req.method === 'POST') {
+    let body;
+    try {
+      body = await readBody(req);
+    } catch {
+      json(res, 400, { error: 'Invalid JSON body' });
+      return;
+    }
+    const { projectId, fountainText } = body;
+    if (!projectId || !fountainText) {
+      json(res, 400, { error: 'projectId and fountainText are required' });
+      return;
+    }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('scriptAgent');
+      const prompt =
+        `Analyze the following Fountain screenplay for project "${projectId}".\n\n` +
+        `Return a complete ScriptAnalysisOutput JSON object.\n\n` +
+        `PROJECT ID: ${projectId}\n\n` +
+        `FOUNTAIN SCRIPT:\n${fountainText}`;
+      const result = await agent.generate(prompt, {
+        output: 'object',
+      });
+      json(res, 200, { ok: true, projectId, data: result.object ?? result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] script/analyze error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/casting/build-bibles
+  if (url === '/api/agents/casting/build-bibles' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, characters } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('characterCastingAgent');
+      const charList = Array.isArray(characters)
+        ? characters.map((c) => `- ${c.name} (${c.role}): ${c.description}`).join('\n')
+        : '(read from ProductionContext)';
+      const result = await agent.generate(
+        `Build character bibles for project "${projectId}".\nCharacters:\n${charList}`,
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] casting/build-bibles error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/production-design/build-bibles
+  if (url === '/api/agents/production-design/build-bibles' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, locations } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('locationSetAgent');
+      const locList = Array.isArray(locations)
+        ? locations.map((l) => `- ${l.name} (${l.intExt}): ${l.description}`).join('\n')
+        : '(read from ProductionContext)';
+      const result = await agent.generate(
+        `Build location bibles for project "${projectId}".\nLocations:\n${locList}`,
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] production-design/build-bibles error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/storyboard/generate
+  if (url === '/api/agents/storyboard/generate' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, shotIds } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('storyboardAgent');
+      const scope = Array.isArray(shotIds) && shotIds.length
+        ? `for shot IDs: ${shotIds.join(', ')}`
+        : 'for all pending shots';
+      const result = await agent.generate(
+        `Generate storyboard frames for project "${projectId}" ${scope}.`,
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] storyboard/generate error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/beat-board/generate-outline
+  if (url === '/api/agents/beat-board/generate-outline' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, beats, characters, locations } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    if (!beats || !Array.isArray(beats) || beats.length === 0) {
+      json(res, 400, { error: 'beats array is required and must not be empty' }); return;
+    }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('beatOutlineAgent');
+      const beatText = beats.map((b, i) =>
+        `Beat ${i + 1}: ${b.title || 'Untitled'}\n${b.description || ''}${b.cameraNotes ? `\n[Camera: ${b.cameraNotes}]` : ''}`
+      ).join('\n\n');
+      const charText = (characters || []).map(c => `- ${c.name}${c.description ? `: ${c.description}` : ''}`).join('\n');
+      const locText = (locations || []).map(l => `- ${l.name} (${l.intExt || 'INT/EXT'})`).join('\n');
+      const prompt = [
+        `Generate a Fountain-format script outline for project "${projectId}" based on these beats:`,
+        '',
+        beatText,
+        '',
+        charText ? `Characters:\n${charText}` : '',
+        locText ? `Locations:\n${locText}` : '',
+        '',
+        'Output JSON with outline (Fountain text), sceneCount, detectedCharacters, and detectedLocations.',
+      ].filter(Boolean).join('\n');
+      const result = await agent.generate(prompt);
+      json(res, 200, { ok: true, projectId, data: result.object || result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] beat-board/generate-outline error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/cinematography/build-prompt
+  if (url === '/api/agents/cinematography/build-prompt' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, shotId, preferredProvider } = body;
+    if (!projectId || !shotId) { json(res, 400, { error: 'projectId and shotId are required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('promptEngineerAgent');
+      const result = await agent.generate(
+        `Build an optimized generation prompt for shot "${shotId}" in project "${projectId}".` +
+        (preferredProvider ? ` Preferred provider: ${preferredProvider}.` : ''),
+      );
+      json(res, 200, { ok: true, projectId, shotId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] cinematography/build-prompt error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/cinematography/route-shot
+  if (url === '/api/agents/cinematography/route-shot' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, shotId, shotType } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('generationAgent');
+      const result = await agent.generate(
+        `Process generation job for shot "${shotId || 'next queued'}" (type: ${shotType || 'reliable-default'}) ` +
+        `in project "${projectId}". Determine provider, log cost estimate.`,
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] cinematography/route-shot error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/cinematography/audit-clip
+  if (url === '/api/agents/cinematography/audit-clip' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, shotId, clipDescription } = body;
+    if (!projectId || !shotId) { json(res, 400, { error: 'projectId and shotId are required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('consistencyAuditorAgent');
+      const result = await agent.generate(
+        `Audit the generated clip for shot "${shotId}" in project "${projectId}". ` +
+        (clipDescription ? `Clip description: ${clipDescription}` : 'Check against ProductionContext references.'),
+      );
+      json(res, 200, { ok: true, projectId, shotId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] audit-clip error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/cinematography/annotate-spatial
+  if (url === '/api/agents/cinematography/annotate-spatial' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, shotId, annotations, provider } = body;
+    if (!projectId || !shotId) { json(res, 400, { error: 'projectId and shotId are required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('spatialAnnotationAgent');
+      const annotationStr = JSON.stringify(annotations || {}, null, 2);
+      const result = await agent.generate(
+        `Translate spatial annotations for shot "${shotId}" in project "${projectId}" ` +
+        `targeting ${provider || 'veo'} provider.\nAnnotations: ${annotationStr}`,
+      );
+      json(res, 200, { ok: true, projectId, shotId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] annotate-spatial error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/sound/prepare-audio
+  if (url === '/api/agents/sound/prepare-audio' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('audioAgent');
+      const result = await agent.generate(
+        `Prepare the complete audio assembly plan for project "${projectId}". ` +
+        `Analyze all scenes, spot dialogue TTS requests, SFX cues, and music cues.`,
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] sound/prepare-audio error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/post/assemble-sequence
+  if (url === '/api/agents/post/assemble-sequence' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, targetDurationSeconds } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('sequenceAssemblyAgent');
+      const result = await agent.generate(
+        `Assemble the sequence for project "${projectId}". ` +
+        (targetDurationSeconds ? `Target duration: ${targetDurationSeconds} seconds. ` : '') +
+        'Arrange approved clips in story order, plan transitions and stitching.',
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] post/assemble-sequence error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/post/color-grade
+  if (url === '/api/agents/post/color-grade' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('finishColorAgent');
+      const result = await agent.generate(
+        `Analyze and prepare color grading for project "${projectId}". ` +
+        'Match the StyleGuide, flag inconsistencies, suggest corrections.',
+      );
+      json(res, 200, { ok: true, projectId, data: result.text });
+    } catch (err) {
+      console.error('[cinegen/agents] post/color-grade error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/visual/identify
+  if (url === '/api/agents/visual/identify' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, images } = body;
+    if (!projectId || !Array.isArray(images)) { json(res, 400, { error: 'projectId and images array are required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('visualAnalysisAgent');
+      const summary = images.map((img) => `Image category: ${img.category || 'unknown'}`).join('\n');
+      const result = await agent.generate(
+        `Analyze the following uploaded images for project "${projectId}".\n\n${summary}\n\n` +
+        'Identify characters (name, description, role), locations (name, description, INT/EXT), and props (name, description).\n' +
+        'Return a JSON object with "characters", "locations", and "props" arrays.',
+        { output: 'object' },
+      );
+      json(res, 200, result.object ?? { characters: [], locations: [], props: [] });
+    } catch (err) {
+      console.error('[cinegen/agents] visual/identify error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/visual/extract-colors
+  if (url === '/api/agents/visual/extract-colors' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, images } = body;
+    if (!projectId || !Array.isArray(images)) { json(res, 400, { error: 'projectId and images array are required' }); return; }
+    try {
+      const { extractDominantColors } = await import('../../backends/agents/visual/color-extractor.js');
+      const result = await extractDominantColors(images, 6);
+      json(res, 200, result);
+    } catch (err) {
+      console.error('[cinegen/agents] visual/extract-colors error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/script/generate-outline
+  if (url === '/api/agents/script/generate-outline' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, characters, locations, style } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('scriptAgent');
+      const charText = Array.isArray(characters) ? characters.map((c) => `- ${c.name} (${c.role}): ${c.description}`).join('\n') : '(none provided)';
+      const locText = Array.isArray(locations) ? locations.map((l) => `- ${l.name} (${l.intExt}): ${l.description}`).join('\n') : '(none provided)';
+      const styleText = style ? `Palette: ${(style.palette || []).join(', ')}\nMood: ${style.mood || 'N/A'}\nNotes: ${style.notes || 'N/A'}` : '(none provided)';
+      const result = await agent.generate(
+        `Generate a Fountain-format script outline for project "${projectId}" based on the following visual context.\n\n` +
+        `CHARACTERS:\n${charText}\n\nLOCATIONS:\n${locText}\n\nSTYLE:\n${styleText}\n\n` +
+        'Create a short outline with scene headings, brief action descriptions, and character appearances. Return as a "outline" string field in JSON.',
+        { output: 'object' },
+      );
+      json(res, 200, { outline: (result.object?.outline ?? result.text) || '' });
+    } catch (err) {
+      console.error('[cinegen/agents] script/generate-outline error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/concept/generate-concepts
+  if (url === '/api/agents/concept/generate-concepts' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { projectId, moodDescription, vibe, colorPalette, sceneSettings, lightingDesc, atmosphereNotes, atmosphereTags, imageDataUrls } = body;
+    if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
+    try {
+      const { getMastra } = await getAgentModule();
+      const mastra = await getMastra();
+      const agent = mastra.getAgentById('conceptAnalysisAgent');
+      const prompt = [
+        `Generate conceptual film elements for project "${projectId}".`,
+        moodDescription ? `\n\nMOOD DESCRIPTION:\n${moodDescription}` : '',
+        vibe ? `\n\nVIBE SLIDERS:\nTemperature: ${vibe.temperature ?? 0}/5 (cool→warm)\nTension: ${vibe.tension ?? 0}/5 (peaceful→tense)\nLighting: ${vibe.lighting ?? 0}/5 (night→day)\nEnergy: ${vibe.energy ?? 0}/5 (calm→energetic)\nStylization: ${vibe.stylization ?? 50}/100 (grounded→stylized)` : '',
+        Array.isArray(colorPalette) && colorPalette.length ? `\n\nCOLOR HINTS:\n${colorPalette.join(', ')}` : '',
+        sceneSettings ? `\n\nSCENE SETTINGS:\n${sceneSettings}` : '',
+        lightingDesc ? `\n\nLIGHTING NOTES:\n${lightingDesc}` : '',
+        atmosphereNotes ? `\n\nATMOSPHERE NOTES:\n${atmosphereNotes}` : '',
+        Array.isArray(atmosphereTags) && atmosphereTags.length ? `\n\nATMOSPHERE TAGS:\n${atmosphereTags.join(', ')}` : '',
+        Array.isArray(imageDataUrls) && imageDataUrls.length ? `\n\nREFERENCE IMAGES PROVIDED: ${imageDataUrls.length} image(s) available for style context.` : '',
+      ].join('');
+      const result = await agent.generate(prompt, { output: 'object' });
+      json(res, 200, result.object ?? {
+        atmosphereTags: [], colorPalette: [], lightingMood: '', styleNotes: '',
+        locations: [], archetypes: [],
+      });
+    } catch (err) {
+      console.error('[cinegen/agents] concept/generate-concepts error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: POST /api/agents/concept/generate-image
+  if (url === '/api/agents/concept/generate-image' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
+    const { prompt } = body;
+    if (!prompt) { json(res, 400, { error: 'prompt is required' }); return; }
+    try {
+      const { generateImage } = await import('../../backends/agents/concept/image-generator.js');
+      const result = await generateImage(prompt);
+      json(res, 200, result);
+    } catch (err) {
+      console.error('[cinegen/agents] concept/generate-image error:', err.message);
+      json(res, 503, { error: err.message });
+    }
+    return;
+  }
+
+  // Route: GET /api/agents/project/:projectId/context
+  const ctxGetMatch = url.match(/^\/api\/agents\/project\/([^/]+)\/context$/);
+  if (ctxGetMatch && req.method === 'GET') {
+    const projectId = decodeURIComponent(ctxGetMatch[1]);
+    const { loadProductionContext } = await getProductionContextHelpers();
+    json(res, 200, loadProductionContext(projectId));
+    return;
+  }
+
+  // Route: POST /api/agents/project/:projectId/context
+  const ctxPostMatch = url.match(/^\/api\/agents\/project\/([^/]+)\/context$/);
+  if (ctxPostMatch && req.method === 'POST') {
+    const projectId = decodeURIComponent(ctxPostMatch[1]);
+    let body;
+    try { body = await readBody(req); } catch {
+      json(res, 400, { error: 'Invalid JSON body' });
+      return;
+    }
+    const { updateProductionContext } = await getProductionContextHelpers();
+    updateProductionContext(projectId, body);
+    json(res, 200, { ok: true, projectId });
+    return;
+  }
+
+  // Route: GET /api/agents/project/:projectId/review-queue
+  const reviewMatch = url.match(/^\/api\/agents\/project\/([^/]+)\/review-queue$/);
+  if (reviewMatch && req.method === 'GET') {
+    const projectId = decodeURIComponent(reviewMatch[1]);
+    const { Orchestrator } = await import('../../backends/agents/orchestrator.js');
+    const orch = new Orchestrator(projectId);
+    json(res, 200, { projectId, items: orch.getPendingReviews() });
+    return;
+  }
+
+  // Route: POST /api/agents/project/:projectId/review/:itemId/approve
+  const approveMatch = url.match(/^\/api\/agents\/project\/([^/]+)\/review\/([^/]+)\/approve$/);
+  if (approveMatch && req.method === 'POST') {
+    const projectId = decodeURIComponent(approveMatch[1]);
+    const itemId = decodeURIComponent(approveMatch[2]);
+    let body;
+    try { body = await readBody(req); } catch { body = {}; }
+    const { Orchestrator } = await import('../../backends/agents/orchestrator.js');
+    const orch = new Orchestrator(projectId);
+    const result = await orch.approveReviewItem(itemId, body.notes || '');
+    json(res, 200, { ok: true, ...result });
+    return;
+  }
+
+  // Route: POST /api/agents/project/:projectId/review/:itemId/reject
+  const rejectMatch = url.match(/^\/api\/agents\/project\/([^/]+)\/review\/([^/]+)\/reject$/);
+  if (rejectMatch && req.method === 'POST') {
+    const projectId = decodeURIComponent(rejectMatch[1]);
+    const itemId = decodeURIComponent(rejectMatch[2]);
+    let body;
+    try { body = await readBody(req); } catch { body = {}; }
+    const { Orchestrator } = await import('../../backends/agents/orchestrator.js');
+    const orch = new Orchestrator(projectId);
+    const result = await orch.rejectReviewItem(itemId, body.reason || '');
+    json(res, 200, { ok: true, ...result });
+    return;
+  }
+
+  // Route: GET /api/agents/health — reports whether Mastra is ready
+  if (url === '/api/agents/health' && req.method === 'GET') {
+    const { resolveDefaultModel } = await getAgentModule();
+    const model = resolveDefaultModel();
+    json(res, 200, {
+      ready: model !== null,
+      provider: process.env.CINEGEN_LLM_PROVIDER || 'anthropic',
+      configured: model !== null,
+    });
+    return;
+  }
+
+  json(res, 404, { error: `Unknown agent route: ${url}` });
+}
+
+// Inline helpers to read/write production-context.json without importing the full tool module
+let _pcHelpers = null;
+async function getProductionContextHelpers() {
+  if (!_pcHelpers) {
+    const mod = await import('../../backends/agents/tools/production-context.tool.js');
+    _pcHelpers = {
+      loadProductionContext: (projectId) => {
+        const all = (() => {
+          try {
+            const p = path.join(__dirname, 'production-context.json');
+            if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8'));
+          } catch { /* ignore */ }
+          return {};
+        })();
+        return all[projectId] ?? null;
+      },
+      updateProductionContext: (projectId, update) => {
+        const p = path.join(__dirname, 'production-context.json');
+        let all = {};
+        try {
+          if (fs.existsSync(p)) all = JSON.parse(fs.readFileSync(p, 'utf-8'));
+        } catch { /* ignore */ }
+        const existing = all[projectId] || { projectId, updatedAt: new Date().toISOString() };
+        // Deep merge
+        function deepMerge(t, s) {
+          const r = { ...t };
+          for (const [k, v] of Object.entries(s)) {
+            if (v !== null && typeof v === 'object' && !Array.isArray(v)) r[k] = deepMerge(r[k] || {}, v);
+            else r[k] = v;
+          }
+          return r;
+        }
+        all[projectId] = deepMerge(existing, { ...update, updatedAt: new Date().toISOString() });
+        fs.writeFileSync(p, JSON.stringify(all, null, 2), 'utf-8');
+      },
+    };
+  }
+  return _pcHelpers;
+}
+
 /* ── Request router ───────────────────────────────────────────────────────── */
 function handleRequest(req, res) {
   const url = req.url || '';
+
+  if (url.startsWith('/api/agents/')) {
+    handleAgentApi(req, res).catch((err) => {
+      console.error('[cinegen/agents] unhandled error:', err);
+      if (!res.headersSent) json(res, 500, { error: 'Internal agent error', detail: err.message });
+    });
+    return;
+  }
 
   if (url.startsWith('/api/settings/keys')) {
     handleKeyApi(req, res);
@@ -523,6 +1156,7 @@ function handleRequest(req, res) {
 export function isProxyOrApiRequest(url) {
   return !!url && (
     url.startsWith('/proxy') ||
+    url.startsWith('/api/agents/') ||
     url.startsWith('/api/settings/keys') ||
     url.startsWith('/api/settings/routing') ||
     url.startsWith('/api/settings/store/') ||

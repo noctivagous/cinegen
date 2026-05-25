@@ -1,0 +1,66 @@
+[
+  {
+    "id": "vfx-hud-overlay-01",
+    "name": "HUD Overlay — Temple Touch UI",
+    "sceneUsage": ["scene01", "scene02", "scene04"],
+    "type": "screen-insert",
+    "characterId": "char-kai",
+    "description": "Golden HUD interface overlay during temple touch activation. Data fractals, waypoint markers, status readouts.",
+    "status": "planned",
+    "priority": "high",
+    "referenceClips": ["sfx-hud-fractal-01"],
+    "notes": "Can be partially generated. Key frames need manual composite for the organic-to-rigid transition."
+  },
+  {
+    "id": "vfx-data-skin-01",
+    "name": "Courier Pod — Shifting Data-Skin",
+    "sceneUsage": ["scene01", "scene02", "scene04"],
+    "type": "character-fx",
+    "propId": "prop-flashlight-01",
+    "description": "The courier pod's surface shifts with flowing data patterns. Subtle information texture that syncs with navigation.",
+    "status": "planned",
+    "priority": "medium",
+    "notes": "AI generation handles this well. Prompt engineering for consistent data-skin pattern across shots."
+  },
+  {
+    "id": "vfx-grid-breathe-01",
+    "name": "Grid Breathing — City Lights Pulse",
+    "sceneUsage": ["scene02"],
+    "type": "environment-fx",
+    "description": "All city lights pulse once in unison as the grid 'breathes'. Single beat of collective acknowledgment.",
+    "status": "planned",
+    "priority": "high",
+    "notes": "Critical story beat. All neon/magenta lights shift to warm gold for one frame then back. Requires frame-by-frame consistency."
+  },
+  {
+    "id": "vfx-golden-surge-01",
+    "name": "Golden Upload Surge — Climax",
+    "sceneUsage": ["scene04"],
+    "type": "climax-fx",
+    "description": "Golden light surge expands from docking point to fill frame. Data particles, harmonic color shift.",
+    "status": "planned",
+    "priority": "critical",
+    "notes": "The finale shot. Requires highest quality generation. Consider multi-pass composite with particle overlay."
+  },
+  {
+    "id": "vfx-neural-crown-01",
+    "name": "Silver Neural Crown — Lights",
+    "sceneUsage": ["scene03"],
+    "type": "character-fx",
+    "characterId": "char-mira",
+    "description": "Subtle pulsing LED patterns on Mira's silver neural crown. Syncs with data rhythms.",
+    "status": "planned",
+    "priority": "low",
+    "notes": "Minor enhancement. Can be added in post if generation misses it."
+  },
+  {
+    "id": "vfx-rain-cleanup-01",
+    "name": "Rain Cleanup — Arcology Exterior",
+    "sceneUsage": ["scene01", "scene04"],
+    "type": "cleanup",
+    "description": "Remove rain streaks from lens where they obscure character faces. Maintain rain in background.",
+    "status": "pending",
+    "priority": "medium",
+    "notes": "AI cleanup pass needed. Reference shots: keep veil of rain but clear character eyeline."
+  }
+]

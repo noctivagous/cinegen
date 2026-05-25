@@ -1,0 +1,28 @@
+**Refined Feature Description (Aligned with Real Filmmaking Workflow):**
+
+In the left margin of the script editor, display a vertical column divided into **Scene blocks**. Within each Scene block are nested **Shot blocks** (clearly labeled as Master Shot, Coverage, B-Roll, or Pickup). 
+
+Each Shot block can be expanded to reveal its associated **Storyboard Frames** (one or more per shot). 
+
+- Dragging the top or bottom edge of a Shot block or individual Storyboard Frame adjusts its approximate duration. These changes automatically update the overall estimated runtime in a connected **Storyboard Video Player** (scrub-able preview of the animatic/rough sequence).
+- Clicking on a Shot block or specific Storyboard Frame highlights the corresponding section of the screenplay text on the right, scrolling the script to the relevant action lines or dialogue.
+- Conversely, selecting text in the script automatically highlights the matching Shot and Frame in the left column.
+
+This vertical column links bidirectionally to a **horizontal timeline view** at the bottom of the screen (toggleable). The timeline contains multiple tracks:
+
+- **Script Track** – Visual representation of the screenplay text flowing across time, with Scene and Shot dividers.
+- **Dialogue Track** – Precise timing blocks for spoken lines, allowing word-level adjustments.
+- **Storyboard Frame Track** – Visual thumbnails of the storyboard panels sequenced horizontally, with their durations matching the left-margin blocks.
+- **Sound Design / SFX Track** – Cues for sound effects, environmental ambiences (e.g., rain, data hums, breathing pulse tones).
+- **Music / Atmos Track** – Layers for score or tonal beds that support the atmospheric tension.
+
+**Key Workflow Adjustments for Realism:**
+
+- Timing adjustments in this tool remain *pre-visualization* only — they create a rough animatic timing guide, not final locked edit timing (which happens later in NLE software like Premiere or DaVinci).
+- Master Shots appear as longer foundational blocks, with Coverage and B-Roll as shorter, layered elements that can overlap or offer alternate options.
+- Pickups are visually flagged (different color or tag) and can be inserted without disrupting the main sequence.
+- The system maintains balance: rigid structural hierarchy on one side (Scenes → Shots → Frames) while allowing fluid creative flow on the other (easy reordering, duration tweaks, and visual preview).
+
+This creates an elegant, unified workspace where the written word, visual planning, and temporal flow support each other naturally — structured enough for technical precision, yet flexible enough for those subtle, living adjustments that emerge during development.
+
+Would you like me to expand this into a more detailed feature spec, or adjust any specific part further?

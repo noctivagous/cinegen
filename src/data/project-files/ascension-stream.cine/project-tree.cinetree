@@ -2,15 +2,15 @@
   "name": "ASCENSION_STREAM",
   "type": "project",
   "icon": "fa-film",
-  "desc": "Sci-fi allegory short. 4 scenes, 2 characters, 4 locations. ~5 min runtime.",
+  "desc": "Sci-fi allegory short. 4 scenes, 2 characters, 4 locations. ~5 min runtime. Department-oriented production pipeline.",
   "expanded": true,
   "children": [
     {
-      "name": "Pre-Production",
+      "name": "Production Office",
       "type": "folder",
-      "icon": "fa-folder",
+      "icon": "fa-building",
       "view": "overview",
-      "desc": "Script, storyboard, scene breakdowns, and casting",
+      "desc": "Script, breakdown, scheduling, shot list, treatment. The planning phase.",
       "expanded": true,
       "children": [
         {
@@ -50,13 +50,6 @@
           "desc": "Scene-by-scene element analysis"
         },
         {
-          "name": "Virtual Location Scout",
-          "type": "location-scout",
-          "icon": "fa-map",
-          "view": "location-scout",
-          "desc": "Browse and generate shooting environments"
-        },
-        {
           "name": "Shot List",
           "type": "list",
           "icon": "fa-list-check",
@@ -65,11 +58,70 @@
           "desc": "All production shots across every scene"
         },
         {
-          "name": "Casting / Characters",
-          "type": "casting",
-          "icon": "fa-users",
-          "view": "casting",
-          "desc": "Character profiles, actor references, and voice data"
+          "name": "Treatment",
+          "type": "treatment",
+          "icon": "fa-file-lines",
+          "view": "asset-detail",
+          "detailKey": "treatment",
+          "desc": "Project logline, synopsis, and treatment notes"
+        }
+      ]
+    },
+    {
+      "name": "Cinematography",
+      "type": "folder",
+      "icon": "fa-camera",
+      "view": "overview",
+      "desc": "Shot design, camera movement, lighting, AI generation, coverage planning",
+      "expanded": true,
+      "children": [
+        {
+          "name": "Shot Designer",
+          "type": "shot-designer",
+          "icon": "fa-pen-ruler",
+          "view": "camera-lighting",
+          "clSection": "shot-designer",
+          "desc": "Compose shots: angle, movement, lens, lighting mood, and spatial annotations"
+        },
+        {
+          "name": "Shot Library",
+          "type": "shot-library",
+          "icon": "fa-camera-retro",
+          "view": "asset-detail",
+          "detailKey": "shot-library",
+          "desc": "Saved camera setups and reusable shot configurations"
+        },
+        {
+          "name": "Camera & Lighting Presets",
+          "type": "camera-presets",
+          "icon": "fa-sliders",
+          "view": "camera-lighting",
+          "clSection": "shot-types",
+          "desc": "Shot type presets, camera angles, movements, lighting moods, atmospheres"
+        },
+        {
+          "name": "Reference Images",
+          "type": "reference-images",
+          "icon": "fa-image",
+          "view": "asset-detail",
+          "detailKey": "reference-images",
+          "desc": "Character bibles, location refs, and moodboard for visual consistency"
+        },
+        {
+          "name": "Motion References",
+          "type": "motion-refs",
+          "icon": "fa-play",
+          "view": "asset-detail",
+          "detailKey": "motion-references",
+          "desc": "Video clips for camera motion transfer and motion brush targets"
+        },
+        {
+          "name": "Spatial Annotations",
+          "type": "spatial-annotations",
+          "icon": "fa-draw-polygon",
+          "view": "asset-detail",
+          "detailKey": "spatial-annotations",
+          "desc": "Per-shot arrows, masks, motion paths, and blocking notes"
         }
       ]
     },
@@ -78,7 +130,7 @@
       "type": "folder",
       "icon": "fa-clapperboard",
       "view": "overview",
-      "desc": "Locations, props, wardrobe, vehicles, and visual style",
+      "desc": "Locations, sets, props, wardrobe, vehicles, and visual style",
       "expanded": true,
       "children": [
         {
@@ -181,6 +233,13 @@
               "desc": "Browse and search all shooting locations"
             },
             {
+              "name": "Virtual Location Scout",
+              "type": "location-scout",
+              "icon": "fa-map",
+              "view": "location-scout",
+              "desc": "Browse and generate AI location concepts"
+            },
+            {
               "name": "Set Builds & Stages",
               "type": "production",
               "icon": "fa-building",
@@ -195,6 +254,24 @@
               "view": "asset-detail",
               "detailKey": "location-continuity",
               "desc": "Scene-by-scene environmental and time-of-day continuity"
+            }
+          ]
+        },
+        {
+          "name": "Sets",
+          "type": "folder",
+          "icon": "fa-couch",
+          "view": "overview",
+          "desc": "Set designs, floor plans, and dressing references",
+          "expanded": true,
+          "children": [
+            {
+              "name": "Set Catalog",
+              "type": "production",
+              "icon": "fa-building",
+              "view": "asset-detail",
+              "detailKey": "set-catalog",
+              "desc": "All constructed sets with design references and dressing lists"
             }
           ]
         },
@@ -265,64 +342,39 @@
               "desc": "Period and architecture references for environments"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Casting",
+      "type": "folder",
+      "icon": "fa-users",
+      "view": "overview",
+      "desc": "Character creation, reference images, voice casting, performance direction",
+      "expanded": true,
+      "children": [
+        {
+          "name": "Character Roster",
+          "type": "casting",
+          "icon": "fa-user",
+          "view": "casting",
+          "desc": "Character profiles, role tags, physical descriptions, and performance notes"
         },
         {
-          "name": "Camera, Lighting & Atmosphere",
-          "type": "folder",
-          "icon": "fa-camera",
-          "view": "camera-lighting",
-          "desc": "Shot types, angles, movement, and lighting presets",
-          "expanded": true,
-          "children": [
-            {
-              "name": "Shot Types & Framing",
-              "type": "production",
-              "icon": "fa-expand",
-              "view": "camera-lighting",
-              "clSection": "shot-types",
-              "desc": "Field size from ECU to ELS"
-            },
-            {
-              "name": "Camera Angles",
-              "type": "production",
-              "icon": "fa-arrows-to-dot",
-              "view": "camera-lighting",
-              "clSection": "angles",
-              "desc": "Eye-level, high, low, dutch, POV"
-            },
-            {
-              "name": "Frame Composition",
-              "type": "production",
-              "icon": "fa-crop",
-              "view": "camera-lighting",
-              "clSection": "composition",
-              "desc": "Rule of thirds, leading lines, symmetry"
-            },
-            {
-              "name": "Camera Movements",
-              "type": "production",
-              "icon": "fa-arrows-left-right",
-              "view": "camera-lighting",
-              "clSection": "movements",
-              "desc": "Dolly, pan, tilt, crane, handheld"
-            },
-            {
-              "name": "Lighting Techniques",
-              "type": "production",
-              "icon": "fa-lightbulb",
-              "view": "camera-lighting",
-              "clSection": "lighting",
-              "desc": "Three-point, low-key, practical, golden hour"
-            },
-            {
-              "name": "Atmospheric Effects",
-              "type": "production",
-              "icon": "fa-cloud-rain",
-              "view": "camera-lighting",
-              "clSection": "atmosphere",
-              "desc": "Rain, fog, dust, god rays, haze"
-            }
-          ]
+          "name": "Voice Library",
+          "type": "casting",
+          "icon": "fa-microphone",
+          "view": "asset-detail",
+          "detailKey": "voice-library",
+          "desc": "TTS voice assignments and voice sample playback"
+        },
+        {
+          "name": "AI Casting Suggestions",
+          "type": "casting",
+          "icon": "fa-wand-magic-sparkles",
+          "view": "asset-detail",
+          "detailKey": "casting-suggestions",
+          "desc": "AI-generated character design and voice casting recommendations per scene"
         }
       ]
     },
@@ -385,6 +437,145 @@
       ]
     },
     {
+      "name": "Post Production",
+      "type": "folder",
+      "icon": "fa-film",
+      "view": "overview",
+      "desc": "Editing, color grading, VFX, finishing, export",
+      "expanded": true,
+      "children": [
+        {
+          "name": "Sequences",
+          "type": "folder",
+          "icon": "fa-scissors",
+          "view": "overview",
+          "desc": "Rough cut, fine cut, and assembly versions",
+          "expanded": true,
+          "children": [
+            {
+              "name": "Rough Cut v1",
+              "type": "sequence",
+              "icon": "fa-film",
+              "view": "timeline",
+              "desc": "All masters in scene order — rough timing only"
+            },
+            {
+              "name": "Fine Cut v1",
+              "type": "sequence",
+              "icon": "fa-film",
+              "view": "timeline",
+              "desc": "Coverage, transitions, foley sync, temp mix reference"
+            }
+          ]
+        },
+        {
+          "name": "Timeline Editor",
+          "type": "sequence",
+          "icon": "fa-timeline",
+          "view": "timeline",
+          "desc": "Drag shots onto timeline to assemble the cut"
+        },
+        {
+          "name": "Color Grade",
+          "type": "color",
+          "icon": "fa-palette",
+          "view": "asset-detail",
+          "detailKey": "color-grade",
+          "desc": "Look development and final grade deliverables"
+        },
+        {
+          "name": "Color Presets",
+          "type": "color",
+          "icon": "fa-droplet",
+          "view": "asset-detail",
+          "detailKey": "color-presets",
+          "desc": "Mood-based grading presets: Cyber Noir, Nexus Clinical, Golden Ascension, Desaturated Rain"
+        },
+        {
+          "name": "VFX & Cleanup",
+          "type": "vfx",
+          "icon": "fa-wand-magic-sparkles",
+          "view": "asset-detail",
+          "detailKey": "vfx-cleanup",
+          "desc": "Visual effects shots, screen inserts, environment fixes, cleanup flags"
+        },
+        {
+          "name": "Audio Mix",
+          "type": "audio",
+          "icon": "fa-wave-square",
+          "view": "asset-detail",
+          "detailKey": "audio-mix",
+          "desc": "Dialogue, music, and effects mix sessions"
+        },
+        {
+          "name": "Export / Outputs",
+          "type": "output",
+          "icon": "fa-arrow-up-from-bracket",
+          "view": "asset-detail",
+          "detailKey": "outputs",
+          "desc": "Rendered final output and export presets"
+        }
+      ]
+    },
+    {
+      "name": "AI Director",
+      "type": "folder",
+      "icon": "fa-robot",
+      "view": "overview",
+      "desc": "Mission control: generation queue, review, cost tracking, model routing, agent logs",
+      "expanded": true,
+      "children": [
+        {
+          "name": "Generation Queue",
+          "type": "ai-queue",
+          "icon": "fa-list-ol",
+          "view": "asset-detail",
+          "detailKey": "generation-queue",
+          "desc": "All pending and active AI generation jobs across departments"
+        },
+        {
+          "name": "Review Dashboard",
+          "type": "ai-review",
+          "icon": "fa-check-double",
+          "view": "asset-detail",
+          "detailKey": "review-queue",
+          "desc": "Items awaiting human approval, flagged issues, audit findings"
+        },
+        {
+          "name": "Cost Tracking",
+          "type": "ai-cost",
+          "icon": "fa-coins",
+          "view": "asset-detail",
+          "detailKey": "cost-tracking",
+          "desc": "Per-provider, per-scene, per-shot generation costs"
+        },
+        {
+          "name": "Model Routing Rules",
+          "type": "ai-routing",
+          "icon": "fa-arrows-split-up-and-left",
+          "view": "asset-detail",
+          "detailKey": "model-routing",
+          "desc": "Default model assignments per modality and shot type with fallback rules"
+        },
+        {
+          "name": "Agent Logs",
+          "type": "ai-logs",
+          "icon": "fa-list-tree",
+          "view": "asset-detail",
+          "detailKey": "agent-logs",
+          "desc": "Decision trail: prompt optimizations, routing choices, retries, audit results"
+        },
+        {
+          "name": "Settings",
+          "type": "ai-settings",
+          "icon": "fa-gear",
+          "view": "asset-detail",
+          "detailKey": "ai-director-settings",
+          "desc": "Auto-retry thresholds, review gate strictness, budget limits"
+        }
+      ]
+    },
+    {
       "name": "Scenes",
       "type": "folder",
       "icon": "fa-video",
@@ -422,38 +613,6 @@
           "view": "scene-detail",
           "sceneId": "scene04",
           "desc": "One unrecorded second of alignment. Delivery complete. FADE OUT."
-        }
-      ]
-    },
-    {
-      "name": "Assembly",
-      "type": "folder",
-      "icon": "fa-film",
-      "view": "overview",
-      "expanded": true,
-      "children": [
-        {
-          "name": "Rough Cut",
-          "type": "sequence",
-          "icon": "fa-film",
-          "view": "timeline",
-          "desc": "Drag shots onto timeline to assemble the cut"
-        },
-        {
-          "name": "Audio Mix",
-          "type": "audio",
-          "icon": "fa-wave-square",
-          "view": "asset-detail",
-          "detailKey": "audio-mix",
-          "desc": "Dialogue, music, and effects mix sessions"
-        },
-        {
-          "name": "Color Grade",
-          "type": "color",
-          "icon": "fa-palette",
-          "view": "asset-detail",
-          "detailKey": "color-grade",
-          "desc": "Look development and final grade deliverables"
         }
       ]
     },
@@ -496,7 +655,7 @@
           "type": "assets",
           "icon": "fa-cube",
           "view": "assets",
-          "desc": "Characters, locations, props, and effects"
+          "desc": "Characters, locations, props, wardrobe, sets, and effects"
         },
         {
           "name": "Scrap Bin",

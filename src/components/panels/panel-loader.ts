@@ -18,6 +18,22 @@ const VIEW_CHUNK: Record<string, string> = {
   'chip-global': 'global',
 };
 
+/** Custom element tag for each workspace view host (index.html light DOM). */
+export const VIEW_HOST_TAG: Record<string, string> = {
+  'preprod-workspace': 'cinegen-preprod-workspace',
+  breakdown: 'cinegen-breakdown-view',
+  'scene-detail': 'cinegen-scene-detail-view',
+  timeline: 'cinegen-timeline-view',
+  'location-scout': 'cinegen-location-scout-view',
+  assets: 'cinegen-assets-view',
+  'camera-lighting': 'cinegen-camera-lighting-view',
+  casting: 'cinegen-casting-view',
+  'chip-global': 'cinegen-chip-global-view',
+  overview: 'cinegen-overview-view',
+  'asset-detail': 'cinegen-asset-detail-view',
+  default: 'cinegen-workspace-empty',
+};
+
 const chunkLoaders: Record<string, () => Promise<unknown>> = {
   preprod: () => import('@/components/panels/chunk-preprod'),
   production: () => import('@/components/panels/chunk-production'),

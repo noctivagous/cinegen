@@ -1,0 +1,262 @@
+/**
+ * CineGen button surface finish + relief depth.
+ * Compose with .toolbar-btn and shape classes from CineGenBaseGUI-button-shapes.css
+ *
+ * Finish:  --finish-reflective | --finish-matte
+ * Relief:  --relief-protruded | --relief-inset
+ */
+
+/* Reflective + protruded: production .toolbar-btn default (no override needed) */
+
+/* ---------- Reflective + inset (pressed / toggle well) ---------- */
+.toolbar-btn--finish-reflective.toolbar-btn--relief-inset {
+  background: linear-gradient(to bottom, #242424 0%, #2c2c2c 100%);
+  border: 1px solid #0a0a0a;
+  border-top-color: #141414;
+  border-left-color: #141414;
+  border-bottom-color: #484848;
+  border-right-color: #484848;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  text-shadow: none;
+  color: var(--text-dim);
+}
+
+.toolbar-btn--finish-reflective.toolbar-btn--relief-inset:hover {
+  background: linear-gradient(to bottom, #2a2a2a 0%, #323232 100%);
+  color: var(--text-main);
+}
+
+.toolbar-btn--finish-reflective.toolbar-btn--relief-inset:active,
+.toolbar-btn--finish-reflective.toolbar-btn--relief-inset.active {
+  background: linear-gradient(to bottom, #1e1e1e 0%, #262626 100%);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.75);
+}
+
+/* ---------- Matte + protruded (fountain insert, dense tool rows) ---------- */
+.toolbar-btn--finish-matte.toolbar-btn--relief-protruded {
+  background: #383838;
+  background-image: linear-gradient(to bottom, #3e3e3e 0%, #363636 100%);
+  border: 1px solid #2a2a2a;
+  border-top-color: #454545;
+  border-left-color: #454545;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: none;
+}
+
+.toolbar-btn--finish-matte.toolbar-btn--relief-protruded:hover {
+  background: #404040;
+  background-image: linear-gradient(to bottom, #444 0%, #3c3c3c 100%);
+  color: var(--text-highlight);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.toolbar-btn--finish-matte.toolbar-btn--relief-protruded:active,
+.toolbar-btn--finish-matte.toolbar-btn--relief-protruded.active {
+  background: #323232;
+  background-image: none;
+  border-color: #1a1a1a;
+  border-top-color: #222;
+  border-left-color: #222;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  padding: 5px 10px 3px 10px;
+}
+
+/* Fountain insert row — always matte raised */
+.toolbar-btn.script-fountain-tool {
+  background: #383838;
+  background-image: linear-gradient(to bottom, #3e3e3e 0%, #363636 100%);
+  border: 1px solid #2a2a2a;
+  border-top-color: #454545;
+  border-left-color: #454545;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: none;
+}
+
+.toolbar-btn.script-fountain-tool:hover {
+  background: #404040;
+  background-image: linear-gradient(to bottom, #444 0%, #3c3c3c 100%);
+  color: var(--text-highlight);
+}
+
+.toolbar-btn.script-fountain-tool:active {
+  background: #323232;
+  background-image: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Matte + inset (segmented off state, recessed tools) ---------- */
+.toolbar-btn--finish-matte.toolbar-btn--relief-inset {
+  background: #2c2c2c;
+  background-image: none;
+  border: 1px solid #1a1a1a;
+  border-top-color: #121212;
+  border-left-color: #121212;
+  border-bottom-color: #3a3a3a;
+  border-right-color: #3a3a3a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+  text-shadow: none;
+  color: var(--text-dim);
+}
+
+.toolbar-btn--finish-matte.toolbar-btn--relief-inset:hover {
+  background: #303030;
+  color: var(--text-main);
+}
+
+.toolbar-btn--finish-matte.toolbar-btn--relief-inset:active,
+.toolbar-btn--finish-matte.toolbar-btn--relief-inset.active {
+  background: #282828;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.65);
+}
+
+/* Matte AI variant — flatter navy, no specular strip */
+.toolbar-btn.btn-ai.toolbar-btn--finish-matte.toolbar-btn--relief-protruded,
+.toolbar-btn.btn-ai.toolbar-btn--finish-matte.toolbar-btn--relief-protruded:hover,
+.toolbar-btn.btn-ai.toolbar-btn--finish-matte.toolbar-btn--relief-protruded:active {
+  background: var(--accent-ai);
+  background-image: linear-gradient(to bottom, #324a6a 0%, #2a4268 100%);
+  border-color: var(--accent-ai-border);
+  border-top-color: #3a5278;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: none;
+  color: #e8eef4;
+}
+
+/* ---------- Classic tabs (rounded top, 3D — not underline) ---------- */
+.tab-strip-classic {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 0 6px;
+  min-height: 26px;
+  background: linear-gradient(to bottom, #383838 0%, #2e2e2e 100%);
+  border-bottom: 1px solid #141414;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn-classic {
+  position: relative;
+  margin: 0 1px 0 0;
+  padding: 5px 14px 4px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: inherit;
+  color: var(--text-dim);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #1a1a1a;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: linear-gradient(to bottom, #343434 0%, #2a2a2a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 -1px 0 rgba(0, 0, 0, 0.2);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+  top: 1px;
+}
+
+.tab-btn-classic:hover {
+  color: var(--text-main);
+  background: linear-gradient(to bottom, #3a3a3a 0%, #303030 100%);
+}
+
+.tab-btn-classic.active {
+  z-index: 2;
+  top: 0;
+  padding-bottom: 5px;
+  color: var(--text-highlight);
+  background: linear-gradient(to bottom, #4a4a4a 0%, #3c3c3c 100%);
+  border-color: #525252 #1a1a1a #3c3c3c #1a1a1a;
+  border-bottom: 1px solid #3c3c3c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tab-btn-classic.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #3c3c3c;
+}
+
+.tab-page-classic {
+  background: var(--bg-panel);
+  border: 1px solid #1a1a1a;
+  border-top: none;
+  padding: 12px 14px;
+  color: var(--text-dim);
+  font-size: 10px;
+  min-height: 48px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Script pane tabs — same classic chrome, compact */
+.script-pane-tabs.tab-strip-classic {
+  padding: 0 2px;
+  min-height: 22px;
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.script-pane-tabs .tab-btn-classic {
+  padding: 2px 10px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 5px 5px 0 0;
+}
+
+.script-pane-tabs .tab-btn-classic.active {
+  color: var(--text-highlight);
+  background: linear-gradient(to bottom, #3a5a88 0%, #2c4464 100%);
+  border-color: #1f3553 #141414 #2c4464 #141414;
+  border-bottom-color: #2c4464;
+}
+
+.script-pane-tabs .tab-btn-classic.active::after {
+  background: #262626;
+}
+
+/* Storyboard pane tabs — classic chrome in sunken header */
+.storyboard-pane-tabs.tab-strip-classic {
+  padding: 0 2px;
+  min-height: 22px;
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.storyboard-pane-tabs .tab-btn-classic {
+  padding: 2px 10px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 5px 5px 0 0;
+  white-space: nowrap;
+  top: 0;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  box-sizing: border-box;
+  line-height: 1.2;
+}
+
+.storyboard-pane-tabs .tab-btn-classic.active {
+  top: 0;
+  padding-bottom: 3px;
+  color: var(--text-highlight);
+  background: linear-gradient(to bottom, #4a4a4a 0%, #3c3c3c 100%);
+  border-color: #525252 #1a1a1a #3c3c3c #1a1a1a;
+  border-bottom-color: #3c3c3c;
+}
+
+.storyboard-pane-tabs .tab-btn-classic.active::after {
+  background: #262626;
+}

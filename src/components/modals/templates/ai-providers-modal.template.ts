@@ -35,7 +35,7 @@ export const aiProvidersModalTemplate = html`
 
         <div id="aip-panel-providers" class="aip-settings-panel" role="tabpanel">
         <p class="project-settings-lead">
-          Add service providers and paste one API key per entry. Test connections here, then assign models on the <strong>AI Models &amp; Modalities</strong> tab.
+          Providers with keys in <strong>backends/.env</strong> appear automatically. Optionally add entries here to test connections or override a key for this browser. Assign models on <strong>AI Models &amp; Modalities</strong>.
         </p>
 
         <!-- Provider master-detail — fixed 260 px, inner panes scroll independently -->
@@ -107,7 +107,7 @@ export const aiProvidersModalTemplate = html`
 
         <div id="aip-panel-models" class="aip-settings-panel" role="tabpanel" hidden>
         <p class="project-settings-lead">
-          Assign which provider and default model handles Text, Image, Video, and Sound generation.
+          Assign which <strong>credential</strong> and <strong>model</strong> handle Text, Image, Video, and Sound. These choices drive storyboards, the debug modal, and all AI services.
         </p>
 
         <!-- Modality Routing + Request Behavior + Diagnostics -->
@@ -116,7 +116,7 @@ export const aiProvidersModalTemplate = html`
           <details class="cg-accordion-section" open>
             <summary class="cg-accordion-header"><i class="fa-solid fa-route" aria-hidden="true" style="margin-right:4px;"></i>Modality Routing</summary>
             <div class="cg-accordion-body">
-              <p class="project-settings-lead" style="margin-bottom:10px;">Assign the active provider and model for each generation type. Only providers with a key for that modality appear.</p>
+              <p class="project-settings-lead" style="margin-bottom:10px;">Pick provider type, credential (vendor entry), and default model per modality. Use <strong>Test connection</strong> on the API Keys tab to refresh live model lists.</p>
 
               <p id="ai-api-gate-llm" class="ai-api-modality-gate" hidden>Add an <strong>API key</strong> for at least one provider above to configure routing.</p>
               <fieldset id="ai-api-fieldset-llm" class="ai-api-modality-fieldset">
@@ -268,7 +268,7 @@ export const aiProvidersModalTemplate = html`
       </form>
 
       <div class="guide-modal-footer bevel-sunken project-settings-modal-footer">
-        <span id="ai-providers-save-hint" class="project-settings-save-hint">Keys never leave this machine except to APIs you call.</span>
+        <span id="ai-providers-save-hint" class="project-settings-save-hint">Routing applies to storyboards, debug, and all AI services.</span>
         <div class="project-settings-footer-actions">
           <button type="button" class="toolbar-btn toolbar-btn--shape-soft btn-back-to-settings" data-aip-action="back-settings"><i class="fa-solid fa-caret-left" aria-hidden="true"></i><span>Back to Settings</span></button>
           <button type="button" class="toolbar-btn toolbar-btn--shape-soft" data-cg-close="ai-providers-modal">Cancel</button>

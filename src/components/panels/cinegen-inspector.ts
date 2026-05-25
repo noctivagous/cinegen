@@ -13,6 +13,7 @@ import type { InspectorType } from '@/types/globals';
 import { escHtml } from '@/utils/html';
 import { patchAppShellPreferences } from '@/stores/app-shell';
 import { syncLayoutSplitDividers } from '@/services/layout-service';
+import { getFramesForShot, getShotForFrame } from '@/workspace/shot-frame-bridge';
 
 @customElement('cinegen-inspector')
 export class CinegenInspector extends CgLightElement {
@@ -113,9 +114,35 @@ export class CinegenInspector extends CgLightElement {
   }
 
   private _renderShot(data: Record<string, unknown>) {
+    const sceneId = window.currentSceneId ?? '';
+    const shotId = data.id as number;
+    const frames = sceneId ? getFramesForShot(sceneId, shotId) : [];
     return html`
       <div class="font-bold">${data.label}</div>
       <p class="text-xs">${data.type}</p>
+      ${data.scriptLink
+        ? html`<p class="text-[10px] text-[var(--text-dim)] mt-2">Script: ${this._escape(data.scriptLink)}</p>`
+        : nothing}
+      ${frames.length
+        ? html`<div class="mt-3">
+            <div class="text-[10px] text-[var(--text-dim)] mb-1">Storyboard frames</div>
+            <ul class="space-y-1">
+              ${frames.map(
+                (frame, idx) => html`
+                  <li>
+                    <button
+                      type="button"
+                      class="text-[10px] underline text-emerald-400"
+                      @click=${() => window.selectStoryboardFrameById?.(frame.id)}
+                    >
+                      ${idx + 1}. ${this._escape(frame.label)}
+                    </button>
+                  </li>
+                `
+              )}
+            </ul>
+          </div>`
+        : nothing}
       <div class="mt-4 flex gap-2">
         <button
           type="button"
@@ -125,7 +152,7 @@ export class CinegenInspector extends CgLightElement {
           Regenerate Take
         </button>
       </div>
-      ${this._unsafeChips(this._extractChips([data.label, data.type]), {
+      ${this._unsafeChips(this._extractChips([data.label, data.type, data.scriptLink]), {
         title: 'Chips in shot',
       })}
     `;
@@ -204,6 +231,7 @@ export class CinegenInspector extends CgLightElement {
 
   private _renderStoryboardFrame(data: Record<string, unknown>) {
     const frameId = data.id as number;
+    const parentShot = getShotForFrame(data as import('@/storyboard/storyboard-types').StoryboardFrame);
     const updateField = (field: string, value: string) => {
       const frames = window.storyboardFrames as Array<Record<string, unknown>>;
       const frame = frames.find((f: Record<string, unknown>) => f.id === frameId);
@@ -217,6 +245,9 @@ export class CinegenInspector extends CgLightElement {
       updateField(field, (e.target as HTMLInputElement).value);
     };
     return html`
+      ${parentShot
+        ? html`<div class="property-row"><span>Shot</span><span>${this._escape(parentShot.label)}</span></div>`
+        : nothing}
       <div class="property-row">
         <span>Scene</span>
         <input

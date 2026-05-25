@@ -25,16 +25,22 @@
     "coverage": [
       {
         "id": 1,
+        "number": 1,
         "type": "Wide Establishing",
         "label": "EXT. ARCOLOGY SPIRE - WIDE",
         "duration": "20s",
-        "bestTake": true
+        "bestTake": true,
+        "scriptLink": "EXT. ARCOLOGY SPIRE",
+        "frameIds": [1]
       },
       {
         "id": 2,
-        "type": "Insert",
-        "label": "CU - Temple Touch / Golden Code",
-        "duration": "8s"
+        "number": 2,
+        "type": "Coverage",
+        "label": "MS Kai + POV Golden Code",
+        "duration": "12s",
+        "scriptLink": "KAI",
+        "frameIds": [2, 3]
       }
     ],
     "broll": [],
@@ -64,7 +70,26 @@
       "prompt": "Continuous neon sky-bridge pursuit, quantum tunnel streaks, city lights pulse once like breathing, HUD code fractals organic then snaps rigid",
       "outputPath": "production/scenes/scene02/generated/master-v1.mp4"
     },
-    "coverage": [],
+    "coverage": [
+      {
+        "id": 3,
+        "number": 1,
+        "type": "Tracking",
+        "label": "Wide tracking shot of Kai and the pod at high speed",
+        "duration": "24s",
+        "scriptLink": "EXT. SKY-BRIDGE NETWORK",
+        "frameIds": [4]
+      },
+      {
+        "id": 4,
+        "number": 2,
+        "type": "Close-Up",
+        "label": "Close-up on Kai's face as the first glitch hits",
+        "duration": "8s",
+        "scriptLink": "The city lights below flicker once",
+        "frameIds": [5]
+      }
+    ],
     "broll": [],
     "pickups": [],
     "notes": "God-like efficiency then hesitation. Grid breathes; overlay glitches. Recognition, not fear."
@@ -91,7 +116,17 @@
       "prompt": "Control nexus interior, Mira at multi-feed interface, silver neural crown, intercut Kai on sky-bridge as city lights breathe deeper",
       "outputPath": "production/scenes/scene03/generated/master-v1.mp4"
     },
-    "coverage": [],
+    "coverage": [
+      {
+        "id": 5,
+        "number": 1,
+        "type": "Wide",
+        "label": "Wide - Control Nexus",
+        "duration": "18s",
+        "scriptLink": "INT. CONTROL NEXUS",
+        "frameIds": [6]
+      }
+    ],
     "broll": [],
     "pickups": [],
     "notes": "Simultaneous with pursuit. Beautiful cage realization. Minimal dialogue."
@@ -120,7 +155,26 @@
       "prompt": "Docking spire finale, lights and data merge in one organic pattern, deliberate one-second pause off optimal vector, clean dock, golden upload surge",
       "outputPath": "production/scenes/scene04/generated/master-v1.mp4"
     },
-    "coverage": [],
+    "coverage": [
+      {
+        "id": 6,
+        "number": 1,
+        "type": "Wide",
+        "label": "Wide - Receiving Spire Dock",
+        "duration": "22s",
+        "scriptLink": "EXT. FINAL APPROACH",
+        "frameIds": [7]
+      },
+      {
+        "id": 7,
+        "number": 2,
+        "type": "Close-Up",
+        "label": "CU - Kai Almost Smiles",
+        "duration": "6s",
+        "scriptLink": "KAI / It's fine. Continuing.",
+        "frameIds": [8]
+      }
+    ],
     "broll": [],
     "pickups": [],
     "notes": "Climax: alignment not rebellion. Kai smiles. City acknowledges. FADE OUT."

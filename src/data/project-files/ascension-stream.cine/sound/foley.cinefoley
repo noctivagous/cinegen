@@ -1,0 +1,66 @@
+[
+  {
+    "id": "foley-kai-footsteps-rain-01",
+    "name": "Kai Footsteps — Wet Surface",
+    "sceneUsage": ["scene01", "scene04"],
+    "characterId": "char-kai",
+    "type": "footsteps",
+    "source": "sound/foley/refs/kai-footsteps-rain-wet-concrete.wav",
+    "duration": "10s",
+    "notes": "Footsteps on rain-slicked concrete, moderate pace, boot-like tread",
+    "gain": -2.0
+  },
+  {
+    "id": "foley-kai-cloth-01",
+    "name": "Kai Courier Suit — Movement Rustle",
+    "sceneUsage": ["scene01", "scene02", "scene04"],
+    "characterId": "char-kai",
+    "type": "cloth",
+    "source": "sound/foley/refs/kai-suit-cloth-rustle.wav",
+    "duration": "5s",
+    "notes": "Synthetic fabric rustle from streamlined courier suit, subtle tech-fabric swish",
+    "gain": -6.0
+  },
+  {
+    "id": "foley-pod-door-01",
+    "name": "Courier Pod — Hatch Open/Close",
+    "sceneUsage": ["scene01", "scene02", "scene04"],
+    "type": "prop",
+    "source": "sound/foley/refs/pod-hatch-pneumatic.wav",
+    "duration": "2s",
+    "notes": "Pneumatic hatch hiss and click for courier pod entry/exit",
+    "gain": -3.0
+  },
+  {
+    "id": "foley-mira-chair-01",
+    "name": "Mira Control Chair — Swivel/Adjust",
+    "sceneUsage": ["scene03"],
+    "characterId": "char-mira",
+    "type": "prop",
+    "source": "sound/foley/refs/mira-chair-swivel-adjust.wav",
+    "duration": "3s",
+    "notes": "High-end executive chair swivel, leather creak, mechanical adjust",
+    "gain": -8.0
+  },
+  {
+    "id": "foley-envelope-insert-01",
+    "name": "Implant Port — Data Insert",
+    "sceneUsage": ["scene01", "scene04"],
+    "type": "prop",
+    "source": "sound/foley/refs/implant-port-data-insert.wav",
+    "duration": "1.5s",
+    "notes": "Subtle click and soft electronic chime as data stream connects to forearm implant",
+    "gain": -5.0
+  },
+  {
+    "id": "foley-temple-touch-01",
+    "name": "Temple Touch — HUD Activation",
+    "sceneUsage": ["scene01", "scene02"],
+    "characterId": "char-kai",
+    "type": "prop",
+    "source": "sound/foley/refs/temple-touch-hud-on.wav",
+    "duration": "1s",
+    "notes": "Soft tap on temple with rising harmonic indicating HUD overlay engaging",
+    "gain": -4.0
+  }
+]

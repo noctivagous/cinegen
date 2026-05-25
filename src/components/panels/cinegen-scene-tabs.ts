@@ -6,6 +6,11 @@ import { emitWorkspaceSceneTab } from '@/events/shell-events';
 import type { SceneDetail } from '@/workspace/scene-types';
 import { workspaceState } from '@/workspace/workspace-state';
 import { escHtml } from '@/utils/html';
+import {
+  formatShotDisplayLabel,
+  getFramesForShot,
+  sceneNumberFromSceneId,
+} from '@/workspace/shot-frame-bridge';
 
 const SCENE_TAB_LABELS = [
   'OVERVIEW',
@@ -192,20 +197,51 @@ export class CinegenSceneTabs extends CgLightElement {
       case 2:
         return html`
           <div class="grid grid-cols-2 gap-4">
-            ${scene.coverage.map(
-              (shot) => html`
+            ${scene.coverage.map((shot) => {
+              const sceneId = this._sceneId ?? workspaceState.currentSceneId ?? '';
+              const frames = sceneId ? getFramesForShot(sceneId, shot.id) : [];
+              const shotLabel =
+                shot.number != null && sceneId
+                  ? formatShotDisplayLabel(sceneNumberFromSceneId(sceneId), shot.number)
+                  : '';
+              return html`
                 <div data-ws-inspect-shot=${String(shot.id)} class="storyboard-frame p-2">
                   <div class="frame-image"><i class="fa-solid fa-camera"></i></div>
                   <div class="frame-label">
+                    ${shotLabel
+                      ? html`<div class="scene-ref">Shot ${escHtml(shotLabel)}</div>`
+                      : nothing}
                     <div class="scene-ref">${escHtml(shot.type ?? '')}</div>
                     <div>${escHtml(shot.label)} • ${escHtml(shot.duration)}</div>
                     ${shot.bestTake
                       ? html`<span class="text-emerald-400 text-[10px]">★ BEST TAKE</span>`
                       : nothing}
+                    ${frames.length
+                      ? html`<ul class="scene-shot-frame-list mt-2 space-y-1">
+                          ${frames.map(
+                            (frame, idx) => html`
+                              <li>
+                                <button
+                                  type="button"
+                                  class="text-[10px] text-left underline text-[var(--text-dim)] hover:text-emerald-400"
+                                  @click=${(e: Event) => {
+                                    e.stopPropagation();
+                                    window.switchView?.('preprod-workspace', 'Storyboard', 'scenes');
+                                    window.setPreprodMode?.('storyboard');
+                                    window.selectStoryboardFrameById?.(frame.id);
+                                  }}
+                                >
+                                  Frame ${idx + 1}: ${escHtml(frame.label)}
+                                </button>
+                              </li>
+                            `
+                          )}
+                        </ul>`
+                      : html`<p class="text-[10px] text-[var(--text-dim)] mt-2">No storyboard frames linked.</p>`}
                   </div>
                 </div>
-              `
-            )}
+              `;
+            })}
           </div>
         `;
       case 3:

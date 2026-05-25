@@ -12,3 +12,8 @@ import './cg-stepper';
 import './cg-modal-tile-grid';
 import './cg-modal-shell';
 import './cg-context-menu';
+import './cg-grid';
+import './cg-stack';
+import './cg-scroll-area';
+import './cg-color-wheel';
+import './cg-color-palette';

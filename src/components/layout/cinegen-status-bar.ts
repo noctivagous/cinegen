@@ -15,6 +15,7 @@ export class CinegenStatusBar extends CgLightElement {
 
   private _unsubShell: (() => void) | null = null;
   private _storyboardFramesListener: (() => void) | null = null;
+  private _projectNameChangedListener: (() => void) | null = null;
   private _connectionPollTimer: ReturnType<typeof setInterval> | null = null;
 
   connectedCallback(): void {
@@ -27,6 +28,8 @@ export class CinegenStatusBar extends CgLightElement {
     });
     this._storyboardFramesListener = () => this._refreshStats();
     window.addEventListener('storyboard-frames-changed', this._storyboardFramesListener);
+    this._projectNameChangedListener = () => this._refreshStats();
+    window.addEventListener('cinegen:project-name-changed', this._projectNameChangedListener);
     this._pollConnections();
     this._connectionPollTimer = setInterval(() => this._pollConnections(), 3000);
   }
@@ -38,6 +41,10 @@ export class CinegenStatusBar extends CgLightElement {
     if (this._storyboardFramesListener) {
       window.removeEventListener('storyboard-frames-changed', this._storyboardFramesListener);
       this._storyboardFramesListener = null;
+    }
+    if (this._projectNameChangedListener) {
+      window.removeEventListener('cinegen:project-name-changed', this._projectNameChangedListener);
+      this._projectNameChangedListener = null;
     }
     if (this._connectionPollTimer) {
       clearInterval(this._connectionPollTimer);

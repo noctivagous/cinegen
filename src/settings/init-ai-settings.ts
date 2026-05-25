@@ -16,6 +16,9 @@ export function initAiSettings(): void {
   }
   // Sync server-side keys, then refresh status bar (keys load after first paint)
   void initServerKeyStore().then(() => {
+    void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
+      refreshAllProviderCatalogsOnLoad()
+    );
     window.updateModelStatusIndicators?.();
     (window as Window & { updateAudioSubmodalityIndicators?: () => void }).updateAudioSubmodalityIndicators?.();
   });

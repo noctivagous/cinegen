@@ -159,8 +159,6 @@ export function handleModalEscapeKey(e: KeyboardEvent): void {
 }
 
 function _broadcastModalState(): void {
-  const mode = (import.meta.env.VITE_PROJECT_PERSISTENCE_MODE as string) || 'local';
-  if (mode !== 'server') return;
   if (_modalSaveDebounce) clearTimeout(_modalSaveDebounce);
   _modalSaveDebounce = setTimeout(() => {
     _modalSaveDebounce = null;

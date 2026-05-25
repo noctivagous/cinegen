@@ -1,0 +1,87 @@
+{
+  "shot-01-01": {
+    "sceneId": "scene01",
+    "shotId": "shot-01-01",
+    "location": "loc-apartment-01",
+    "blocking": {
+      "description": "Kai enters frame left from pod, crosses to window center-right. Camera pans to follow.",
+      "annotations": [
+        { "type": "arrow", "from": "frame-left-offscreen", "to": "center-right-window", "label": "Kai enter → cross to window" },
+        { "type": "mask", "region": "upper-third", "label": "Golden HUD code appears upper right" }
+      ]
+    },
+    "cameraPath": {
+      "type": "pan-right",
+      "startFrame": "Kai enters left",
+      "endFrame": "Kai at window, rain visible",
+      "duration": "6s"
+    },
+    "motionBrushAnnotations": [
+      {
+        "region": "rain-streams-on-window",
+        "motion": "downward-slight-angle",
+        "intensity": "medium",
+        "description": "Rain streaks sliding down window glass"
+      }
+    ]
+  },
+  "shot-02-01": {
+    "sceneId": "scene02",
+    "shotId": "shot-02-01",
+    "location": "loc-city-streets-01",
+    "blocking": {
+      "description": "Kai pod racing through sky-bridge. Camera tracking forward alongside. Data fractals pulse in air.",
+      "annotations": [
+        { "type": "arrow", "from": "center-frame-moving", "to": "forward-path", "label": "Pod trajectory → forward" },
+        { "type": "mask", "region": "hud-overlay", "label": "HUD data fractals in upper visual field" }
+      ]
+    },
+    "cameraPath": {
+      "type": "tracking-forward",
+      "startFrame": "Pod in mid-bridge",
+      "endFrame": "Pod approaches bridge terminus",
+      "duration": "10s"
+    },
+    "motionBrushAnnotations": [
+      {
+        "region": "neon-streaks",
+        "motion": "horizontal-fast",
+        "intensity": "high",
+        "description": "Neon light streaks creating speed lines"
+      },
+      {
+        "region": "data-fractals",
+        "motion": "organic-pulse",
+        "intensity": "variable",
+        "description": "Golden data fractals pulsing from organic to rigid pattern"
+      }
+    ]
+  },
+  "shot-04-01": {
+    "sceneId": "scene04",
+    "shotId": "shot-04-01",
+    "location": "loc-precinct-rooftop-01",
+    "blocking": {
+      "description": "Kai pod approaches docking spire. One deliberate second pause off optimal vector. Clean dock, golden upload surge.",
+      "annotations": [
+        { "type": "circle", "center": "docking-port", "radius": "10%", "label": "Docking target — pause here" },
+        { "type": "arrow", "from": "off-vector-pause", "to": "docking-port-correct", "label": "← pause 1s → correct vector" },
+        { "type": "mask", "region": "full-frame-flare", "label": "Golden upload surge fills frame" }
+      ]
+    },
+    "cameraPath": {
+      "type": "tracking-forward-then-static",
+      "startFrame": "Pod approaches spire",
+      "endFrame": "Dock complete, surge fills frame",
+      "duration": "12s"
+    },
+    "motionBrushAnnotations": [
+      {
+        "region": "golden-upload-surge",
+        "motion": "radial-expand",
+        "intensity": "maximum",
+        "description": "Golden light surge expanding from docking point to fill frame"
+      }
+    ]
+  }
+}

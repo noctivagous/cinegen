@@ -1,6 +1,8 @@
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
+import { getPersistedPreprodMode } from '@/tree/project-tree-service';
+import { PREPROD_LAYOUT_CHROME } from '@/workspace/preprod-layout';
 
 /** Pre-production workspace: script pane + storyboard pane (split). */
 @customElement('cinegen-preprod-workspace')
@@ -12,19 +14,15 @@ export class CinegenPreprodWorkspace extends CgLightElement {
   }
 
   render() {
+    const mode = getPersistedPreprodMode();
+    const chrome = PREPROD_LAYOUT_CHROME[mode];
+    const storyboardTogglesHidden = mode === 'script';
     return html`
       <cg-panel-header>
         <span slot="title" id="preprod-panel-title" class="workspace-panel-title"
-          ><i class="fa-solid fa-scroll"></i> SCRIPT + STORYBOARD</span
+          ><i class="fa-solid ${chrome.icon}"></i> ${chrome.label}</span
         >
         <div slot="actions" class="flex gap-1">
-          <button
-            class="toolbar-btn"
-            style="padding: 2px 8px; font-size: 10px;"
-            data-ws-action="syncScriptToStoryboard"
-          >
-            <i class="fa-solid fa-link"></i> Sync
-          </button>
           <button
             class="toolbar-btn btn-ai"
             style="padding: 2px 8px; font-size: 10px;"
@@ -63,20 +61,18 @@ export class CinegenPreprodWorkspace extends CgLightElement {
           </button>
           <button
             class="toolbar-btn"
-            style="padding: 2px 8px; font-size: 10px;"
-            data-ws-action="parseScriptToAssets"
-          >
-            <i class="fa-solid fa-magic"></i> Parse to Assets
-          </button>
-          <button
-            class="toolbar-btn"
             style="padding: 2px 8px; font-size: 10px; margin-left:auto;"
             data-ws-action="openSectionSettings"
             title="Section settings"
           >
             <i class="fa-solid fa-gear"></i>
           </button>
-          <span id="storyboard-vis-toggles" class="flex items-center gap-1" style="margin-left:auto;">
+          <span
+            id="storyboard-vis-toggles"
+            class="flex items-center gap-1"
+            style="margin-left:auto;"
+            ?hidden=${storyboardTogglesHidden}
+          >
             <span class="storyboard-toolbar-sep" aria-hidden="true"></span>
             <cg-toggle-group label="Storyboard visibility">
               <cg-vis-toggle
@@ -101,7 +97,7 @@ export class CinegenPreprodWorkspace extends CgLightElement {
           </span>
         </div>
       </cg-panel-header>
-      <div id="preprod-body" class="split-view flex-1 mode-both">
+      <div id="preprod-body" class="split-view flex-1 mode-${mode}">
         <cinegen-script-pane></cinegen-script-pane>
         <cg-split-divider
           id="preprod-split-divider"

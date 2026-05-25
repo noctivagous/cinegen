@@ -1,5 +1,7 @@
 import { workspaceState } from '@/workspace/workspace-state';
 import { alertCG } from '@/utils/alert-cg';
+import { nextShotNumber, reconcileShotFrameLinks } from '@/workspace/shot-frame-bridge';
+import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 
 /** AI generation stubs */
 
@@ -59,13 +61,18 @@ export function regenerateShot(id: string | number): void {
 export function addShotToCoverage(): void {
   if (!currentSceneId) return;
   const scene = currentSceneData[currentSceneId];
+  const shotId = Date.now();
   scene.coverage.push({
-    id: Date.now(),
-    type: "New Angle",
-    label: "AI Suggested Dutch Tilt",
-    duration: "5s",
-    bestTake: false
+    id: shotId,
+    number: nextShotNumber(currentSceneId),
+    type: 'New Angle',
+    label: 'AI Suggested Dutch Tilt',
+    duration: '5s',
+    bestTake: false,
+    frameIds: [],
   });
+  reconcileShotFrameLinks(currentSceneId);
+  requestProjectTreeRefresh();
   switchSceneTab(2);
   alertCG('New coverage angle added from AI understanding of script rhythm.');
 }

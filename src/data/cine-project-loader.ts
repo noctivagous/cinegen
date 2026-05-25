@@ -10,7 +10,7 @@ import {
 import { PREPROD_MODES, SUPPORTED_TREE_VIEWS, TREE_VIEW_REQUIREMENTS } from '@/tree/tree-view-contract';
 
 /** Raw `.cine/` package files — loaded on demand (not at app boot). */
-const packageFileLoaders = import.meta.glob('./project-files/*.cine/**', {
+const packageFileLoaders = import.meta.glob('./project-files/**/*', {
   eager: false,
   query: '?raw',
   import: 'default',
@@ -195,6 +195,26 @@ export function parseCineManifest(raw: string, sourceLabel = 'project'): CinePro
   if (file.documents.importedAssets) {
     assertDocExtension(file.documents.importedAssets, '.cineimported', sourceLabel);
   }
+  if (file.documents.shotLibrary) assertDocExtension(file.documents.shotLibrary, '.cineshotlibrary', sourceLabel);
+  if (file.documents.cameraPresets) assertDocExtension(file.documents.cameraPresets, '.cinecamerapresets', sourceLabel);
+  if (file.documents.referenceImages) assertDocExtension(file.documents.referenceImages, '.cinereferenceimages', sourceLabel);
+  if (file.documents.motionReferences) assertDocExtension(file.documents.motionReferences, '.cinemotionreferences', sourceLabel);
+  if (file.documents.spatialAnnotations) assertDocExtension(file.documents.spatialAnnotations, '.cinespatialannotations', sourceLabel);
+  if (file.documents.productionSound) assertDocExtension(file.documents.productionSound, '.cineproductionsound', sourceLabel);
+  if (file.documents.adr) assertDocExtension(file.documents.adr, '.cineadr', sourceLabel);
+  if (file.documents.foley) assertDocExtension(file.documents.foley, '.cinefoley', sourceLabel);
+  if (file.documents.sfx) assertDocExtension(file.documents.sfx, '.cinesfx', sourceLabel);
+  if (file.documents.music) assertDocExtension(file.documents.music, '.cinemusic', sourceLabel);
+  if (file.documents.tempMix) assertDocExtension(file.documents.tempMix, '.cinetempmix', sourceLabel);
+  if (file.documents.sets) assertDocExtension(file.documents.sets, '.cinesets', sourceLabel);
+  if (file.documents.colorPresets) assertDocExtension(file.documents.colorPresets, '.cinecolorpresets', sourceLabel);
+  if (file.documents.sequences) assertDocExtension(file.documents.sequences, '.cinesequences', sourceLabel);
+  if (file.documents.vfx) assertDocExtension(file.documents.vfx, '.cinevfx', sourceLabel);
+  if (file.documents.generationQueue) assertDocExtension(file.documents.generationQueue, '.cinegenerationqueue', sourceLabel);
+  if (file.documents.reviewQueue) assertDocExtension(file.documents.reviewQueue, '.cinereviewqueue', sourceLabel);
+  if (file.documents.costTracking) assertDocExtension(file.documents.costTracking, '.cinecosttracking', sourceLabel);
+  if (file.documents.modelRoutingRules) assertDocExtension(file.documents.modelRoutingRules, '.cinemodelrouting', sourceLabel);
+  if (file.documents.agentLog) assertDocExtension(file.documents.agentLog, '.cineagentlog', sourceLabel);
   return file;
 }
 
@@ -259,6 +279,16 @@ function loadStoryboardDoc(packageBasename: string, relativePath: string): CineP
     deletedFrames: Array.isArray(storyboard?.deletedFrames) ? storyboard.deletedFrames : [],
     selectedFrameId: storyboard?.selectedFrameId ?? null,
     visibility: storyboard?.visibility ?? { scene: true, frame: true, notes: true },
+    previsSelection:
+      storyboard?.previsSelection && typeof storyboard.previsSelection === 'object'
+        ? storyboard.previsSelection
+        : {
+            sceneId: null,
+            shotId: null,
+            frameId: null,
+            scriptRange: null,
+            timelineItemId: null,
+          },
     referenceBank: (storyboard?.referenceBank && typeof storyboard.referenceBank === 'object'
       ? storyboard.referenceBank
       : { characters: [], locations: [], interiors: [], exteriors: [] }) as Record<string, unknown>,
@@ -601,15 +631,112 @@ function validateTreeNodeSchema(
   }
 }
 
+function sceneIdFromStoryboardSceneNumber(sceneNum: string): string {
+  const num = String(sceneNum || '1').replace(/\D/g, '') || '1';
+  return `scene${num.padStart(2, '0')}`;
+}
+
+function validateShotFrameLinks(params: {
+  scenes?: Record<string, unknown>;
+  storyboard?: { frames?: unknown[] };
+  sourceLabel: string;
+}): void {
+  const scenes = params.scenes ?? {};
+  const frames = Array.isArray(params.storyboard?.frames) ? params.storyboard.frames : [];
+  const frameById = new Map<number, Record<string, unknown>>();
+  for (const raw of frames) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const row = raw as Record<string, unknown>;
+    const id = row.id;
+    if (typeof id !== 'number') continue;
+    frameById.set(id, row);
+  }
+
+  const shotIdsByScene = new Map<string, Set<number>>();
+  for (const [sceneId, rawScene] of Object.entries(scenes)) {
+    if (!rawScene || typeof rawScene !== 'object' || Array.isArray(rawScene)) continue;
+    const coverage = (rawScene as Record<string, unknown>).coverage;
+    if (!Array.isArray(coverage)) continue;
+    const ids = new Set<number>();
+    for (const rawShot of coverage) {
+      if (!rawShot || typeof rawShot !== 'object' || Array.isArray(rawShot)) continue;
+      const shot = rawShot as Record<string, unknown>;
+      const shotId = shot.id;
+      if (typeof shotId !== 'number') {
+        throw new Error(
+          `Invalid .cine package file (${params.sourceLabel}): "${sceneId}.coverage[]" entries require numeric "id"`
+        );
+      }
+      ids.add(shotId);
+      const frameIds = shot.frameIds;
+      if (!frameIds) continue;
+      if (!Array.isArray(frameIds)) {
+        throw new Error(
+          `Invalid .cine package file (${params.sourceLabel}): "${sceneId}.coverage" shot ${shotId} "frameIds" must be an array`
+        );
+      }
+      for (const frameId of frameIds) {
+        if (typeof frameId !== 'number') {
+          throw new Error(
+            `Invalid .cine package file (${params.sourceLabel}): "${sceneId}.coverage" shot ${shotId} "frameIds" must contain numbers`
+          );
+        }
+        const frame = frameById.get(frameId);
+        if (!frame) {
+          throw new Error(
+            `Invalid .cine package file (${params.sourceLabel}): "${sceneId}.coverage" shot ${shotId} references missing storyboard frame id ${frameId}`
+          );
+        }
+        const frameSceneId = sceneIdFromStoryboardSceneNumber(String(frame.scene ?? '1'));
+        if (frameSceneId !== sceneId) {
+          throw new Error(
+            `Invalid .cine package file (${params.sourceLabel}): frame ${frameId} belongs to ${frameSceneId}, not ${sceneId}`
+          );
+        }
+        if (frame.shotId != null && frame.shotId !== shotId) {
+          throw new Error(
+            `Invalid .cine package file (${params.sourceLabel}): frame ${frameId} shotId ${frame.shotId} disagrees with shot ${shotId} frameIds`
+          );
+        }
+      }
+    }
+    shotIdsByScene.set(sceneId, ids);
+  }
+
+  for (const raw of frames) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const frame = raw as Record<string, unknown>;
+    const frameId = frame.id;
+    const shotId = frame.shotId;
+    if (typeof frameId !== 'number' || shotId == null) continue;
+    if (typeof shotId !== 'number') {
+      throw new Error(
+        `Invalid .cine package file (${params.sourceLabel}): frame ${frameId} "shotId" must be a number`
+      );
+    }
+    const sceneId = sceneIdFromStoryboardSceneNumber(String(frame.scene ?? '1'));
+    const shotIds = shotIdsByScene.get(sceneId);
+    if (!shotIds?.has(shotId)) {
+      throw new Error(
+        `Invalid .cine package file (${params.sourceLabel}): frame ${frameId} references missing coverage shot ${shotId} in ${sceneId}`
+      );
+    }
+  }
+}
+
 function validateCrossFileIntegrity(params: {
   packageBasename: string;
   scenePath?: string;
+  storyboardPath?: string;
   locationsPath?: string;
   charactersPath?: string;
   propsPath?: string;
   wardrobePath?: string;
   vehiclesPath?: string;
   effectsPath?: string;
+  setsPath?: string;
+  adrPath?: string;
+  foleyPath?: string;
   generatedPath?: string;
   importedPath?: string;
   outputsPath?: string;
@@ -622,10 +749,14 @@ function validateCrossFileIntegrity(params: {
   wardrobe?: Record<string, unknown>[];
   vehicles?: Record<string, unknown>[];
   effects?: Record<string, unknown>[];
+  sets?: Record<string, unknown>[];
+  adr?: Record<string, unknown>[];
+  foley?: Record<string, unknown>[];
   generatedAssets?: Record<string, unknown>[];
   importedAssets?: Record<string, unknown>[];
   outputs?: Record<string, unknown>[];
   assetDetails?: Record<string, unknown>;
+  storyboard?: { frames?: unknown[] };
 }): void {
   const packagePrefix = `./project-files/${params.packageBasename}/`;
   const packageFileSet = new Set(
@@ -642,6 +773,9 @@ function validateCrossFileIntegrity(params: {
   const vehiclesLabel = `${params.packageBasename}/${params.vehiclesPath ?? 'vehicles'}`;
   const effectsLabel = `${params.packageBasename}/${params.effectsPath ?? 'effects'}`;
   const scenesLabel = `${params.packageBasename}/${params.scenePath ?? 'scenes'}`;
+  const setsLabel = `${params.packageBasename}/${params.setsPath ?? 'sets'}`;
+  const adrLabel = `${params.packageBasename}/${params.adrPath ?? 'adr'}`;
+  const foleyLabel = `${params.packageBasename}/${params.foleyPath ?? 'foley'}`;
   const generatedLabel = `${params.packageBasename}/${params.generatedPath ?? 'generated'}`;
   const importedLabel = `${params.packageBasename}/${params.importedPath ?? 'imported'}`;
   const outputsLabel = `${params.packageBasename}/${params.outputsPath ?? 'outputs'}`;
@@ -684,6 +818,61 @@ function validateCrossFileIntegrity(params: {
     }
   }
 
+  if (params.sets) {
+    const setIds = buildIdSet(params.sets, setsLabel, '.cinesets schema');
+    for (const row of params.sets) {
+      const setId = assertStringField(row, 'id', setsLabel, '.cinesets schema');
+      const locationId = row.locationId;
+      if (locationId == null) continue;
+      if (typeof locationId !== 'string' || !locationId.trim()) {
+        throw new Error(
+          `Invalid .cine package file (${setsLabel}): "${setId}.locationId" must be a non-empty string (.cinesets schema)`
+        );
+      }
+      if (!locationIds.has(locationId)) {
+        throw new Error(
+          `Invalid .cine package file (${setsLabel}): "${setId}" references missing locationId "${locationId}" (.cinesets schema)`
+        );
+      }
+    }
+  }
+
+  if (params.adr) {
+    for (const row of params.adr) {
+      const adrId = assertStringField(row, 'id', adrLabel, '.cineadr schema');
+      const characterId = row.characterId;
+      if (characterId == null) continue;
+      if (typeof characterId !== 'string' || !characterId.trim()) {
+        throw new Error(
+          `Invalid .cine package file (${adrLabel}): "${adrId}.characterId" must be a non-empty string (.cineadr schema)`
+        );
+      }
+      if (!characterIds.has(characterId)) {
+        throw new Error(
+          `Invalid .cine package file (${adrLabel}): "${adrId}" references missing characterId "${characterId}" (.cineadr schema)`
+        );
+      }
+    }
+  }
+
+  if (params.foley) {
+    for (const row of params.foley) {
+      const foleyId = assertStringField(row, 'id', foleyLabel, '.cinefoley schema');
+      const characterId = row.characterId;
+      if (characterId == null) continue;
+      if (typeof characterId !== 'string' || !characterId.trim()) {
+        throw new Error(
+          `Invalid .cine package file (${foleyLabel}): "${foleyId}.characterId" must be a non-empty string (.cinefoley schema)`
+        );
+      }
+      if (!characterIds.has(characterId)) {
+        throw new Error(
+          `Invalid .cine package file (${foleyLabel}): "${foleyId}" references missing characterId "${characterId}" (.cinefoley schema)`
+        );
+      }
+    }
+  }
+
   const relatedSets = {
     sceneId: sceneIds,
     locationId: locationIds,
@@ -699,6 +888,9 @@ function validateCrossFileIntegrity(params: {
   validateCatalogMediaPaths(params.locations, locationsLabel, packageFileSet);
   validateCatalogMediaPaths(params.props, propsLabel, packageFileSet);
   validateCatalogMediaPaths(params.wardrobe, wardrobeLabel, packageFileSet);
+  if (params.sets) {
+    validateCatalogMediaPaths(params.sets, setsLabel, packageFileSet);
+  }
 
   validatePathBackedRows(params.generatedAssets, generatedLabel, 'status', packageFileSet);
   validatePathBackedRows(params.importedAssets, importedLabel, 'status', packageFileSet);
@@ -708,6 +900,14 @@ function validateCrossFileIntegrity(params: {
   const assetDetailKeys = new Set(Object.keys(params.assetDetails ?? {}));
   if (params.tree) {
     validateTreeNodeSchema(params.tree, treeLabel, String(params.tree.name ?? 'root'), sceneIds, assetDetailKeys);
+  }
+
+  if (params.scenes && params.storyboard) {
+    validateShotFrameLinks({
+      scenes: params.scenes,
+      storyboard: params.storyboard,
+      sourceLabel: `${params.packageBasename}/${params.storyboardPath ?? 'storyboard'}`,
+    });
   }
 }
 
@@ -807,6 +1007,130 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     '.cinebreakdown',
     '.cinebreakdown schema: array of breakdown records'
   );
+  const shotLibrary = loadOptionalArrayDoc(
+    packageBasename,
+    documents.shotLibrary,
+    '.cineshotlibrary',
+    '.cineshotlibrary schema: array of shot setup records',
+    'id'
+  );
+  const cameraPresets = loadOptionalArrayDoc(
+    packageBasename,
+    documents.cameraPresets,
+    '.cinecamerapresets',
+    '.cinecamerapresets schema: array of camera preset records',
+    'id'
+  );
+  const referenceImages = documents.referenceImages
+    ? loadJsonDoc(packageBasename, documents.referenceImages)
+    : undefined;
+  const motionReferences = loadOptionalArrayDoc(
+    packageBasename,
+    documents.motionReferences,
+    '.cinemotionreferences',
+    '.cinemotionreferences schema: array of motion reference records',
+    'id'
+  );
+  const spatialAnnotations = documents.spatialAnnotations
+    ? loadJsonDoc(packageBasename, documents.spatialAnnotations)
+    : undefined;
+  const productionSound = loadOptionalArrayDoc(
+    packageBasename,
+    documents.productionSound,
+    '.cineproductionsound',
+    '.cineproductionsound schema: array of production sound clip records',
+    'id'
+  );
+  const adr = loadOptionalArrayDoc(
+    packageBasename,
+    documents.adr,
+    '.cineadr',
+    '.cineadr schema: array of ADR line records',
+    'id'
+  );
+  const foley = loadOptionalArrayDoc(
+    packageBasename,
+    documents.foley,
+    '.cinefoley',
+    '.cinefoley schema: array of foley event records',
+    'id'
+  );
+  const sfx = loadOptionalArrayDoc(
+    packageBasename,
+    documents.sfx,
+    '.cinesfx',
+    '.cinesfx schema: array of sound effect records',
+    'id'
+  );
+  const music = loadOptionalArrayDoc(
+    packageBasename,
+    documents.music,
+    '.cinemusic',
+    '.cinemusic schema: array of music cue records',
+    'id'
+  );
+  const tempMix = documents.tempMix
+    ? loadJsonDoc(packageBasename, documents.tempMix)
+    : undefined;
+  const sets = loadOptionalArrayDoc(
+    packageBasename,
+    documents.sets,
+    '.cinesets',
+    '.cinesets schema: array of set design records',
+    'id'
+  );
+  const colorPresets = loadOptionalArrayDoc(
+    packageBasename,
+    documents.colorPresets,
+    '.cinecolorpresets',
+    '.cinecolorpresets schema: array of color preset records',
+    'id'
+  );
+  const sequences = loadOptionalArrayDoc(
+    packageBasename,
+    documents.sequences,
+    '.cinesequences',
+    '.cinesequences schema: array of sequence records',
+    'id'
+  );
+  const vfx = loadOptionalArrayDoc(
+    packageBasename,
+    documents.vfx,
+    '.cinevfx',
+    '.cinevfx schema: array of VFX records',
+    'id'
+  );
+  const generationQueue = loadOptionalArrayDoc(
+    packageBasename,
+    documents.generationQueue,
+    '.cinegenerationqueue',
+    '.cinegenerationqueue schema: array of generation job records',
+    'id'
+  );
+  const reviewQueue = loadOptionalArrayDoc(
+    packageBasename,
+    documents.reviewQueue,
+    '.cinereviewqueue',
+    '.cinereviewqueue schema: array of review item records',
+    'id'
+  );
+  const costTracking = loadOptionalArrayDoc(
+    packageBasename,
+    documents.costTracking,
+    '.cinecosttracking',
+    '.cinecosttracking schema: array of cost tracking records',
+    'id'
+  );
+  const modelRoutingRules = documents.modelRoutingRules
+    ? loadJsonDoc(packageBasename, documents.modelRoutingRules)
+    : undefined;
+  const agentLog = loadOptionalArrayDoc(
+    packageBasename,
+    documents.agentLog,
+    '.cineagentlog',
+    '.cineagentlog schema: array of agent log records',
+    'id'
+  );
   if (documents.assetDetails) {
     assertDocExtension(
       documents.assetDetails,
@@ -818,6 +1142,8 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     ? loadJsonDoc(packageBasename, documents.assetDetails)
     : undefined;
 
+  const storyboard = loadStoryboardDoc(packageBasename, documents.storyboard);
+
   validateCrossFileIntegrity({
     packageBasename,
     scenePath: documents.scenes,
@@ -827,18 +1153,26 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     wardrobePath: documents.wardrobe,
     vehiclesPath: documents.vehicles,
     effectsPath: documents.effects,
+    setsPath: documents.sets,
+    adrPath: documents.adr,
+    foleyPath: documents.foley,
     generatedPath: documents.generatedAssets,
     importedPath: documents.importedAssets,
     outputsPath: documents.outputs,
     treePath: documents.tree,
+    storyboardPath: documents.storyboard,
     tree,
     scenes,
+    storyboard,
     locations,
     characters,
     props,
     wardrobe,
     vehicles,
     effects,
+    sets,
+    adr,
+    foley,
     generatedAssets,
     importedAssets,
     outputs,
@@ -853,9 +1187,29 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     locations,
     breakdown,
     assetDetails,
+    shotLibrary,
+    cameraPresets,
+    referenceImages,
+    motionReferences,
+    spatialAnnotations,
+    productionSound,
+    adr,
+    foley,
+    sfx,
+    music,
+    tempMix,
+    sets,
+    colorPresets,
+    sequences,
+    vfx,
+    generationQueue,
+    reviewQueue,
+    costTracking,
+    modelRoutingRules,
+    agentLog,
     screenplay: loadScreenplayDoc(packageBasename, documents.screenplay),
     treatment: loadTreatmentDoc(packageBasename, documents.treatment),
-    storyboard: loadStoryboardDoc(packageBasename, documents.storyboard),
+    storyboard,
     assets: assetLibrary,
   };
 }
@@ -885,12 +1239,39 @@ export type AppliedCineProject = {
   storyboardReferenceBank: Record<string, unknown>;
   sceneReferenceOverrides: Record<string, unknown>;
   referenceGenerationStatus: string;
+  previsSelectionState: {
+    sceneId: string | null;
+    shotId: number | null;
+    frameId: number | null;
+    scriptRange: { start: number; end: number } | null;
+    timelineItemId: string | null;
+  };
   timelineClips: unknown[];
   locationLibrary: unknown[];
   assetLibrary: Record<string, unknown>;
   breakdownData: unknown[];
   assetDetailData: Record<string, unknown>;
   projectScreenplay: CineProjectScreenplay;
+  shotLibrary?: Record<string, unknown>[];
+  cameraPresets?: Record<string, unknown>[];
+  referenceImages?: Record<string, unknown>;
+  motionReferences?: Record<string, unknown>[];
+  spatialAnnotations?: Record<string, unknown>;
+  productionSound?: Record<string, unknown>[];
+  adr?: Record<string, unknown>[];
+  foley?: Record<string, unknown>[];
+  sfx?: Record<string, unknown>[];
+  music?: Record<string, unknown>[];
+  tempMix?: Record<string, unknown>;
+  sets?: Record<string, unknown>[];
+  colorPresets?: Record<string, unknown>[];
+  sequences?: Record<string, unknown>[];
+  vfx?: Record<string, unknown>[];
+  generationQueue?: Record<string, unknown>[];
+  reviewQueue?: Record<string, unknown>[];
+  costTracking?: Record<string, unknown>[];
+  modelRoutingRules?: Record<string, unknown>;
+  agentLog?: Record<string, unknown>[];
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {
@@ -929,11 +1310,60 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
       ? sb.sceneReferenceOverrides
       : {}) as Record<string, unknown>,
     referenceGenerationStatus: typeof sb?.referenceGenerationStatus === 'string' ? sb.referenceGenerationStatus : 'idle',
+    previsSelectionState: {
+      sceneId:
+        sb?.previsSelection && typeof sb.previsSelection.sceneId === 'string'
+          ? sb.previsSelection.sceneId
+          : null,
+      shotId:
+        sb?.previsSelection && typeof sb.previsSelection.shotId === 'number'
+          ? sb.previsSelection.shotId
+          : null,
+      frameId:
+        sb?.previsSelection && typeof sb.previsSelection.frameId === 'number'
+          ? sb.previsSelection.frameId
+          : null,
+      scriptRange:
+        sb?.previsSelection &&
+        sb.previsSelection.scriptRange &&
+        typeof sb.previsSelection.scriptRange === 'object' &&
+        typeof sb.previsSelection.scriptRange.start === 'number' &&
+        typeof sb.previsSelection.scriptRange.end === 'number'
+          ? {
+              start: sb.previsSelection.scriptRange.start,
+              end: sb.previsSelection.scriptRange.end,
+            }
+          : null,
+      timelineItemId:
+        sb?.previsSelection && typeof sb.previsSelection.timelineItemId === 'string'
+          ? sb.previsSelection.timelineItemId
+          : null,
+    },
     timelineClips: doc.timeline ?? [],
     locationLibrary: doc.locations ?? [],
     assetLibrary: assets,
     breakdownData: doc.breakdown ?? [],
     assetDetailData: (doc.assetDetails && typeof doc.assetDetails === 'object' ? doc.assetDetails : {}) as Record<string, unknown>,
+    shotLibrary: doc.shotLibrary ?? [],
+    cameraPresets: doc.cameraPresets ?? [],
+    referenceImages: doc.referenceImages ?? {},
+    motionReferences: doc.motionReferences ?? [],
+    spatialAnnotations: doc.spatialAnnotations ?? {},
+    productionSound: doc.productionSound ?? [],
+    adr: doc.adr ?? [],
+    foley: doc.foley ?? [],
+    sfx: doc.sfx ?? [],
+    music: doc.music ?? [],
+    tempMix: doc.tempMix ?? {},
+    sets: doc.sets ?? [],
+    colorPresets: doc.colorPresets ?? [],
+    sequences: doc.sequences ?? [],
+    vfx: doc.vfx ?? [],
+    generationQueue: doc.generationQueue ?? [],
+    reviewQueue: doc.reviewQueue ?? [],
+    costTracking: doc.costTracking ?? [],
+    modelRoutingRules: doc.modelRoutingRules ?? {},
+    agentLog: doc.agentLog ?? [],
   };
 }
 

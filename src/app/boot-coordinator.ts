@@ -18,9 +18,9 @@ export type BootDomain =
   | 'setupAssistant'
   | 'shell'
   | 'keybindings'
-  | 'console'
+  // | 'console'
   | 'debug'
-  | 'mcpBridge'
+  // | 'mcpBridge'
   | 'app';
 
 const completed = new Set<BootDomain>();

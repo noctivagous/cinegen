@@ -1,7 +1,27 @@
 import { emitTreeNodeSelect, treeNodeSelectDetail } from '@/events/shell-events';
+import { activeProjectId, getActiveProjectSettings } from '@/data/project-data';
+import {
+  persistProjectTreeExpandedState,
+  restoreProjectTreeExpandedState,
+} from '@/services/project-service';
+import { loadPreferences, savePreferences } from '@/services/preferences';
+import { ensurePanelForView } from '@/components/panels/panel-loader';
+import {
+  applyPreprodLayoutToDom,
+  preprodModeForTreeNode,
+  type PreprodLayoutMode,
+} from '@/workspace/preprod-layout';
+import { SUPPORTED_TREE_VIEWS } from '@/tree/tree-view-contract';
 import type { TreeNode, TreeProjectRoot } from '@/tree/tree-types';
 import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
 import { selectTreeNode as selectWorkspaceTreeNode } from '@/workspace/workspace-bundle';
+import {
+  formatShotDisplayLabel,
+  getFramesForShot,
+  getShotsForScene,
+  sceneNumberFromSceneId,
+} from '@/workspace/shot-frame-bridge';
+import type { SceneShot } from '@/workspace/scene-types';
 
 type BreakdownRow = {
   scene: string;
@@ -30,6 +50,17 @@ type TreeRefreshListener = () => void;
 
 let _selectedName: string | null = null;
 const _listeners = new Set<TreeRefreshListener>();
+let _treeUiRestoredForProjectId: string | null = null;
+
+const DEFAULT_PROJECT_TREE_SELECTION = 'Script + Storyboard';
+
+function commitProjectTreeExpandedState(): void {
+  persistProjectTreeExpandedState();
+}
+
+export function resetProjectTreeUiRestoreFlag(): void {
+  _treeUiRestoredForProjectId = null;
+}
 
 export function subscribeProjectTree(listener: TreeRefreshListener): () => void {
   _listeners.add(listener);
@@ -44,8 +75,59 @@ export function getSelectedTreeName(): string | null {
   return _selectedName;
 }
 
+export function persistProjectTreeSelection(nodeName: string, projectId = activeProjectId): void {
+  if (!projectId || !nodeName) return;
+  const prefs = window.CineGen?.preferences ?? loadPreferences();
+  savePreferences({
+    projectTreeSelectedByProjectId: {
+      ...(prefs.projectTreeSelectedByProjectId ?? {}),
+      [projectId]: nodeName,
+    },
+  });
+}
+
+export function getPersistedProjectTreeSelection(projectId = activeProjectId): string {
+  if (!projectId) return DEFAULT_PROJECT_TREE_SELECTION;
+  const prefs = window.CineGen?.preferences ?? loadPreferences();
+  return prefs.projectTreeSelectedByProjectId?.[projectId] ?? DEFAULT_PROJECT_TREE_SELECTION;
+}
+
+function resolveActivatableTreeNodeName(preferredName: string): string {
+  if (findProjectNodeByName(preferredName)) return preferredName;
+  if (findProjectNodeByName(DEFAULT_PROJECT_TREE_SELECTION)) return DEFAULT_PROJECT_TREE_SELECTION;
+  return preferredName;
+}
+
+export function getPersistedPreprodMode(projectId = activeProjectId): PreprodLayoutMode {
+  ensureStoryboardReferenceNodes();
+  ensureSceneShotListNodes();
+  const preferred = resolveActivatableTreeNodeName(getPersistedProjectTreeSelection(projectId));
+  return preprodModeForTreeNode(findProjectNodeByName(preferred));
+}
+
+/** Sync tree highlight + preprod layout before first paint (no workspace routing). */
+export function primePersistedProjectTreeUi(projectId = activeProjectId): void {
+  ensureStoryboardReferenceNodes();
+  ensureSceneShotListNodes();
+  const name = resolveActivatableTreeNodeName(getPersistedProjectTreeSelection(projectId));
+  _selectedName = name;
+  const node = findProjectNodeByName(name);
+  if (node?.view === 'preprod-workspace') {
+    applyPreprodLayoutToDom(preprodModeForTreeNode(node));
+  }
+  expandTreePathToName(name);
+  requestProjectTreeRefresh();
+}
+
+/** Restore last hierarchy selection for a project (falls back to Script + Storyboard). */
+export function activatePersistedProjectTreeSelection(projectId = activeProjectId): boolean {
+  const preferred = getPersistedProjectTreeSelection(projectId);
+  return activateProjectTreeNode(resolveActivatableTreeNodeName(preferred));
+}
+
 export function setSelectedTreeName(name: string | null): void {
   _selectedName = name;
+  if (name) persistProjectTreeSelection(name);
   requestProjectTreeRefresh();
   requestAnimationFrame(() => {
     document
@@ -56,6 +138,7 @@ export function setSelectedTreeName(name: string | null): void {
 
 export function getProjectTreeChildren(): TreeNode[] {
   ensureStoryboardReferenceNodes();
+  ensureSceneShotListNodes();
   return getProjectData().children ?? [];
 }
 
@@ -84,6 +167,81 @@ function ensureStoryboardReferenceNodes(): void {
       preprodMode: 'storyboard',
       referenceCategory: w.key,
     });
+  }
+}
+
+function findScenesFolder(nodes: TreeNode[]): TreeNode | null {
+  for (const node of nodes) {
+    if (node.type === 'folder' && node.name === 'Scenes') return node;
+    if (node.children?.length) {
+      const found = findScenesFolder(node.children);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function shotTreeNodeName(sceneId: string, shot: SceneShot): string {
+  const sceneNum = sceneNumberFromSceneId(sceneId);
+  const num = shot.number ?? shot.id;
+  const prefix = formatShotDisplayLabel(sceneNum, num);
+  const label = shot.label.length > 42 ? `${shot.label.slice(0, 39)}…` : shot.label;
+  return `Scene ${String(sceneNum).padStart(2, '0')} — Shot ${prefix} — ${label}`;
+}
+
+function frameTreeNodeName(sceneId: string, shot: SceneShot, frameIndex: number, frameLabel: string): string {
+  const sceneNum = sceneNumberFromSceneId(sceneId);
+  const num = shot.number ?? shot.id;
+  const prefix = formatShotDisplayLabel(sceneNum, num);
+  const label = frameLabel.length > 36 ? `${frameLabel.slice(0, 33)}…` : frameLabel;
+  return `Scene ${String(sceneNum).padStart(2, '0')} — ${prefix}.${frameIndex} — ${label}`;
+}
+
+/** Inject coverage shots and storyboard frames under each scene node. */
+function ensureSceneShotListNodes(): void {
+  const projectData = getProjectData();
+  const scenesFolder = findScenesFolder(projectData.children ?? []);
+  if (!scenesFolder?.children?.length) return;
+
+  for (const sceneNode of scenesFolder.children) {
+    if (sceneNode.type !== 'scene' || !sceneNode.sceneId) continue;
+    const sceneId = sceneNode.sceneId;
+    const shots = [...getShotsForScene(sceneId)].sort(
+      (a, b) => (a.number ?? 0) - (b.number ?? 0) || a.id - b.id
+    );
+
+    if (!shots.length) {
+      if (sceneNode.children?.length) delete sceneNode.children;
+      continue;
+    }
+
+    const shotChildren: TreeNode[] = [];
+    for (const shot of shots) {
+      const frames = getFramesForShot(sceneId, shot.id);
+      const frameChildren: TreeNode[] = frames.map((frame, idx) => ({
+        name: frameTreeNodeName(sceneId, shot, idx + 1, frame.label),
+        type: 'storyboard-frame',
+        icon: 'fa-image',
+        view: 'preprod-workspace',
+        preprodMode: 'storyboard',
+        sceneId,
+        shotId: shot.id,
+        frameId: frame.id,
+      }));
+
+      shotChildren.push({
+        name: shotTreeNodeName(sceneId, shot),
+        type: 'scene-shot',
+        icon: 'fa-video',
+        view: 'scene-detail',
+        sceneId,
+        shotId: shot.id,
+        children: frameChildren.length ? frameChildren : undefined,
+      });
+    }
+
+    sceneNode.children = shotChildren;
+    if (sceneNode.expanded == null) sceneNode.expanded = false;
   }
 }
 
@@ -120,9 +278,19 @@ export function updateProjectTreeHeader(): void {
   icon.setAttribute('aria-hidden', 'true');
   el.appendChild(icon);
   const nameEl = document.createElement('span');
-  nameEl.className = 'truncate min-w-0';
+  nameEl.className = 'truncate min-w-0 flex-1';
   nameEl.textContent = projectData.name || 'UNTITLED';
   el.appendChild(nameEl);
+
+  const settings = getActiveProjectSettings();
+  const aspect = settings.aspectRatio ? String(settings.aspectRatio) : '';
+  if (aspect) {
+    const aspectEl = document.createElement('span');
+    aspectEl.className = 'project-tree-header-aspect shrink-0';
+    aspectEl.textContent = aspect;
+    aspectEl.title = 'Aspect ratio';
+    el.appendChild(aspectEl);
+  }
 }
 
 export function findProjectNode(
@@ -153,9 +321,17 @@ export function expandTreePathToName(
   ancestors: TreeNode[] = []
 ): boolean {
   if (node.name === targetName) {
+    let changed = false;
     ancestors.forEach((n) => {
-      if (n.children?.length) n.expanded = true;
+      if (n.children?.length && !n.expanded) {
+        n.expanded = true;
+        changed = true;
+      }
     });
+    if (changed) {
+      requestProjectTreeRefresh();
+      commitProjectTreeExpandedState();
+    }
     return true;
   }
   if (node.children) {
@@ -176,7 +352,10 @@ export function expandProjectTreeToNode(target: TreeNode): boolean {
       changed = true;
     }
   }
-  if (changed) requestProjectTreeRefresh();
+  if (changed) {
+    requestProjectTreeRefresh();
+    commitProjectTreeExpandedState();
+  }
   return changed;
 }
 
@@ -194,6 +373,7 @@ export function toggleTreeNodeExpanded(node: TreeNode): boolean {
   node.expanded = !node.expanded;
   requestProjectTreeRefresh();
   if (node.name) setSelectedTreeName(node.name);
+  commitProjectTreeExpandedState();
   return true;
 }
 
@@ -213,13 +393,20 @@ export function handleTreeNodeSelect(node: TreeNode, sectionKey: string | null):
   selectWorkspaceTreeNode(null, node, sectionKey);
 }
 
+function resolveTreeNodeViewName(node: TreeNode): string {
+  const requested = typeof node?.view === 'string' && node.view.trim() ? node.view : 'default';
+  return SUPPORTED_TREE_VIEWS.has(requested) ? requested : 'default';
+}
+
 export function activateProjectTreeNode(name: string): boolean {
   expandTreePathToName(name);
   const node = findProjectNodeByName(name);
   if (!node) return false;
   requestProjectTreeRefresh();
   const sectionKey = getTreeSectionKeyForNode(node);
-  queueMicrotask(() => handleTreeNodeSelect(node, sectionKey));
+  void ensurePanelForView(resolveTreeNodeViewName(node)).then(() => {
+    handleTreeNodeSelect(node, sectionKey);
+  });
   return true;
 }
 
@@ -245,6 +432,12 @@ function nodeContains(parent: TreeNode, target: TreeNode): boolean {
 
 export function refreshProjectTree(): void {
   ensureStoryboardReferenceNodes();
+  ensureSceneShotListNodes();
+  const activeId = activeProjectId || '';
+  if (activeId && _treeUiRestoredForProjectId !== activeId) {
+    restoreProjectTreeExpandedState(activeId);
+    _treeUiRestoredForProjectId = activeId;
+  }
   updateProjectTreeHeader();
   requestProjectTreeRefresh();
 }

@@ -1,0 +1,395 @@
+**Input limits and constraints vary significantly** across major AI video generation platforms in 2026. These directly impact consistency workflows, as longer prompts, more references, or extended durations can strain coherence. Most tools favor concise, structured inputs over exhaustive ones for reliable results. Here’s a breakdown focused on standard (non-custom) models:
+
+### Prompt Length Limits
+- **Runway Gen-4 / Gen-4.5**: Maximum ~1000 characters for text prompts. Shorter, focused prompts perform better for motion and consistency.
+- **Luma Dream Machine / Ray**: Up to 5000 characters, but very long prompts can lead to ignored details or errors. Minimum 3 characters; aim for concise descriptions.
+- **Kling (3.0 and similar)**: No strict published character limit in most docs, but practical advice emphasizes short, action-focused prompts (action + environment + camera). Overly detailed prompts reduce effectiveness—use negatives and references instead for consistency.
+- **Pika Labs**: Prefers short, clear prompts (subject + action + setting + style). Long, detailed prompts often get ignored or produce muddled results. No hard token limit publicized, but brevity is key.
+
+**General tip**: Even with higher limits, models handle 200–800 characters most reliably for consistent outputs. Break complex scenes into parameters like camera movement, lighting, and subject action rather than cramming everything in.
+
+### Reference Image / Asset Limits (Critical for Consistency)
+- **Runway Gen-4 References**: Up to **3 reference images** per generation. Excellent for character/location locking. Supports various resolutions (e.g., max ~1280x720 for 16:9).
+- **Kling**: Strong multi-reference support—often **3–4 images** (or up to more via Elements/Subject Binding). Can use front/side/profile + outfit details. Element references and "Bind Subject" features excel at identity retention without custom training.
+- **Luma**: Supports reference/keyframe images (start/end frames common). Multi-image prompting available, but limits aren't as explicitly high as Kling/Runway—typically 1–several for personalization.
+- **Pika**: Good image-to-video and keyframe tools (Pikaframes), but consistency across clips relies more on chaining than heavy multi-ref in single gens. Image uploads have size limits (e.g., ~10MB).
+
+**Optimal practice**: Provide 1–4 high-quality, varied-angle references (well-lit, clear faces) rather than overloading. More references improve consistency but can slow generation or introduce conflicts if they clash.
+
+### Video Duration & Generation Constraints
+Most tools cap single generations at short clips, requiring chaining/extension for longer content (which tests consistency):
+- **Runway**: Often 5–10 seconds (up to ~16s in some modes). Extensions possible.
+- **Kling**: Up to 10–15 seconds standard; some modes reach 30s+ or longer with stitching. Strong temporal consistency in longer clips.
+- **Luma**: ~5–10 seconds per generation; extensions add 2–5s each. Can chain to 30s+.
+- **Pika**: 5–10 seconds typical (earlier versions 3–5s).
+
+Other constraints: Resolution (720p–1080p common, some 4K), credits per second, aspect ratios (16:9, 9:16, 1:1, etc.), and generation queues. Negative prompts help lock consistency by excluding unwanted changes.
+
+### For Your App: Key Considerations
+- **Expose flexible inputs**: Allow users to upload 1–4 refs with strength sliders (0.5–1.0), character names for reuse, and prompt templates.
+- **Handle chaining**: Auto-use last frame as next start image + carry references/prompt seeds.
+- **Warn on limits**: Surface character counts, ref counts, and duration caps to prevent failed generations.
+- **Balance**: Heavy reference use boosts consistency but may limit creative motion. Test combos—e.g., 2–3 refs + concise prompt + negative list yields best stable outcomes without custom models.
+
+These limits evolve quickly, so integrate API checks for real-time validation. Focus your app on smart asset management (reference libraries, prompt locking) to work *within* these bounds for professional consistency.
+
+**Major AI video platforms in 2026** naturally support a wide range of cinematic shots, angles, framing (field of view), and movements through **prompt engineering**, with some offering dedicated controls or presets. These features enhance consistency when combined with reference images, locked subjects, and structured prompts—key for your app.
+
+### Supported Camera Angles & Shots
+Models understand standard film terminology reliably. Common ones include:
+
+- **Aerial / Bird's Eye / Overhead**: High overhead views, often drone-like, showing scale or landscapes.
+- **High Angle**: Camera looks down, making subjects appear smaller or vulnerable.
+- **Low Angle**: Camera looks up, conveying power or grandeur.
+- **Eye Level / Neutral**: Natural human perspective for relatability.
+- **Ground Level / Worm's Eye**: Extreme low shots for dramatic effect.
+- **Over-the-Shoulder (OTS)**: From behind a character, ideal for dialogue or point-of-view.
+- **POV / Selfie / First-Person**: Immersive, direct viewer perspective.
+- **Close-Up / Medium Shot / Wide Shot / Establishing Shot**: Varying field of view (framing) from intimate details to broad context.
+
+**Framing/Field of View** works best when specified with lens-like terms (e.g., "50mm lens, medium shot," "wide-angle 24mm establishing shot"). This helps control depth and focus naturally.
+
+### Camera Movements
+These are well-supported across tools, especially in **Runway Gen-4.5**, **Kling 3.0+**, and **Luma Ray**:
+
+- **Static / Locked / Fixed Camera**: "Still camera," "tripod shot," "zero movement" for maximum consistency.
+- **Pan (Left/Right)**: Horizontal rotation from a fixed point.
+- **Tilt (Up/Down)**: Vertical rotation.
+- **Zoom (In/Out)**: Changing focal length smoothly.
+- **Dolly / Push In / Pull Out / Tracking**: Camera physically moves through space toward/away from or following a subject. Excellent for depth and parallax.
+- **Orbit / Arc / Crane**: Circular or rising movements around subjects.
+- **Pedestal / Elevator**: Vertical lift or drop.
+- **Truck / Slide**: Lateral movement parallel to the scene.
+- **Roll**: Rotational tilt for dynamic or disorienting effects.
+- **Handheld / FPV / Shaky Cam**: Organic, realistic motion.
+- **Advanced**: 360° spins, bolt cam, tiny planet effects, or combined moves (e.g., "slow dolly forward while tilting up").
+
+**Runway** excels with granular controls like Motion Brush for directing specific elements alongside camera paths. **Kling** shines in complex tracking and physics-aware motion. **Luma** has strong preset concepts for reliable reproduction.
+
+### Best Practices for Consistent Outcomes (No Custom Models)
+- **Prompt Structure**: Place camera instructions clearly, e.g., "Medium shot, slow tracking camera follows the character walking through the forest, eye-level angle, subtle handheld motion." Keep prompts focused—one primary movement per clip for better temporal consistency.
+- **Combine with References**: Use start/end frames or character refs to anchor shots. Explicitly reference angles in initial images.
+- **Negatives**: Add "no camera shake, no random movement, stable framing" to lock consistency.
+- **Chaining**: Generate short clips (5–10s) and extend using the last frame as input, carrying over the same camera directives.
+- **Limits**: Overly complex or rapid multi-movements can reduce coherence—favor smooth, intentional ones. Static or simple tracking yields the most reliable identity/environment lock.
+
+### App Integration Tips
+- **UI Elements**: Dropdowns/presets for common angles, movements, and shots with auto-appended prompt text. Sliders for speed/intensity.
+- **Asset Support**: Let users save "shot templates" (e.g., "low-angle tracking hero shot") tied to character refs for reuse.
+- **Validation**: Warn users when combining conflicting moves (e.g., fast orbit + multiple subjects) that could hurt consistency.
+- **Workflow**: Image-to-video with camera path + chaining tools will give users professional results within platform limits.
+
+These capabilities feel increasingly film-like, with natural physics and spatial awareness improving steadily. Test specific prompts across backends in your app to surface what delivers the smoothest, most controllable results for users.
+
+**For a backyard scene with people**, static backdrops are one of the strongest anchors for consistency. Models excel when you give them a clear, reusable environmental foundation rather than relying solely on text prompts.
+
+### What to Include for Static Backdrops
+Provide a dedicated **background plate**—a high-quality, static reference image of the backyard. This acts as your environmental anchor:
+
+- **Key elements to capture**: The house exterior (windows, doors, siding), lawn/grass texture, trees/shrubs, fence, sky/lighting conditions (e.g., golden hour, overcast), and overall composition. Use a wide or establishing shot angle for flexibility.
+- **Why this works**: Tools like Runway, Kling, and Luma maintain the background more reliably when it's supplied visually. This prevents drift (e.g., the house changing style mid-video) and lets people/props move naturally on top.
+- **Tips for optimal results**: Generate or photograph the backdrop with even lighting, no people, and consistent weather/season. Include subtle depth (foreground bushes, mid-ground patio, background trees) for parallax in camera moves. Reuse the exact same plate across chained clips.
+
+In prompts, reference it explicitly (e.g., "in the established backyard from the reference image") alongside character refs.
+
+### Handling Props via Sprite Sheets or Arrays
+AI tools don't handle traditional sprite sheets (grid of isolated props) particularly well in one go—they can interpret them as cluttered or separate entities, leading to blending, duplication, or ignored details.
+
+- **Better alternatives**:
+  - **Separate prop references**: Upload 1–3 individual high-quality images of key props (e.g., one for a grill, one for lawn chairs, one for toys/scattered items). Many platforms support multi-image references (Kling Elements, Runway References) and let you label or weight them.
+  - **Composite prop plate**: Create a single clean image with arranged props (not a rigid sprite grid) placed in realistic backyard positions or on a transparent/neutral background. This gives spatial context.
+  - **Strength/weight**: Set higher adherence for critical props to lock their appearance without overpowering motion.
+
+**Outcome**: The AI integrates them more naturally into the scene rather than treating them as a sheet to parse. Test with 2–4 total references (1 background + 1–2 characters + 1 props) to stay within typical limits.
+
+### Best Ways to Construct Scenes for Consistency
+Focus on an **asset-first workflow**—build reusable pieces before animation:
+
+1. **Create a Reference Library**:
+   - Background plate (backyard).
+   - Character sheets (multiple angles, outfits matching the scene).
+   - Prop references.
+   - Style/lighting reference (e.g., warm afternoon light, realistic photography style).
+
+2. **Image-to-Video Foundation**:
+   - Start with a high-quality static composite image: People posed naturally in the backyard with props placed. Use this as the primary input for image-to-video modes. This locks composition better than text alone.
+
+3. **Prompt Structure**:
+   - "Static wide shot of the established backyard [describe key features briefly], characters [exact descriptors] interacting naturally with props, consistent lighting from reference, subtle leaf movement, no changes to environment."
+   - Add camera: "Static camera" or gentle movements like "slow pan right" for backyard feel.
+
+4. **Chaining for Longer Scenes**:
+   - Generate short clips (5–10s).
+   - Use the last frame of one as the start image for the next, carrying all references forward.
+   - This preserves the static backdrop while allowing action.
+
+5. **Advanced Controls**:
+   - Negative prompts: "blurry background, changing house architecture, floating props, inconsistent lighting."
+   - Depth/layering: Describe foreground/mid/background to help with occlusion (people behind chairs, etc.).
+
+**For your app**: Let users upload and tag assets (backgrounds, props, characters) into "scene kits." Auto-suggest prompts that reference them, with sliders for influence strength. Warn on overload (too many props can reduce motion quality). This mirrors successful creator workflows—separate, reference-heavy construction yields the most coherent backyard stories without custom training.
+
+The interplay of a fixed environmental foundation with dynamic human elements creates natural balance: stability in the setting supports fluid action in the foreground. Test simple backyard setups across tools to calibrate defaults for your users.
+
+
+**A well-designed "scene kit"** serves as a reusable, modular package that anchors the AI models' tendencies toward drift, giving them clear visual and textual anchors within their input limits (typically 1–4 references, concise prompts). It turns scattered assets into a cohesive system for reliable backyard scenes or any setting.
+
+### Core Components of a Scene Kit
+Tailor it to how current models (Runway Gen-4.5, Kling 3.0+, Luma, Seedance, etc.) best consume inputs: strong visual references + structured text.
+
+- **Background Plate (Essential Anchor)**: 
+  - One high-resolution, static image of the empty backyard (wide/establishing shot preferred). Capture consistent lighting, weather, house details, lawn, trees, fence. This locks the environment so people and props can move naturally on top without architecture or foliage shifting.
+
+- **Character References (1–3 per person)**:
+  - Front view, 3/4 or profile, full-body, and close-up face shots.
+  - Include varied but matching outfits for the scene (e.g., casual backyard clothes).
+  - Optional short reference video clip (if the tool supports Elements/video refs, like Kling) for better 3D/motion fidelity.
+
+- **Prop and Interaction References**:
+  - 1–2 clean images of key props (grill, chairs, toys, drinks) either isolated on neutral background or placed realistically in the backyard context.
+  - Avoid dense sprite sheets; models integrate separate or thoughtfully composed plates more cleanly.
+
+- **Style and Lighting Reference**:
+  - One image defining the overall aesthetic (photorealistic, warm golden hour, cinematic color grade). This helps maintain mood and prevents lighting drift across chained clips.
+
+- **Prompt Template & Bible**:
+  - A saved text file with locked descriptors: exact character names/phrases, background summary, lighting notes, negative prompts (e.g., "no architecture changes, no prop floating, consistent shadows").
+  - Example structure: "[Subject refs] in the established backyard [brief key features], [action], [camera movement], [style from ref]". Include presets for static shots, slow pans, etc.
+
+- **Metadata & Chaining Helpers**:
+  - Recommended seeds (when supported).
+  - Start/end frame examples.
+  - Aspect ratio and duration notes (e.g., 16:9, 5–10s clips).
+  - Previous output frames for easy extension.
+
+### How to Structure and Use the Kit
+Keep total references light (background + 1–2 characters + 1 prop/style) to respect platform limits. Users generate a base composite image first (people + props in backyard), then use image-to-video with the full kit for motion. Chain clips by feeding the last frame forward while reusing the kit.
+
+**For your app**: Make scene kits savable projects with tagged assets, auto-generated prompt suggestions, reference weight sliders, and one-click chaining. This workflow balances the models' strength in visual anchoring with their need for simplicity—providing stability in the setting so dynamic human elements can flow naturally without fighting the generation process. Test kits on real backends to refine defaults.
+
+**For the typical 3–4 image reference limit**, a "sprite kit" (or character sheet) in a single image is a practical compromise, but it's not the absolute strongest approach. Models handle it with varying success depending on how you prepare the image.
+
+### Single-Image Character Sprite/Sheet Feasibility
+Yes, you can combine multiple views of **one character** into a single reference image. This is a common workflow when reference slots are limited:
+
+- **Recommended Layout**: A clean, well-organized sheet with 4–6 views (e.g., front, 3/4 left, 3/4 right, profile, full-body neutral pose, one expression variant). Keep backgrounds transparent or uniform, good spacing, consistent lighting/scale, and no clutter.
+- **How Well It Works**: 
+  - Models like **Kling** (with Elements) and **Runway** can pull identity from such a composite, especially if the prompt references "the character shown in the reference sheet."
+  - It saves slots: Use 1 slot for the full character kit, leaving room for background + 1–2 props or style.
+  - Limitations: If the sheet is too dense or views overlap/conflict, the AI may blend features, ignore some angles, or reduce motion fidelity. Clean, high-resolution sheets perform better than traditional game-style sprite grids.
+
+**Better than nothing**, especially for your app's scene kits, but dedicated separate images (one per key view) usually yield tighter consistency when you have the slots.
+
+### One Character vs. Multiple Characters
+- **Primarily One Character per Strong Reference**: The most reliable results come from dedicating one high-quality reference (or one composite sheet) to a single main character. This maximizes identity lock for motion, expressions, and angles.
+- **Multiple Characters**: Possible within 3–4 slots. For example:
+  - Ref 1: Character A (sheet or single strong image).
+  - Ref 2: Character B.
+  - Ref 3: Background or environment.
+  - Ref 4: Props/style.
+  Tools like Kling's Elements or Runway References explicitly support multi-subject setups. Prompt clearly (e.g., "Character A from ref1 interacts with Character B from ref2"). Consistency drops slightly with more subjects, so test and prioritize.
+
+### Optimal Scene Kit Adjustments for Reference Limits
+Update your scene kits like this:
+- **1 Background plate** (static backyard).
+- **1 Character reference** (composite sheet for one main person, or primary view + prompt for angles).
+- **1–2 Supporting refs** (secondary character or key props).
+- Keep each image clean and purpose-focused—models reward clarity over quantity.
+
+**In your app**: Offer a "character sheet composer" tool where users upload separate poses/angles and it auto-arranges them into an optimized single image (with labels like "Front View," "Side Profile"). Include strength sliders per reference and prompt auto-fill that names characters clearly. This respects limits while giving users flexibility.
+
+The balance here is elegant—providing structured visual anchors lets the models focus their energy on natural movement and interaction rather than guessing identity, creating smoother backyard scenes where the environment holds steady as people come to life. Test a few sheet layouts across your target backends to set smart defaults.
+
+**Yes — for a house location spanning interior and exterior**, your scene kit benefits from dedicated background plates for each major space. These serve as distinct environmental anchors, allowing the models to maintain structural integrity when the action moves between areas.
+
+### Why Separate Plates Make Sense
+Interior and exterior represent fundamentally different visual domains (lighting, textures, depth, reflections). A single plate struggles to cover both reliably within the 3–4 reference limit, especially during transitions or cuts. Models perform best when given clear, purpose-specific visuals rather than forcing extrapolation across big spatial shifts.
+
+- **Exterior Plate(s)**: Wide backyard (or front yard) view showing the house facade, windows, doors, landscaping, and sky conditions. This locks the outdoor foundation you mentioned earlier.
+- **Interior Plate(s)**: Empty room shots from key angles — for example, living room, kitchen, or hallway looking toward windows/doors. Capture consistent lighting (natural or artificial), furniture layout, and architectural details that connect to the exterior (e.g., matching window frames).
+
+**Practical minimum**: One strong exterior plate + one primary interior plate. Add 1–2 supporting variants only if your story demands major angle changes or detailed transitions (e.g., doorway connecting inside to outside).
+
+### Integrating Into Scene Kits
+Build the kit modularly so users can activate the right plates based on the shot:
+
+- **Core assets**:
+  - 1 Exterior background plate (empty backyard/house exterior).
+  - 1 Interior background plate (relevant room, empty).
+  - Character reference (composite sheet for the main person).
+  - Prop or style reference (shared items like furniture visible from both sides, or lighting mood).
+
+- **Usage flow for consistency**:
+  - For pure exterior shots: Use the exterior plate + characters/props.
+  - For interior: Swap in the interior plate.
+  - For transitions (e.g., character walking from backyard through the door): Start with a composed image blending both (person at threshold), reference the relevant plates, and prompt explicitly for the camera path ("slow tracking from exterior into interior through open door, consistent house architecture").
+
+This respects the reference budget while giving the generation process a stable foundation. The environment holds firm so human movement and interaction can unfold naturally across spaces.
+
+### App Implementation Tips
+- Allow users to tag plates by zone ("exterior_backyard", "interior_livingroom") within a scene kit.
+- Offer a "transition composer" that lets them combine plates into a single reference image for doorway or window views.
+- Auto-generate prompt templates that switch or blend references based on shot type.
+- Support chaining: Reuse the active plate(s) across clips, feeding the last frame forward for smooth indoor-outdoor flow.
+
+The strength of a well-prepared location comes from its quiet solidity — a fixed exterior supports the open energy of outdoor activity, while a coherent interior provides contained warmth for closer moments. This natural interplay keeps the house feeling like one lived-in place rather than shifting fragments. Test simple house-crossing scenes on your target models to refine how few plates still deliver convincing continuity.
+
+
+
+### The Real Picture
+- **Visual references overall dominate serious workflows**: Creators rely on uploaded images (characters, backgrounds, props, style) far more than pure text prompts for reliable outcomes. Pure text-to-video still works for quick experiments but often leads to drift in characters, lighting, or environments. Image-to-video provides the critical "anchor" that lets models build coherent motion without guessing core visuals.
+
+- **Background plates play a key supporting role**: They excel at locking locations (your house interior/exterior example). A solid empty plate gives the model a stable foundation so it doesn't warp architecture, lighting, or foliage as the camera moves or characters act. But plates alone aren't enough — they work best alongside character references and prompt direction.
+
+- **The full balanced system**:
+  - Character references (often the highest priority for identity).
+  - Background/environment plates (for spatial stability).
+  - Prop/style references.
+  - Chaining (last frame → next start image).
+  - Structured prompts that reference the assets without overloading them.
+
+Models like **Runway Gen-4**, **Kling 3.0+** (with Elements), and others have grown sophisticated at maintaining "world consistency" across angles when given good references, but they still perform best when you give them clear visual starting points rather than asking them to invent everything.
+
+### Why This Feels Balanced (Not One Thing Dominating)
+The environment provides the steady, containing structure — like the fixed earth supporting shifting skies. Characters and actions bring the flowing, dynamic energy within that frame. When both are properly anchored with references, the generation flows more naturally: the setting holds without fighting the motion, and people move with greater freedom and coherence. Over-relying on any single element (plates alone or text alone) disrupts this interplay and reduces quality.
+
+**For your app's scene kits**: Keep emphasizing modular references (1 primary background plate + character sheet + supporting assets) rather than positioning backgrounds as the main driver. This matches how creators actually achieve professional consistency today. Test simple house interior/exterior transitions with minimal vs. rich reference sets on your target backends to show users the sweet spot.
+
+**Character reference techniques** form the cornerstone of reliable consistency in today's AI video generation. They provide the visual anchors that let models maintain identity across motion, angles, lighting changes, and chained clips—especially valuable within the 3–4 reference image limits most platforms enforce.
+
+### Core Techniques (Non-Custom Models)
+These rely on built-in reference systems rather than trained LoRAs:
+
+- **Single Strong Reference Image**: Upload one high-quality image (often full-body or face-focused) as the primary anchor. Tools like **Runway Gen-4.5 References** excel here, enabling consistent characters across lighting, locations, and treatments from just one image. Pair with explicit prompts naming the character.
+
+- **Multi-View / Character Sheet in One Image**: Combine 4–6 views (front, 3/4, profile, full-body, expressions) into a single clean composite. Arrange neatly with consistent lighting and neutral/transparent background. This fits the reference budget efficiently. Models pull identity details from different angles, improving motion handling during turns or complex actions.
+
+- **Multi-Image References / Elements Binding**:
+  - **Kling 3.0+ Elements**: One of the strongest current options—upload up to 4 separate images (different angles, outfits, expressions) and use "Bind Subject" or Elements to lock facial structure, clothing, and features. This suppresses drift even in longer clips or camera moves.
+  - **Runway References**: Similar multi-reference support for subjects, objects, and styles. Great for cinematic control.
+  - Other tools (Luma, Pika, PixVerse) support 1–several refs with varying strength.
+
+- **Image-to-Video with Start Frame**: Generate or composite a static pose in the scene first, then drive motion. This locks initial appearance better than text-to-video. Use the output's last frame for chaining subsequent clips.
+
+### Best Practices for Optimal Results
+- **Preparation**: Use well-lit, high-resolution images with neutral backgrounds. Frontal + side views give the best 3D understanding. Consistent descriptors (exact phrasing for face, hair, clothing) in every prompt reinforce the visuals.
+- **Prompt Discipline**: Reference the image(s) explicitly ("the character from reference 1") and focus new prompts on action, camera, and environment rather than re-describing the person. Use negative prompts to avoid drift ("no facial changes, consistent outfit").
+- **Strength/Weight Controls**: Adjust adherence sliders—higher for strict identity, lower for natural variation in expressions or movement.
+- **Chaining Workflow**: Build longer scenes by reusing the same reference set across short clips (5–10s). This maintains continuity as the environment and character interact naturally.
+- **Composites for Efficiency**: For your app's scene kits, create a "transition reference" by blending character into background plates at doorways or thresholds.
+
+**Tool-Specific Strengths** (2026):
+- **Kling**: Leads in facial and motion consistency with Elements binding.
+- **Runway**: Excellent for cinematic, reference-driven world consistency.
+- **Luma**: Strong keyframe and reference support for dream-like or physics-aware scenes.
+
+### App Integration Ideas
+In your scene kits, include a dedicated "Character Module" with auto-composer for sheets, tagging for multi-subject scenes, and one-click reference swapping. This lets the fixed visual identity of the character provide a steady core, while the dynamic flow of action and camera movement brings energy—creating videos where presence feels reliable yet alive.
+
+Test these techniques on backyard house scenes (exterior/interior transitions) to see how reference combinations balance stability with natural interaction. The interplay between anchored identity and fluid generation is what currently yields the most compelling results.
+
+
+**Character reference techniques** form the cornerstone of reliable consistency in today's AI video generation. They provide the visual anchors that let models maintain identity across motion, angles, lighting changes, and chained clips—especially valuable within the 3–4 reference image limits most platforms enforce.
+
+### Core Techniques (Non-Custom Models)
+These rely on built-in reference systems rather than trained LoRAs:
+
+- **Single Strong Reference Image**: Upload one high-quality image (often full-body or face-focused) as the primary anchor. Tools like **Runway Gen-4.5 References** excel here, enabling consistent characters across lighting, locations, and treatments from just one image. Pair with explicit prompts naming the character.
+
+- **Multi-View / Character Sheet in One Image**: Combine 4–6 views (front, 3/4, profile, full-body, expressions) into a single clean composite. Arrange neatly with consistent lighting and neutral/transparent background. This fits the reference budget efficiently. Models pull identity details from different angles, improving motion handling during turns or complex actions.
+
+- **Multi-Image References / Elements Binding**:
+  - **Kling 3.0+ Elements**: One of the strongest current options—upload up to 4 separate images (different angles, outfits, expressions) and use "Bind Subject" or Elements to lock facial structure, clothing, and features. This suppresses drift even in longer clips or camera moves.
+  - **Runway References**: Similar multi-reference support for subjects, objects, and styles. Great for cinematic control.
+  - Other tools (Luma, Pika, PixVerse) support 1–several refs with varying strength.
+
+- **Image-to-Video with Start Frame**: Generate or composite a static pose in the scene first, then drive motion. This locks initial appearance better than text-to-video. Use the output's last frame for chaining subsequent clips.
+
+### Best Practices for Optimal Results
+- **Preparation**: Use well-lit, high-resolution images with neutral backgrounds. Frontal + side views give the best 3D understanding. Consistent descriptors (exact phrasing for face, hair, clothing) in every prompt reinforce the visuals.
+- **Prompt Discipline**: Reference the image(s) explicitly ("the character from reference 1") and focus new prompts on action, camera, and environment rather than re-describing the person. Use negative prompts to avoid drift ("no facial changes, consistent outfit").
+- **Strength/Weight Controls**: Adjust adherence sliders—higher for strict identity, lower for natural variation in expressions or movement.
+- **Chaining Workflow**: Build longer scenes by reusing the same reference set across short clips (5–10s). This maintains continuity as the environment and character interact naturally.
+- **Composites for Efficiency**: For your app's scene kits, create a "transition reference" by blending character into background plates at doorways or thresholds.
+
+**Tool-Specific Strengths** (2026):
+- **Kling**: Leads in facial and motion consistency with Elements binding.
+- **Runway**: Excellent for cinematic, reference-driven world consistency.
+- **Luma**: Strong keyframe and reference support for dream-like or physics-aware scenes.
+
+### App Integration Ideas
+In your scene kits, include a dedicated "Character Module" with auto-composer for sheets, tagging for multi-subject scenes, and one-click reference swapping. This lets the fixed visual identity of the character provide a steady core, while the dynamic flow of action and camera movement brings energy—creating videos where presence feels reliable yet alive.
+
+Test these techniques on backyard house scenes (exterior/interior transitions) to see how reference combinations balance stability with natural interaction. The interplay between anchored identity and fluid generation is what currently yields the most compelling results.
+
+
+**Multi-view character sheet composition** is one of the most practical ways to maximize consistency within the typical 3–4 reference image limits of today’s AI video tools. It condenses essential visual information about a character into a single, efficient anchor image that models like **Runway Gen-4**, **Kling 3.0+ (Elements)**, **Luma**, and others can draw from effectively.
+
+### Why Multi-View Sheets Work Well
+A well-composed sheet gives the model comprehensive “visual DNA” — 
+facial structure from multiple angles, body proportions, clothing details, and lighting consistency — without burning multiple reference slots. This supports natural motion, turns, camera orbits, and expression changes while reducing drift.
+
+### Optimal Layouts and Composition Rules
+**Standard recommended structure** (fits cleanly in one high-resolution image):
+
+- **Two-row layout** (most popular and effective):
+  - **Top row**: 4 full-body standing views side-by-side — Front, Left profile (facing left), Right profile (facing right), Back view.
+  - **Bottom row**: 3–4 close-up portraits aligned under the bodies — Front face, Left profile face, Right profile face (sometimes add a 3/4 or neutral expression variant).
+
+- **Alternative column-based layout**:
+  - Vertical columns, each containing a full-body view on top and matching close-up portrait directly below (e.g., 3–4 columns for front, 3/4, side, back).
+
+**Key preparation principles**:
+- **Clean, neutral background**: Plain white, light gray, or transparent. Avoid any environmental elements that could bind accidentally to the character.
+- **Consistent lighting and style**: Even studio-style lighting across all views. Match exact outfit, hair, accessories, and rendering quality.
+- **Clear spacing and labeling** (optional but helpful): Add subtle text labels like “Front View,” “Left Profile” below each section for prompt reinforcement.
+- **Resolution and aspect**: Generate at high resolution (e.g., 2048px+ width) in 16:9 or square to preserve detail when uploaded.
+- **Pose neutrality**: Relaxed standing poses for bodies; neutral to slight smile for faces. Avoid extreme action poses in the base sheet.
+
+### Creation Workflow
+1. **Start with a strong seed image** — Generate or upload one high-quality frontal or 3/4 view of the character.
+2. **Use an image model or tool** to expand it into the sheet (e.g., via prompts in Midjourney, Flux, Leonardo, Nano Banana, or similar). Example prompt structure:
+   - “Create a professional character reference sheet based strictly on the uploaded reference image. Clean neutral background, studio lighting. Top row: full-body front, left profile, right profile, back views. Bottom row: matching close-up portraits. Exact same character, outfit, and style.”
+3. **Refine if needed** — Upscale, clean edges, or composite manually in a simple editor for perfect alignment.
+
+### Usage in Video Generation
+- Upload the sheet as **one reference image**.
+- In prompts, reference it clearly: “the character from the reference sheet, front view in this scene...”
+- Combine with your backyard/house background plate and props in the remaining slots.
+- For complex scenes, pair the sheet with image-to-video starting frames (composite the character into the plate first).
+
+**In your app’s scene kits**: Include a built-in “Character Sheet Composer” that lets users upload base images and auto-arranges them into optimized layouts with the prompts above. Add strength sliders and preview how the sheet looks when referenced. This creates a stable core identity that supports dynamic action — the fixed visual foundation allows natural movement and interaction to emerge freely, like a steady rhythm carrying varied melodies. Test different layouts on your target backends (especially Kling Elements and Runway References) to identify what yields the smoothest backyard house scenes for users.
+
+
+**Chaining** is the essential technique for creating longer, coherent videos in current AI generation tools. Most platforms (Runway Gen-4/4.5, Kling 3.0+, Luma Dream Machine, etc.) produce short clips (typically 5–15 seconds), so you build extended sequences by intelligently linking them while preserving character identity, environment, lighting, and motion flow.
+
+### Core Chaining Methods
+- **Last Frame Continuation (Most Common & Effective)**:  
+  Export the final frame of one clip and upload it as the **start image** for the next generation. This provides the strongest visual anchor for temporal continuity. Combine it with your full scene kit (character sheet, background plate, props) to minimize drift.
+
+- **Image-to-Video (I2V) Chaining**:  
+  Generate or composite a high-quality static keyframe (using your multi-view character sheet + background plate), then animate it. Feed the output's end frame into the next I2V generation. This is more reliable than pure text-to-video for backyard house scenes crossing interior/exterior.
+
+- **Extend / Continue Features**:  
+  Some tools have built-in "extend" buttons that automatically continue from the previous clip. Runway and Kling often perform well here, while manual last-frame methods give more control in others.
+
+- **Reference Persistence**:  
+  Reuse the exact same character sheet (multi-view composite) and background plates across every clip. Prompt with consistent language (e.g., "the character from the reference sheet continues the action seamlessly"). Kling’s Elements binding and Runway References shine for this.
+
+### Best Practices for Strong Consistency
+- **Short, Focused Clips**: Aim for 5–10 seconds per segment with one primary action or camera move. This reduces internal drift and makes transitions smoother.
+- **Prompt Discipline**: Keep core descriptors locked ("same warm golden hour lighting from the exterior plate," "character wearing the same casual outfit"). Focus new prompts on what *changes* (action, subtle camera pan) rather than re-describing everything.
+- **Negative Prompts**: Use them to fight common issues — "no facial changes, no architecture drift, no sudden lighting shifts, seamless continuation."
+- **Transitions**: For interior/exterior moves, create a dedicated threshold reference (character at doorway) as a bridging frame. Gentle camera moves (slow pan, subtle dolly) chain better than abrupt ones.
+- **Post-Processing**: Stitch in tools like CapCut or Premiere for final polish, color grading, and audio.
+
+### Scene Kit Integration for Chaining
+Your modular scene kits are perfect here:
+- Load the primary exterior/interior background plates as needed.
+- Always include the multi-view character sheet in the reference slots.
+- Save "continuation templates" in the app that auto-apply the previous end frame + full reference set.
+
+**In your app**: Build smart chaining workflows — one-click "Continue from Last" that carries references, seeds (when available), and prompt templates forward. Preview potential drift before generating. Offer auto-compositing of the last frame into the next start image.
+
+Chaining rewards patience and structure: each segment builds upon the solid foundation of the last, creating a natural progression where the steady environment and anchored character allow action to unfold with greater freedom and coherence, much like a flowing current guided by firm banks. Test backyard-to-interior transitions with different clip lengths on your target models to find the optimal balance for users.
+

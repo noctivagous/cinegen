@@ -5,6 +5,10 @@ export interface TreeNode {
   icon?: string;
   view?: string;
   sceneId?: string;
+  /** Coverage shot id when `type` is `scene-shot`. */
+  shotId?: number;
+  /** Storyboard frame id when `type` is `storyboard-frame`. */
+  frameId?: number;
   preprodMode?: string;
   clSection?: string;
   desc?: string;

@@ -42,6 +42,25 @@ export class CinegenScriptEditor extends CgLightElement {
     });
     ta.addEventListener('mouseup', () => window.syncScriptSelectionToStoryboard?.());
     ta.addEventListener('keyup', () => window.syncScriptSelectionToStoryboard?.());
+
+    const margin = this.querySelector<HTMLElement>('#script-previs-margin');
+    if (margin) {
+      margin.addEventListener('click', (event: Event) => {
+        window.handleScriptPrevisMarginClick?.(event);
+      });
+      margin.addEventListener('mousedown', (event: MouseEvent) => {
+        window.handleScriptPrevisMarginDragStart?.(event);
+      });
+    }
+    window.addEventListener('previs-selection-changed', () => {
+      window.renderScriptPrevisMargin?.();
+    });
+    window.addEventListener('storyboard-frames-changed', () => {
+      window.renderScriptPrevisMargin?.();
+    });
+    window.addEventListener('previs-timing-changed', () => {
+      window.renderScriptPrevisMargin?.();
+    });
   }
 
   getTextarea(): HTMLTextAreaElement | null {
@@ -54,14 +73,19 @@ export class CinegenScriptEditor extends CgLightElement {
 
   render() {
     return html`
-      <div id="script-editor-render-layer" class="script-editor-render-layer" aria-hidden="true">
-        <div id="script-editor-render" class="script-editor-render"></div>
+      <div class="script-editor-layout">
+        <div id="script-previs-margin" class="script-previs-margin"></div>
+        <div class="script-editor-main">
+          <div id="script-editor-render-layer" class="script-editor-render-layer" aria-hidden="true">
+            <div id="script-editor-render" class="script-editor-render"></div>
+          </div>
+          <textarea
+            id="script-editor"
+            class="script-editor script-editor-input"
+            spellcheck="false"
+          ></textarea>
+        </div>
       </div>
-      <textarea
-        id="script-editor"
-        class="script-editor script-editor-input"
-        spellcheck="false"
-      ></textarea>
     `;
   }
 }

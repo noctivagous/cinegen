@@ -1,11 +1,15 @@
-import type { Terminal } from '@xterm/xterm';
-import { initConsoleInput, setTerminal } from '@/console/console-service';
+// Developer console / xterm disabled — re-enable with main.ts, index.html, and init-keybindings.
+// import type { Terminal } from '@xterm/xterm';
+// import { initConsoleInput, setTerminal } from '@/console/console-service';
 
-let _initPromise: Promise<Terminal | null> | null = null;
+// let _initPromise: Promise<Terminal | null> | null = null;
 
-/**
- * Lazily creates the xterm instance when the console drawer is first opened.
- */
+/** @deprecated Console disabled — was: lazily create xterm when drawer opens. */
+export function ensureConsoleTerminal(): Promise<null> {
+  return Promise.resolve(null);
+}
+
+/*
 export function ensureConsoleTerminal(): Promise<Terminal | null> {
   if (_initPromise) return _initPromise;
   _initPromise = (async () => {
@@ -78,3 +82,4 @@ export function ensureConsoleTerminal(): Promise<Terminal | null> {
   })();
   return _initPromise;
 }
+*/

@@ -6,6 +6,8 @@
 
 import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinations';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import { persistProjectTreeExpandedState } from '@/services/project-service';
+import { sceneIdFromStoryboardFrame } from '@/workspace/shot-frame-bridge';
 
 // ==================== CHIP NAVIGATION ====================
 let chipNavFocus = { type: null, label: null };
@@ -126,9 +128,14 @@ function findProjectNodeBySceneId(sceneId, node = window.projectData) {
 
 function expandTreePathToNode(targetName, node = window.projectData, ancestors = []) {
   if (node.name === targetName) {
+    let changed = false;
     ancestors.forEach((n) => {
-      if (n.children && n.children.length) n.expanded = true;
+      if (n.children && n.children.length && !n.expanded) {
+        n.expanded = true;
+        changed = true;
+      }
     });
+    if (changed) persistProjectTreeExpandedState();
     return true;
   }
   if (node.children) {
@@ -587,14 +594,6 @@ function initChipNavigation() {
   });
 }
 
-// ==================== STORYBOARD NAVIGATION ====================
-
-let storyboardContextState = null;
-
-function sceneIdFromStoryboardFrame(frame) {
-  const num = String(frame.scene || '1').replace(/\D/g, '') || '1';
-  return `scene${num.padStart(2, '0')}`;
-}
 
 function collectStoryboardFrameMentions(frame) {
   const chips = extractChipsFromTexts([frame.label, frame.notes, frame.scriptLink]);

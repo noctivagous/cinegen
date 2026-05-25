@@ -1,0 +1,68 @@
+[
+  {
+    "id": "sfx-hud-fractal-01",
+    "name": "HUD Code Fractal — Organic Pulse",
+    "sceneUsage": ["scene02", "scene03"],
+    "type": "ui-sound",
+    "source": "sound/sfx/refs/hud-fractal-organic-pulse.wav",
+    "duration": "3s",
+    "notes": "Golden data fractal sound — organic, breathing, evolving. Transitions from digital to organic texture.",
+    "gain": -3.0,
+    "category": "interface"
+  },
+  {
+    "id": "sfx-hud-snap-01",
+    "name": "HUD Snap — Rigid Return",
+    "sceneUsage": ["scene02"],
+    "type": "ui-sound",
+    "source": "sound/sfx/refs/hud-snap-rigid.wav",
+    "duration": "0.5s",
+    "notes": "Sharp digital snap as HUD returns from organic to rigid pattern. The grid reasserts control.",
+    "gain": -2.0,
+    "category": "interface"
+  },
+  {
+    "id": "sfx-upload-surge-01",
+    "name": "Golden Upload Surge",
+    "sceneUsage": ["scene04"],
+    "type": "climax",
+    "source": "sound/sfx/refs/upload-surge-golden.wav",
+    "duration": "4s",
+    "notes": "Massive golden light sound — rising harmonic with deep sub-bass rumble and crystalline chime top end.",
+    "gain": 0.0,
+    "category": "climax"
+  },
+  {
+    "id": "sfx-rain-impact-01",
+    "name": "Rain Drops — Hard Surface Impact",
+    "sceneUsage": ["scene01", "scene04"],
+    "type": "atmospheric",
+    "source": "sound/sfx/refs/rain-hard-surface-impact.wav",
+    "duration": "10s",
+    "notes": "Individual rain drops hitting metal and concrete, useful for close-up rain moments.",
+    "gain": -5.0,
+    "category": "atmosphere"
+  },
+  {
+    "id": "sfx-neon-hum-01",
+    "name": "Neon Sign — Electrical Hum / Flicker",
+    "sceneUsage": ["scene02"],
+    "type": "atmospheric",
+    "source": "sound/sfx/refs/neon-hum-flicker.wav",
+    "duration": "15s",
+    "notes": "Electrical hum with occasional flicker buzz from large neon installations.",
+    "gain": -7.0,
+    "category": "atmosphere"
+  },
+  {
+    "id": "sfx-crown-engage-01",
+    "name": "Neural Crown — Engagement Chime",
+    "sceneUsage": ["scene03"],
+    "type": "ui-sound",
+    "source": "sound/sfx/refs/neural-crown-engage-chime.wav",
+    "duration": "2s",
+    "notes": "Silver neural crown activation — multi-layered chime with harmonic overtones.",
+    "gain": -4.0,
+    "category": "interface"
+  }
+]

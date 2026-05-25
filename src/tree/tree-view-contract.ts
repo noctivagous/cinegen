@@ -29,6 +29,8 @@ export const LEGACY_NODE_VIEW_CONTRACT = [
   { nodeType: 'location-scout', view: 'location-scout' },
   { nodeType: 'casting', view: 'casting' },
   { nodeType: 'scene', view: 'scene-detail', required: { sceneId: '(scene id)' } },
+  { nodeType: 'scene-shot', view: 'scene-detail', required: { sceneId: '(scene id)', shotId: '(coverage shot id)' } },
+  { nodeType: 'storyboard-frame', view: 'preprod-workspace', required: { preprodMode: 'storyboard', frameId: '(frame id)' } },
   { nodeType: 'sequence', view: 'timeline' },
   { nodeType: 'assets', view: 'assets' },
   { nodeType: 'bin', view: 'asset-detail', required: { detailKey: '(detail key)' } },

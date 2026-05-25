@@ -1,5 +1,5 @@
 import { registerKeybinding, handleKeydown } from '@/keybindings/keybinding-registry';
-import { toggleConsoleDrawer } from '@/console/console-service';
+// import { toggleConsoleDrawer } from '@/console/console-service';
 import { TREE_SECTION_BY_NAME } from '@/tree/tree-constants';
 import { handleTreeNodeSelect } from '@/tree/project-tree-service';
 
@@ -19,13 +19,13 @@ function selectTreeSectionByName(name: string): void {
 export function initKeybindings(): void {
   const sections = Object.keys(TREE_SECTION_BY_NAME);
 
-  registerKeybinding({
-    id: 'console-toggle',
-    combo: 'Alt+K',
-    description: 'Toggle developer console',
-    action: () => toggleConsoleDrawer(),
-    allowInInput: true,
-  });
+  // registerKeybinding({
+  //   id: 'console-toggle',
+  //   combo: 'Alt+K',
+  //   description: 'Toggle developer console',
+  //   action: () => toggleConsoleDrawer(),
+  //   allowInInput: true,
+  // });
 
   for (let i = 0; i < sections.length; i++) {
     const name = sections[i];

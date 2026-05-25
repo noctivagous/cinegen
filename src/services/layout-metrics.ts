@@ -6,6 +6,10 @@ export const LAYOUT_LIMITS = {
   minMainWorkspacePx: 520,
   minPreprodPercent: 20,
   maxPreprodPercent: 80,
+  minPrevisDrawerPx: 120,
+  minPrevisPanePercent: 18,
+  maxPrevisPanePercent: 82,
+  minPrevisPanePx: 56,
 } as const;
 
 export const LAYOUT_DIVIDER_WIDTH_PX = 5;
@@ -23,5 +27,19 @@ export function getWorkspaceRowRect(): DOMRect | null {
   return (
     document.getElementById('main-workspace-container')?.parentElement?.getBoundingClientRect() ??
     null
+  );
+}
+
+/** Max previs overlay height (px) before the dock head meets the toolbar. */
+export function getPrevisDrawerMaxHeightPx(): number {
+  const statusTop =
+    document.querySelector('cinegen-status-bar')?.getBoundingClientRect().top ?? window.innerHeight;
+  const toolbarBottom =
+    document.querySelector('cinegen-toolbar')?.getBoundingClientRect().bottom ?? 0;
+  const dockHead =
+    document.querySelector('.previs-timeline-dock-head')?.getBoundingClientRect().height ?? 28;
+  return Math.max(
+    LAYOUT_LIMITS.minPrevisDrawerPx,
+    Math.floor(statusTop - toolbarBottom - dockHead - 48)
   );
 }

@@ -95,8 +95,6 @@ export function subscribeStateSync(callback: (domain: string, payload: unknown) 
 
 /** Initialize the WebSocket connection for state sync. Idempotent. */
 export function initStateSync(): void {
-  const mode = (import.meta.env.VITE_PROJECT_PERSISTENCE_MODE as string) || 'local';
-  if (mode !== 'server') return;
   if (!_clientId) _clientId = generateClientId();
   connect();
 }

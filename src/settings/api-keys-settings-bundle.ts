@@ -62,7 +62,9 @@ function normalizeVendor(v: any) {
   const baseUrl   = typeof v.baseUrl === 'string' && v.baseUrl ? v.baseUrl : (slot?.baseUrl || '');
   const slotId    = typeof v.slotId === 'string' && v.slotId ? v.slotId : (slot?.slotId || '');
   const apiKey    = typeof v.apiKey === 'string' ? v.apiKey : '';
-  return { id, name, providerId, baseUrl, slotId, apiKey };
+  const maskedKey = /^•+$/.test(apiKey.trim());
+  const hasServerKey = Boolean(v.hasServerKey) || maskedKey;
+  return { id, name, providerId, baseUrl, slotId, apiKey, hasServerKey };
 }
 
 /* ── Storage merge ───────────────────────────────────────────────────────── */
@@ -240,9 +242,18 @@ function apiScopeForModality(modalityKey: any) {
   return modalityKey === 'llm' ? 'language' : modalityKey;
 }
 
-function vendorHasApiKey(v: any) {
+/** True when a vendor can call APIs (browser key, masked server key, or backends/.env slot). */
+export function vendorIsConfigured(v: any): boolean {
+  if (!v) return false;
+  if (v.hasServerKey) return true;
   const k = String(v?.apiKey || '').trim();
-  return Boolean(k && k !== '');
+  if (!k) return false;
+  if (/^•+$/.test(k)) return true;
+  return true;
+}
+
+function vendorHasApiKey(v: any) {
+  return vendorIsConfigured(v);
 }
 
 /** @deprecated scope ignored — one key per provider */
@@ -251,7 +262,9 @@ function vendorHasKeyForScope(v: any, _scopeKey: any) {
 }
 
 function readVendorKey(v: any, _scopeKey: any) {
-  // Keys are server-side; never expose to client code
+  const k = String(v?.apiKey || '').trim();
+  if (k && !/^•+$/.test(k)) return k;
+  if (vendorIsConfigured(v)) return '••••••••';
   return '';
 }
 
@@ -292,9 +305,13 @@ function getApiKey(scopeKey: any) {
   return '';
 }
 
-function maskKeyHint(value: any) {
+function maskKeyHint(value: any, hasServerKey?: boolean) {
+  if (hasServerKey && (!value || !String(value).trim() || /^•+$/.test(String(value).trim()))) {
+    return 'Configured in backends/.env';
+  }
   if (!value || !String(value).trim()) return 'Not set';
   const t = String(value).trim();
+  if (/^•+$/.test(t)) return 'Configured on server';
   if (t.length <= 4) return 'Saved (hidden)';
   return `Saved (…${t.slice(-4)})`;
 }
@@ -415,11 +432,15 @@ function applyDetailFromDraft() {
   if (input) {
     input.value = '';
     input.type  = 'password';
-    input.placeholder = keyVal ? 'Leave blank to keep · enter new to replace' : 'Paste key (this browser only)';
+    input.placeholder = v.hasServerKey
+      ? 'Optional: paste to override backends/.env for this provider'
+      : keyVal
+        ? 'Leave blank to keep · enter new to replace'
+        : 'Paste key (optional if set in backends/.env)';
   }
   if (meta) {
-    meta.textContent = maskKeyHint(keyVal);
-    meta.classList.toggle('is-set', !!keyVal);
+    meta.textContent = maskKeyHint(keyVal, Boolean(v.hasServerKey));
+    meta.classList.toggle('is-set', vendorIsConfigured(v));
   }
   const reveal = input?.closest('.api-keys-input-row')?.querySelector('.api-keys-reveal-btn');
   if (reveal) reveal.textContent = 'Show';
@@ -539,12 +560,19 @@ function refreshAiApiModalityGating() {
     { modality: 'video', fieldsetId: 'ai-api-fieldset-video', gateId: 'ai-api-gate-video' },
     { modality: 'audio', fieldsetId: 'ai-api-fieldset-audio', gateId: 'ai-api-gate-audio' }
   ];
+  const anyConfigured = loadApiKeys().vendors.some((v: any) => vendorIsConfigured(v));
   defs.forEach(({ modality, fieldsetId, gateId }) => {
     const fs   = _el(fieldsetId);
     const gate = _el(gateId);
-    const ok   = hasAnyVendorKeyForModality(modality);
+    const ok   = anyConfigured;
     if (fs)   fs.disabled   = !ok;
-    if (gate) gate.hidden   = ok;
+    if (gate) {
+      gate.hidden = ok;
+      if (!ok) {
+        gate.innerHTML =
+          'Add a provider with a key in <strong>backends/.env</strong> or paste a key on the <strong>API Keys</strong> tab, then assign models here.';
+      }
+    }
   });
 }
 
@@ -575,6 +603,7 @@ export function installApiKeysSettingsBundleGlobals(): void {
   w.loadApiKeys = loadApiKeys;
   w.saveApiKeys = saveApiKeys;
   w.apiScopeForModality = apiScopeForModality;
+  w.vendorIsConfigured = vendorIsConfigured;
   w.vendorHasApiKey = vendorHasApiKey;
   w.vendorHasKeyForScope = vendorHasKeyForScope;
   w.readVendorKey = readVendorKey;

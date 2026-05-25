@@ -1,0 +1,108 @@
+[
+  {
+    "id": "genjob-scene02-coverage-01",
+    "sceneId": "scene02",
+    "shotId": "shot-02-01",
+    "type": "video",
+    "status": "queued",
+    "priority": 1,
+    "model": "runway",
+    "prompt": "Continuous neon sky-bridge pursuit, quantum tunnel streaks, city lights pulse once like breathing, HUD code fractals organic then snaps rigid",
+    "parameters": {
+      "aspectRatio": "2.39:1",
+      "duration": 10,
+      "motion": "tracking-forward",
+      "styleRef": "cinematography/reference-images/refs/skybridge-neon-ref.png"
+    },
+    "cost": null,
+    "created": "2026-05-22T10:00:00Z",
+    "assignedAgent": "generation-agent"
+  },
+  {
+    "id": "genjob-scene04-master-01",
+    "sceneId": "scene04",
+    "shotId": "shot-04-01",
+    "type": "video",
+    "status": "queued",
+    "priority": 1,
+    "model": "kling",
+    "prompt": "Docking spire finale, lights and data merge in one organic pattern, deliberate one-second pause off optimal vector, clean dock, golden upload surge",
+    "parameters": {
+      "aspectRatio": "2.39:1",
+      "duration": 12,
+      "motion": "tracking-forward-then-static",
+      "motionRef": "cinematography/motion-references/refs/crane-descent-spire.mp4"
+    },
+    "cost": null,
+    "created": "2026-05-22T10:05:00Z",
+    "assignedAgent": "generation-agent"
+  },
+  {
+    "id": "genjob-scene02-broll-01",
+    "sceneId": "scene02",
+    "type": "video",
+    "status": "queued",
+    "priority": 2,
+    "model": "runway",
+    "prompt": "B-roll: neon sign close-ups, rain-slicked surfaces reflection, anonymous city details",
+    "parameters": {
+      "aspectRatio": "2.39:1",
+      "duration": 5,
+      "motion": "static"
+    },
+    "cost": null,
+    "created": "2026-05-22T10:10:00Z",
+    "assignedAgent": "generation-agent"
+  },
+  {
+    "id": "genjob-char-kai-refs-01",
+    "sceneId": null,
+    "type": "image",
+    "status": "queued",
+    "priority": 3,
+    "model": "fal",
+    "prompt": "Kai — executive courier, sharp features, seamless neural implants, god-like efficiency, cinematic portrait, front facing",
+    "parameters": {
+      "count": 4,
+      "angles": ["front", "profile", "three-quarter", "full-body"],
+      "styleRef": "cinematography/reference-images/refs/look-moodboard-dark-sci-fi.png"
+    },
+    "cost": null,
+    "created": "2026-05-22T09:00:00Z",
+    "assignedAgent": "prompt-engineer"
+  },
+  {
+    "id": "genjob-sfx-upload-01",
+    "sceneId": "scene04",
+    "type": "audio",
+    "status": "queued",
+    "priority": 2,
+    "model": "elevenlabs-sfx",
+    "prompt": "Massive golden light surge sound with deep sub-bass rumble and crystalline chime top end, cinematic climax",
+    "parameters": {
+      "duration": 4,
+      "variations": 3
+    },
+    "cost": null,
+    "created": "2026-05-22T11:00:00Z",
+    "assignedAgent": "audio-agent"
+  },
+  {
+    "id": "genjob-music-finale-01",
+    "sceneId": "scene04",
+    "type": "audio",
+    "status": "queued",
+    "priority": 2,
+    "model": "suno",
+    "prompt": "Triumphant yet peaceful orchestral electronic climax, D major, 90 BPM, ascending golden light vibe",
+    "parameters": {
+      "duration": 90,
+      "style": "orchestral-electronic-climax",
+      "key": "D major",
+      "tempo": 90
+    },
+    "cost": null,
+    "created": "2026-05-22T11:05:00Z",
+    "assignedAgent": "audio-agent"
+  }
+]

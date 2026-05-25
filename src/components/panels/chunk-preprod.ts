@@ -6,3 +6,4 @@ import './cinegen-storyboard-pane';
 import './cinegen-storyboard';
 import './cinegen-script-editor';
 import './cinegen-treatment-panel';
+import './cinegen-storyboard-animatic-player';

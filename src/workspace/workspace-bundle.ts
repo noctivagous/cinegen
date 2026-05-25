@@ -20,6 +20,7 @@ import { alertCG } from '@/utils/alert-cg';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
 import type { TreeNode } from '@/tree/tree-types';
 import { PREPROD_MODES, SUPPORTED_TREE_VIEWS } from '@/tree/tree-view-contract';
+import { applyPreprodLayoutToDom, normalizePreprodLayoutMode } from '@/workspace/preprod-layout';
 import {
   TREATMENT_FIELDS,
   TREATMENT_SECTIONS,
@@ -51,6 +52,10 @@ import {
   _renderAssetDetailForm as _extRenderAssetDetailForm,
   _renderAssetFormEmpty as _extRenderAssetFormEmpty,
 } from '@/workspace/asset-form-renderers';
+import {
+  highlightScriptForShot as bridgeHighlightScriptForShot,
+  selectStoryboardFrameById as bridgeSelectStoryboardFrameById,
+} from '@/workspace/shot-frame-bridge';
 
 declare const projectData: { children?: TreeNode[]; name?: string };
 declare const currentSceneData: Record<string, SceneData>;
@@ -139,6 +144,25 @@ function resolveNodeViewOrFallback(node: TreeNode): string {
 }
 
 // ==================== VIEW SWITCHING & SCENE DETAIL ====================
+
+function _populateTreeNodeView(node, sectionKey, resolvedView) {
+  if (resolvedView === 'preprod-workspace') {
+    setPreprodMode(normalizePreprodMode(node.preprodMode));
+  }
+  if (resolvedView === 'assets') renderGlobalAssets(0);
+  if (resolvedView === 'location-scout') renderLocationScout();
+  if (resolvedView === 'timeline') renderTimeline();
+  if (resolvedView === 'camera-lighting') renderCameraLighting(node.clSection || null);
+  if (resolvedView === 'casting') window.renderCastingView?.(window.chipNavFocus?.label);
+  if (resolvedView === 'overview') renderOverviewPanel(node, sectionKey);
+  if (resolvedView === 'asset-detail') renderAssetDetailPanel(node);
+  if (node.type === 'scrap') {
+    updateInspector('scrap', { items: window.deletedStoryboardFrames });
+  } else {
+    updateInspector(node.type, node);
+  }
+}
+
 function selectTreeNode(element, node, sectionKeyOverride) {
   const sectionKey =
     sectionKeyOverride ??
@@ -154,50 +178,38 @@ function selectTreeNode(element, node, sectionKeyOverride) {
     element.classList.add('selected');
   }
 
-  if (node.type === 'scene' && node.sceneId) {
+  if (node.type === 'scene-shot' && node.sceneId && node.shotId != null) {
     workspaceState.currentSceneId = node.sceneId;
-    switchView('scene-detail', node.name, sectionKey);
-    renderSceneDetail();
-    updateInspector('scene', window.currentSceneData?.[node.sceneId]);
+    void switchView('scene-detail', node.name, sectionKey).then(() => {
+      renderSceneDetail();
+      switchSceneTab(2);
+      inspectShot(node.shotId);
+      const scene = window.currentSceneData?.[node.sceneId];
+      const shot = scene?.coverage?.find((s) => s.id === node.shotId);
+      if (shot) bridgeHighlightScriptForShot(node.sceneId, shot);
+    });
+  } else if (node.type === 'storyboard-frame' && node.frameId != null) {
+    void switchView('preprod-workspace', node.name, sectionKey).then(() => {
+      setPreprodMode('storyboard');
+      if (node.sceneId) workspaceState.currentSceneId = node.sceneId;
+      bridgeSelectStoryboardFrameById(node.frameId);
+    });
+  } else if (node.type === 'scene' && node.sceneId) {
+    workspaceState.currentSceneId = node.sceneId;
+    void switchView('scene-detail', node.name, sectionKey).then(() => {
+      renderSceneDetail();
+      updateInspector('scene', window.currentSceneData?.[node.sceneId]);
+    });
   } else {
     const resolvedView = resolveNodeViewOrFallback(node);
-    switchView(resolvedView, node.name, sectionKey);
-    if (resolvedView === 'preprod-workspace') {
-      setPreprodMode(normalizePreprodMode(node.preprodMode));
-    }
-    if (resolvedView === 'assets') renderGlobalAssets(0);
-    if (resolvedView === 'location-scout') renderLocationScout();
-    if (resolvedView === 'timeline') renderTimeline();
-    if (resolvedView === 'camera-lighting') renderCameraLighting(node.clSection || null);
-    if (resolvedView === 'casting') window.renderCastingView?.(window.chipNavFocus?.label);
-    if (resolvedView === 'overview') renderOverviewPanel(node, sectionKey);
-    if (resolvedView === 'asset-detail') renderAssetDetailPanel(node);
-    if (node.type === 'scrap') {
-      updateInspector('scrap', { items: window.deletedStoryboardFrames });
-    } else {
-      updateInspector(node.type, node);
-    }
+    void switchView(resolvedView, node.name, sectionKey).then(() => {
+      _populateTreeNodeView(node, sectionKey, resolvedView);
+    });
   }
 }
 
-const PREPROD_TITLE_ICONS = { script: 'fa-scroll', storyboard: 'fa-images', both: 'fa-columns' };
-
 function setPreprodMode(mode) {
-  const body = document.getElementById('preprod-body');
-  if (!body) return;
-  body.classList.remove('mode-script', 'mode-storyboard', 'mode-both');
-  const m = mode === 'script' || mode === 'storyboard' || mode === 'both' ? mode : 'both';
-  body.classList.add('mode-' + m);
-  const titleEl = document.getElementById('preprod-panel-title');
-  if (titleEl) {
-    const icon = PREPROD_TITLE_ICONS[m] || 'fa-scroll';
-    const label = m === 'script' ? 'SCRIPT' : m === 'storyboard' ? 'STORYBOARD' : 'SCRIPT + STORYBOARD';
-    titleEl.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
-  }
-  const toggles = document.getElementById('storyboard-vis-toggles');
-  if (toggles) {
-    toggles.hidden = m !== 'both' && m !== 'storyboard';
-  }
+  applyPreprodLayoutToDom(normalizePreprodLayoutMode(mode));
 }
 
 function syncSegmentedControlValue(segEl, value, valueAttr = 'data-segmented-value') {
@@ -297,9 +309,15 @@ function switchSceneTab(tabIndex) {
 }
 
 function inspectShot(id) {
-  const scene = window.currentSceneData?.[workspaceState.currentSceneId];
-  const shot = scene.coverage.find(s => s.id === id);
+  const sceneId = workspaceState.currentSceneId;
+  const scene = window.currentSceneData?.[sceneId];
+  const shot = scene?.coverage?.find((s) => s.id === id);
   updateInspector('shot', shot);
+  if (shot && typeof window.highlightScriptForShot === 'function') {
+    window.highlightScriptForShot(sceneId, shot);
+  } else if (shot) {
+    bridgeHighlightScriptForShot(sceneId, shot);
+  }
 }
 
 /* Treatment field constants are now in @/workspace/treatment-fields.ts */
@@ -848,7 +866,10 @@ function _selectTreeItemByNode(node) {
           treeChanged = true;
         }
       }
-      if (treeChanged) renderFullTree();
+      if (treeChanged) {
+        renderFullTree();
+        void import('@/services/project-service').then((m) => m.persistProjectTreeExpandedState());
+      }
     }
   }
 
@@ -890,27 +911,38 @@ function _renderNodeView(node) {
   if (!node) return;
   const sectionKey = _sectionKeyForNode(node);
 
+  if (node.type === 'scene-shot' && node.sceneId && node.shotId != null) {
+    workspaceState.currentSceneId = node.sceneId;
+    void switchView('scene-detail', node.name, sectionKey).then(() => {
+      renderSceneDetail();
+      switchSceneTab(2);
+      inspectShot(node.shotId);
+    });
+    return;
+  }
+
+  if (node.type === 'storyboard-frame' && node.frameId != null) {
+    void switchView('preprod-workspace', node.name, sectionKey).then(() => {
+      setPreprodMode('storyboard');
+      if (node.sceneId) workspaceState.currentSceneId = node.sceneId;
+      bridgeSelectStoryboardFrameById(node.frameId);
+    });
+    return;
+  }
+
   if (node.type === 'scene' && node.sceneId) {
     workspaceState.currentSceneId = node.sceneId;
-    switchView('scene-detail', node.name, sectionKey);
-    renderSceneDetail();
-    updateInspector('scene', window.currentSceneData?.[node.sceneId]);
+    void switchView('scene-detail', node.name, sectionKey).then(() => {
+      renderSceneDetail();
+      updateInspector('scene', window.currentSceneData?.[node.sceneId]);
+    });
     return;
   }
 
   const resolvedView = resolveNodeViewOrFallback(node);
-  switchView(resolvedView, node.name, sectionKey);
-  if (resolvedView === 'preprod-workspace') setPreprodMode(normalizePreprodMode(node.preprodMode));
-  if (resolvedView === 'assets')            renderGlobalAssets(0);
-  if (resolvedView === 'location-scout')    renderLocationScout();
-  if (resolvedView === 'timeline')          renderTimeline();
-  if (resolvedView === 'camera-lighting')   renderCameraLighting(node.clSection || null);
-  if (resolvedView === 'casting')           renderCastingView(null);
-  if (resolvedView === 'overview')          renderOverviewPanel(node, sectionKey);
-  if (resolvedView === 'asset-detail')      renderAssetDetailPanel(node);
-
-  if (node.type === 'scrap') updateInspector('scrap', { items: window.deletedStoryboardFrames });
-  else                       updateInspector(node.type, node);
+  void switchView(resolvedView, node.name, sectionKey).then(() => {
+    _populateTreeNodeView(node, sectionKey, resolvedView);
+  });
 }
 
 /** Best-effort section key lookup by walking top-level section names. */
@@ -950,11 +982,16 @@ function _nodeContains(parent, target) {
  * Items arrays → master-detail split.
  * Continuity / shot-table layouts → full-width scrollable table.
  */
-function renderAssetDetailPanel(node) {
+function renderAssetDetailPanel(node, attempt = 0) {
   const titleEl   = document.getElementById('asset-detail-title');
   const actionsEl = document.getElementById('asset-detail-actions');
   const contentEl = document.getElementById('asset-detail-content');
-  if (!titleEl || !contentEl) return;
+  if (!titleEl || !contentEl) {
+    if (attempt < 24) {
+      requestAnimationFrame(() => renderAssetDetailPanel(node, attempt + 1));
+    }
+    return;
+  }
 
   workspaceState.assetDetailCurrentNode = node;
 
@@ -1269,6 +1306,8 @@ export function installWorkspaceBundleGlobals(): void {
     addContinuityRow: addContinuityRow,
     _renderContinuityTable: _renderContinuityTable,
     _renderShotListTable: _renderShotListTable,
+    highlightScriptForShot: bridgeHighlightScriptForShot,
+    selectStoryboardFrameById: bridgeSelectStoryboardFrameById,
   };
   for (const n of names) {
     w[n] = fns[n];

@@ -72,15 +72,19 @@ End-to-end autonomous filmmaking: input a concept → receive a finished film.
 - Cross-shot spatial logic (ShotVerse-Bench dataset calibrated into unified coordinate system).
 - Character identity preserved via feature injection and subject-driven self-attention across shots.
 
-**Key Insight:** The frontier is moving toward **holistic / global planning** rather than greedy clip-by-clip generation. Agents should plan the entire sequence first, then generate with shared context.
+**Key Insight:** The frontier is moving toward **holistic / global planning** rather than 
+greedy clip-by-clip generation. Agents should plan the entire sequence first, then generate with shared context.
 
-**Relevance to CineGen:** The app's agent layer should maintain a **global sequence context** (character bank, style guide, shot list) that every generation call references — not treat each shot as an isolated prompt.
+**Relevance to CineGen:** The app's agent layer should maintain a **global sequence context** 
+(character bank, style guide, shot list) that every generation call references — not treat 
+each shot as an isolated prompt.
 
 ---
 
 ## 3. Agent Roles That Map to a Filmmaking App
 
-Based on the architectures above and practical production needs, the following agent roles should exist inside CineGen:
+Based on the architectures above and practical production needs, the following agent roles 
+should exist inside CineGen:
 
 ### Pre-Production Agents
 
@@ -255,7 +259,7 @@ Based on real-world autonomous filmmaking experience (e.g., *Daisy*, 2025 horror
 
 | Decision | Why Human |
 |----------|-----------|
-| **Final shot selection** | Taste, timing, and subtext are irreducibly human. |
+| **Final shot selection** | Taste, timing, and subtext are the role of the person. |
 | **Performance/emotion beats** | AI generates motion; it doesn't feel dramatic irony. |
 | **Sound design intent** | What you hear vs. what you see creates meaning. |
 | **Color grading mood** | Aesthetic judgment, not a solvable optimization. |
@@ -263,7 +267,8 @@ Based on real-world autonomous filmmaking experience (e.g., *Daisy*, 2025 horror
 | **Casting / character design** | Identity representation, diversity, creative vision. |
 | **Legal/ethical content review** | Copyright, likeness rights, harmful content. |
 
-**Agent Design Rule:** Every agent should expose its reasoning (the "why" behind a suggestion) and offer alternatives, not just a single output.
+**Agent Design Rule:** Every agent should expose its reasoning (the "why" 
+behind a suggestion) and offer alternatives, not just a single output.
 
 ---
 
@@ -330,7 +335,8 @@ A core design goal for CineGen is that the repository must remain **self-contain
 
 ```
 CineGen Repository
-├── source/            (Vite frontend)
+
+source/
 ├── backends/          (Node proxy server + Mastra agent layer)
 │   └── agents/
 │       ├── script-agent.ts
@@ -338,7 +344,7 @@ CineGen Repository
 │       ├── generation-agent.ts
 │       └── orchestrator.ts
 ├── .cine projects/    (local project files — Production Context store)
-└── ollama/            (local LLM runtime, user-managed)
+└── FUTURE: ollama/            (local LLM runtime, user-managed)
 ```
 
 - The agent layer runs as part of the existing `backends/` Node server.

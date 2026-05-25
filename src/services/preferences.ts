@@ -1,10 +1,9 @@
 /**
- * ── NOTE: Preferences use the persistence abstraction layer ──
- * 
- * In local mode (default), preferences are stored via localStorage.
- * In collaborative deployments, the ServerPersistence back-end stores
- * them server-side. Do NOT add localStorage-only fallbacks here.
- * 
+ * ── NOTE: Preferences use server-backed persistence ──
+ *
+ * Preferences are stored via the ServerPersistence back-end so state can be
+ * shared across browser instances connected to the same server URL.
+ *
  * This file stores UI preferences only (font size, sidebar widths, etc.).
  * It does NOT store API keys or auth tokens.
  * ─────────────────────────────────────────────────────────────────────
@@ -26,8 +25,17 @@ export interface CineGenPreferences {
   inspectorWidthPx: number;
   projectSidebarWidthPx: number;
   preprodSplitPercent: number;
+  previsTimelineDockVisible: boolean;
+  previsDrawerHeightPx: number;
+  previsPaneSplitPercent: number;
   activeProjectId: string;
   statusBarScale: number;
+  /** Storyboard pane: group by shot vs. flat sequence grid. */
+  storyboardViewMode: 'shots' | 'sequence';
+  /** Storyboard thumbnail scale (0.5–2). */
+  storyboardThumbnailScale: number;
+  /** Last selected project hierarchy node name, keyed by project id. */
+  projectTreeSelectedByProjectId?: Record<string, string>;
 }
 
 export const DEFAULT_PREFERENCES: CineGenPreferences = {
@@ -40,8 +48,13 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   inspectorWidthPx: 288,
   projectSidebarWidthPx: 280,
   preprodSplitPercent: 50,
+  previsTimelineDockVisible: false,
+  previsDrawerHeightPx: 0,
+  previsPaneSplitPercent: 44,
   activeProjectId: 'proj-001',
   statusBarScale: 1.1,
+  storyboardViewMode: 'shots',
+  storyboardThumbnailScale: 1,
 };
 
 export function loadPreferences(): CineGenPreferences {
@@ -60,7 +73,8 @@ export function loadPreferences(): CineGenPreferences {
 export function savePreferences(
   nextPreferences: Partial<CineGenPreferences> | null | undefined
 ): CineGenPreferences {
-  const merged = { ...DEFAULT_PREFERENCES, ...(nextPreferences || {}) };
+  const current = window.CineGen?.preferences ?? loadPreferences();
+  const merged = { ...DEFAULT_PREFERENCES, ...current, ...(nextPreferences || {}) };
   try {
     storageService.setItem(PREFS_KEY, JSON.stringify(merged));
   } catch (error) {

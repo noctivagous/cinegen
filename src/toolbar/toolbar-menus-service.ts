@@ -4,12 +4,23 @@ import { alertCG } from '@/utils/alert-cg';
 import {
   hydrateProjectRegistryFromPersistence,
   openProject as openProjectFromService,
+  prepareActiveProjectTreeUiForSwitch,
 } from '@/services/project-service';
+import {
+  activatePersistedProjectTreeSelection,
+  primePersistedProjectTreeUi,
+  resetProjectTreeUiRestoreFlag,
+} from '@/tree/project-tree-service';
 import { appShellStore } from '@/stores/app-shell';
 import { AI_ASSIST_ASSISTANT_TILES, AI_ASSIST_TASK_TILES } from '@/toolbar/toolbar-data';
 import {
   launchAiAssistAction,
   openAiProviderInfoModal,
+  openAssetWizardModal,
+  openConceptWizardModal,
+  openScriptWizardModal,
+  openStoryboardWizardModal,
+  openVisualWizardModal,
   openDebugGenerationForDebug,
   openGuide,
   openSettings,
@@ -60,6 +71,8 @@ function switchProject(projectId: string): void {
     closeToolbarSplitMenu('projects-split');
     return;
   }
+  prepareActiveProjectTreeUiForSwitch();
+  resetProjectTreeUiRestoreFlag();
   let activeName = proj.name;
   if (proj.file) {
     loadProjectFromCineFile(proj.file);
@@ -77,6 +90,8 @@ function switchProject(projectId: string): void {
   refresh.renderTimeline?.();
   refresh.hydrateScriptEditorFromProject?.();
   renderProjectsMenu();
+  primePersistedProjectTreeUi(projectId);
+  queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
   closeToolbarSplitMenu('projects-split');
   alertCG(`Opened project: ${proj.name}\n\nAll references and AI locks restored.`);
 }
@@ -218,6 +233,25 @@ function initSaveExportMenu(): void {
   });
 }
 
+const WIZARD_ACTIONS: Record<string, () => void> = {
+  'script-wizard': openScriptWizardModal,
+  'visual-wizard': openVisualWizardModal,
+  'concept-wizard': openConceptWizardModal,
+  'asset-wizard': openAssetWizardModal,
+  'storyboard-wizard': openStoryboardWizardModal,
+};
+
+function initWizardsMenu(): void {
+  const menu = document.getElementById('wizards-menu');
+  menu?.querySelectorAll('[data-wizard-action]').forEach((item) => {
+    item.addEventListener('click', () => {
+      const action = (item as HTMLElement).dataset.wizardAction || '';
+      closeToolbarSplitMenu('wizards-split');
+      WIZARD_ACTIONS[action]?.();
+    });
+  });
+}
+
 function initScriptImportExportMenu(): void {
   const menu = document.getElementById('script-import-export-menu');
   menu?.querySelectorAll('[data-script-io-action]').forEach((item) => {
@@ -242,6 +276,7 @@ export function wireToolbarMenus(): void {
   initAiAssistMenu();
   initDebugMenu();
   initSaveExportMenu();
+  initWizardsMenu();
   initScriptImportExportMenu();
 }
 

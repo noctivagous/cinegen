@@ -1,7 +1,7 @@
 import { classMap } from 'lit/directives/class-map.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { html, nothing } from 'lit';
-import { customElement } from 'lit/decorators.js';
+import { html, nothing, type PropertyValues } from 'lit';
+import { customElement, property } from 'lit/decorators.js';
 import { whenBootReady } from '@/app/boot-coordinator';
 import { CgLightElement } from '@/components/lit-base';
 import {
@@ -10,13 +10,28 @@ import {
   storyboardVisibility,
 } from '@/data/project-data';
 import type { StoryboardFrame, StoryboardVisibilityPart } from '@/storyboard/storyboard-types';
+import {
+  formatShotDisplayLabel,
+  getShotForFrame,
+  groupStoryboardFramesByShot,
+  sceneNumberFromSceneId,
+} from '@/workspace/shot-frame-bridge';
 import { escHtml } from '@/utils/html';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
 
 let _storyboardMenuDismissBound = false;
 
+const SHOT_INDEX_IN_GROUP = new Map<number, number>();
+
 @customElement('cinegen-storyboard')
 export class CinegenStoryboard extends CgLightElement {
+  /** `shots` = grouped by coverage shot; `sequence` = flat board order. */
+  @property({ type: String, reflect: true, attribute: 'view-mode' })
+  viewMode: 'shots' | 'sequence' = 'shots';
+
+  @property({ type: Number, attribute: 'thumbnail-scale' })
+  thumbnailScale = 1;
+
   private readonly _onFramesChanged = (): void => {
     this.syncVisibilityClasses();
     this.requestUpdate();
@@ -37,7 +52,6 @@ export class CinegenStoryboard extends CgLightElement {
     super.disconnectedCallback();
   }
 
-  /** Document-level dismiss for storyboard context menu (once). */
   wireContextMenuDismiss(): void {
     if (_storyboardMenuDismissBound) return;
     _storyboardMenuDismissBound = true;
@@ -53,10 +67,15 @@ export class CinegenStoryboard extends CgLightElement {
     });
   }
 
-  /** Re-render from `storyboardFrames` / selection (called by storyboard-bundle). */
   refresh(): void {
     this.syncVisibilityClasses();
     this.requestUpdate();
+  }
+
+  updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const scale = Math.min(2, Math.max(0.5, this.thumbnailScale || 1));
+    this.style.setProperty('--sb-thumb-scale', String(scale));
   }
 
   syncVisibilityClasses(): void {
@@ -99,12 +118,22 @@ export class CinegenStoryboard extends CgLightElement {
     window.showStoryboardContextMenu?.(frame, e.clientX, e.clientY);
   }
 
-  private _frameTemplate(frame: StoryboardFrame) {
+  private _shotBadge(frame: StoryboardFrame): string | null {
+    const shot = getShotForFrame(frame);
+    if (!shot?.number) return null;
+    const sceneNum = sceneNumberFromSceneId(
+      `scene${String(frame.scene || '1').replace(/\D/g, '').padStart(2, '0')}`
+    );
+    return formatShotDisplayLabel(sceneNum, shot.number);
+  }
+
+  private _frameTemplate(frame: StoryboardFrame, frameIndexInShot: number) {
     const selectedId = window.selectedStoryboardFrameId ?? selectedStoryboardFrameId;
     const selected = frame.id === selectedId;
     const hasImage = !!frame.imageUrl;
     const isGenerating = !!frame.generatingStatus;
     const isError = isGenerating && frame.generatingStatus!.startsWith('error:');
+    const shotBadge = this._shotBadge(frame);
     return html`
       <div
         class=${classMap({ 'storyboard-frame': true, selected })}
@@ -128,7 +157,9 @@ export class CinegenStoryboard extends CgLightElement {
           ` : ''}
         </div>
         <div class="frame-label">
-          <div class="scene-ref frame-part-scene">SC ${escHtml(frame.scene)}</div>
+          <div class="scene-ref frame-part-scene">
+            SC ${escHtml(frame.scene)}${shotBadge ? html` · ${escHtml(shotBadge)}.${frameIndexInShot}` : nothing}
+          </div>
           <div class="frame-shot-label">${escHtml(frame.label)}</div>
         </div>
         <div class="frame-notes frame-part-notes">
@@ -140,10 +171,51 @@ export class CinegenStoryboard extends CgLightElement {
     `;
   }
 
+  private _syncShotFrameIndices(): void {
+    SHOT_INDEX_IN_GROUP.clear();
+    for (const group of groupStoryboardFramesByShot()) {
+      group.frames.forEach((frame, idx) => {
+        SHOT_INDEX_IN_GROUP.set(frame.id, idx + 1);
+      });
+    }
+  }
+
+  private _renderByShot() {
+    const groups = groupStoryboardFramesByShot();
+    return repeat(
+      groups,
+      (g) => g.key,
+      (group) => html`
+        <section class="storyboard-shot-group">
+          <header class="storyboard-shot-group-header text-[10px] uppercase tracking-wide text-[var(--text-dim)] px-1 py-2">
+            ${escHtml(group.label)}
+          </header>
+          <div class="storyboard-shot-group-frames">
+            ${repeat(
+              group.frames,
+              (f) => f.id,
+              (frame) => this._frameTemplate(frame, SHOT_INDEX_IN_GROUP.get(frame.id) ?? 1)
+            )}
+          </div>
+        </section>
+      `
+    );
+  }
+
+  private _renderSequence() {
+    return repeat(
+      storyboardFrames as StoryboardFrame[],
+      (f) => f.id,
+      (frame, idx) => this._frameTemplate(frame, SHOT_INDEX_IN_GROUP.get(frame.id) ?? idx + 1)
+    );
+  }
+
   render() {
     this.syncVisibilityClasses();
     if (!storyboardFrames.length) return nothing;
-    return html`${repeat(storyboardFrames, (f) => f.id, (frame) => this._frameTemplate(frame))}`;
+
+    this._syncShotFrameIndices();
+    return this.viewMode === 'sequence' ? this._renderSequence() : this._renderByShot();
   }
 }
 

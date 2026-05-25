@@ -1,0 +1,80 @@
+[
+  {
+    "id": "log-consistency-scene01-001",
+    "agent": "consistency-auditor",
+    "timestamp": "2026-05-21T14:05:00Z",
+    "level": "info",
+    "message": "Audit complete for scene01 master-v1",
+    "details": {
+      "findings": ["character-consistency:pass", "lighting-mismatch:warn", "location-accuracy:pass"],
+      "verdict": "conditional-pass",
+      "duration_ms": 3200
+    }
+  },
+  {
+    "id": "log-prompt-scene02-001",
+    "agent": "prompt-engineer",
+    "timestamp": "2026-05-22T10:00:00Z",
+    "level": "info",
+    "message": "Prompt optimized for scene02 — sky-bridge pursuit",
+    "details": {
+      "originalPrompt": "Continuous neon sky-bridge pursuit, quantum tunnel streaks, city lights pulse once like breathing, HUD code fractals organic then snaps rigid",
+      "optimizedFor": "runway",
+      "additions": ["Added motion reference ref", "Set aspect ratio constraint", "Added style reference image"],
+      "duration_ms": 1500
+    }
+  },
+  {
+    "id": "log-route-scene02-001",
+    "agent": "generation-agent",
+    "timestamp": "2026-05-22T10:02:00Z",
+    "level": "info",
+    "message": "Routing decision for scene02 master shot",
+    "details": {
+      "shotType": "master",
+      "selectedModel": "kling",
+      "reason": "Master shot requires complex motion and environment consistency. Kling 3.0 preferred for tracking shots with atmospheric elements.",
+      "costEstimate": 0.42,
+      "alternativesConsidered": ["runway", "veo"]
+    }
+  },
+  {
+    "id": "log-generate-scene02-001",
+    "agent": "generation-agent",
+    "timestamp": "2026-05-22T10:05:00Z",
+    "level": "error",
+    "message": "Generation failed for scene02 — model timeout",
+    "details": {
+      "model": "kling",
+      "error": "Request timed out after 120s",
+      "attempt": 1,
+      "willRetry": true,
+      "fallbackModel": "runway"
+    }
+  },
+  {
+    "id": "log-retry-scene02-001",
+    "agent": "generation-agent",
+    "timestamp": "2026-05-22T10:07:00Z",
+    "level": "warn",
+    "message": "Retry 1: falling back to Runway",
+    "details": {
+      "originalModel": "kling",
+      "fallbackModel": "runway",
+      "retryDelayMs": 5000,
+      "adjustedPrompt": "Reduced complexity — removed motion reference, simplified atmospheric elements"
+    }
+  },
+  {
+    "id": "log-generate-scene02-002",
+    "agent": "generation-agent",
+    "timestamp": "2026-05-22T10:08:00Z",
+    "level": "info",
+    "message": "Generation submitted to Runway for scene02 (fallback path)",
+    "details": {
+      "model": "runway",
+      "jobId": "genjob-scene02-coverage-01",
+      "estimatedDuration": 45
+    }
+  }
+]

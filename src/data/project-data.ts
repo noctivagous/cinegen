@@ -1,6 +1,7 @@
 import {
   buildRegistryFromCineFiles,
   ensureCinePackagesLoaded,
+  listCineProjectFiles,
   loadAndApplyCineFile,
   loadCineProjectByFile,
 } from '@/data/cine-project-loader';
@@ -12,11 +13,20 @@ import type {
   StoryboardReferenceBank,
   StoryboardReferenceGenerationStatus,
 } from '@/storyboard/storyboard-types';
+import { syncProjectShotFrameLinks } from '@/workspace/shot-frame-bridge';
 
 /** Screenplay storage — plain Fountain text plus format tag for future rich/structured exports */
 export type ProjectScreenplay = {
   format: 'fountain';
   text: string;
+};
+
+export type PrevisSelectionState = {
+  sceneId: string | null;
+  shotId: number | null;
+  frameId: number | null;
+  scriptRange: { start: number; end: number } | null;
+  timelineItemId: string | null;
 };
 
 const DEFAULT_CINE_FILE = 'ascension-stream.cine';
@@ -161,8 +171,13 @@ export function ensureProjectSettingsRecord(project: any) {
   return project.settings;
 }
 
+export function getActiveProjectRegistryEntry(): ProjectRegistryEntry | undefined {
+  if (!activeProjectId) return undefined;
+  return projectRegistry.find((p) => p.id === activeProjectId);
+}
+
 export function getActiveProjectSettings() {
-  const project = projectRegistry.find((p) => p.id === activeProjectId);
+  const project = getActiveProjectRegistryEntry();
   if (!project) return { ...DEFAULT_PROJECT_SETTINGS };
   return { ...ensureProjectSettingsRecord(project) };
 }
@@ -185,16 +200,38 @@ export let storyboardReferenceBank: StoryboardReferenceBank = {
 };
 export let sceneReferenceOverrides: SceneReferenceOverrides = {};
 export let referenceGenerationStatus: StoryboardReferenceGenerationStatus = 'idle';
+export let previsSelectionState: PrevisSelectionState = {
+  sceneId: null,
+  shotId: null,
+  frameId: null,
+  scriptRange: null,
+  timelineItemId: null,
+};
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let timelineClips: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let locationLibrary: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export let assetLibrary: any = { characters: [], props: [], locations: [], audio: [], production: [] };
+export let assetLibrary: any = {
+  characters: [],
+  locations: [],
+  props: [],
+  vehicles: [],
+  wardrobe: [],
+  effects: [],
+  audio: [],
+  production: [],
+};
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let breakdownData: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let assetDetailData: any = {};
+
+function resolveInitialCineFile(): string | null {
+  const available = listCineProjectFiles();
+  if (available.includes(DEFAULT_CINE_FILE)) return DEFAULT_CINE_FILE;
+  return available[0] ?? null;
+}
 
 /** Notify Lit storyboard panel and status bar after frames change. */
 export function notifyStoryboardFramesChanged(): void {
@@ -207,6 +244,36 @@ export function notifyStoryboardReferencesChanged(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('storyboard-references-changed'));
   }
+}
+
+export function setPrevisSelectionState(
+  next: Partial<PrevisSelectionState>,
+  opts?: { emit?: boolean }
+): void {
+  previsSelectionState = { ...previsSelectionState, ...next };
+  if (opts?.emit === false) return;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('previs-selection-changed', { detail: previsSelectionState }));
+  }
+}
+
+function normalizeAssetLibrary(raw: unknown): Record<string, unknown> {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+  return {
+    characters: asArray(source.characters),
+    locations: asArray(source.locations),
+    props: asArray(source.props),
+    vehicles: asArray(source.vehicles),
+    wardrobe: asArray(source.wardrobe),
+    effects: asArray(source.effects),
+    audio: asArray(source.audio),
+    production: asArray(source.production),
+    media:
+      source.media && typeof source.media === 'object'
+        ? (source.media as Record<string, unknown[]>)
+        : {},
+  };
 }
 
 function applyMutableProjectState(applied: AppliedCineProject): void {
@@ -226,13 +293,26 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
   }) as StoryboardReferenceBank;
   sceneReferenceOverrides = (applied.sceneReferenceOverrides || {}) as SceneReferenceOverrides;
   referenceGenerationStatus = (applied.referenceGenerationStatus as StoryboardReferenceGenerationStatus) || 'idle';
+  previsSelectionState = applied.previsSelectionState ?? {
+    sceneId: null,
+    shotId: null,
+    frameId: null,
+    scriptRange: null,
+    timelineItemId: null,
+  };
   timelineClips = applied.timelineClips;
-  locationLibrary = applied.locationLibrary;
-  assetLibrary = applied.assetLibrary;
+  assetLibrary = normalizeAssetLibrary(applied.assetLibrary);
+  locationLibrary = Array.isArray(applied.locationLibrary)
+    ? applied.locationLibrary
+    : (assetLibrary.locations as any[]);
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
+  syncProjectShotFrameLinks({ migrateOrphans: false });
   notifyStoryboardFramesChanged();
   notifyStoryboardReferencesChanged();
+  if (typeof window.refreshProjectTree === 'function') {
+    window.refreshProjectTree();
+  }
 }
 
 function upsertRegistryEntry(
@@ -287,11 +367,24 @@ export function loadProjectFromCineFile(filename: string): void {
 /** Load bundled `.cine` samples and apply the default project (called during boot). */
 export async function initProjectData(): Promise<void> {
   await ensureCinePackagesLoaded();
-  const initial = loadAndApplyCineFile(DEFAULT_CINE_FILE);
-  applyMutableProjectState(initial);
   projectRegistry = buildRegistryFromCineFiles();
-  activeProjectId = loadCineProjectByFile(DEFAULT_CINE_FILE).id;
+  const initialFile = resolveInitialCineFile();
+  if (!initialFile) {
+    activeProjectId = '';
+    for (const p of projectRegistry) ensureProjectSettingsRecord(p);
+    const { hydrateProjectSettingsFromPersistence } = await import('@/services/project-service');
+    hydrateProjectSettingsFromPersistence();
+    return;
+  }
+
+  const initial = loadAndApplyCineFile(initialFile);
+  applyMutableProjectState(initial);
+  activeProjectId = loadCineProjectByFile(initialFile).id;
   for (const p of projectRegistry) ensureProjectSettingsRecord(p);
+  const { hydrateProjectSettingsFromPersistence } = await import('@/services/project-service');
+  hydrateProjectSettingsFromPersistence();
+  const activeEntry = projectRegistry.find((p) => p.id === activeProjectId);
+  if (activeEntry?.name) projectData.name = activeEntry.name;
 }
 
 function bindWindowData<K extends string>(
@@ -337,6 +430,9 @@ export function installProjectDataGlobals(): void {
   bindWindowData('timelineClips', () => timelineClips, (v) => {
     timelineClips = v as typeof timelineClips;
   });
+  bindWindowData('previsSelectionState', () => previsSelectionState, (v) => {
+    previsSelectionState = v as typeof previsSelectionState;
+  });
   bindWindowData('storyboardReferenceBank', () => storyboardReferenceBank, (v) => {
     storyboardReferenceBank = v as typeof storyboardReferenceBank;
   });
@@ -375,4 +471,5 @@ export function installProjectDataGlobals(): void {
   w.getActiveProjectSettings = getActiveProjectSettings;
   w.ensureProjectSettingsRecord = ensureProjectSettingsRecord;
   w.loadProjectFromCineFile = loadProjectFromCineFile;
+  w.setPrevisSelectionState = setPrevisSelectionState;
 }

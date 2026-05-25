@@ -1,0 +1,24 @@
+[
+  {
+    "id": "set-nexus-01",
+    "name": "Control Nexus Interior",
+    "desc": "Multi-screen command center with central neural interface. Silver crown motif on main console.",
+    "tags": "interior,command,screens,futuristic",
+    "icon": "fa-display",
+    "locationId": "loc-warehouse-01",
+    "mediaRefs": {
+      "images": []
+    },
+    "generatedRefs": {
+      "stills": []
+    },
+    "usageRefs": ["scene03"],
+    "dressing": [
+      "Multi-feed display wall (12 screens)",
+      "Silver neural crown interface console",
+      "Ambient LED strips (cyan/magenta)",
+      "Operator chair (black mesh)",
+      "Server rack backdrop"
+    ]
+  }
+]

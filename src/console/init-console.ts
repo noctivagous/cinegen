@@ -1,9 +1,7 @@
 /**
  * ── NOTE ──
- * The `reset` console command below uses raw localStorage.removeItem() to
- * clear all app state. This is a developer/debugging tool only. In a
- * collaborative deployment, the server-side store should be cleared via
- * the dedicated /api/settings/* DELETE endpoints instead.
+ * The `reset` console command below clears app state from server-backed
+ * persistence and API key endpoints.
  * ─────────
  */
 
@@ -19,7 +17,9 @@ import {
   API_KEYS_STORAGE_KEY,
   PROVIDER_MODEL_CATALOG_STORAGE_KEY,
   PREFERENCES_STORAGE_KEY,
+  LOCAL_PROJECTS_STORAGE_KEY,
 } from '@/constants/storage-keys';
+import { storageService } from '@/services/persistence';
 
 let _initialized = false;
 
@@ -205,7 +205,7 @@ function buildCommands(): void {
     name: 'clear',
     description: 'Clear the console',
     handler: () => {
-      getTerminal()?.clear();
+      getTerminal()?.clear?.();
       return undefined;
     },
   });
@@ -333,7 +333,7 @@ function buildCommands(): void {
 
   registerConsoleCommand({
     name: 'reset',
-    description: 'Reset all app state (localStorage, server keys, setup progress)',
+    description: 'Reset all app state (server store, API keys, setup progress)',
     handler: async () => {
       const keys = [
         SETUP_COMPLETE_STORAGE_KEY,
@@ -342,10 +342,10 @@ function buildCommands(): void {
         API_KEYS_STORAGE_KEY,
         PROVIDER_MODEL_CATALOG_STORAGE_KEY,
         PREFERENCES_STORAGE_KEY,
-        'cinegen.local-projects.v1',
+        LOCAL_PROJECTS_STORAGE_KEY,
       ];
       keys.forEach((k) => {
-        try { localStorage.removeItem(k); } catch { /* noop */ }
+        try { storageService.removeItem(k); } catch { /* noop */ }
       });
       try {
         const resp = await fetch('/api/settings/keys');

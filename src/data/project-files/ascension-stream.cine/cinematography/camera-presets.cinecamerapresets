@@ -1,0 +1,210 @@
+[
+  {
+    "id": "preset-wide-2.39",
+    "name": "Wide Anamorphic",
+    "group": "shot-types",
+    "description": "Full field of view, deep focus, emphasizes environment scale",
+    "shotType": "wide",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "18-24mm",
+    "typicalUses": ["establishing", "master", "landscape"],
+    "defaultMovement": "static",
+    "suggestedModel": "runway"
+  },
+  {
+    "id": "preset-medium-50",
+    "name": "Medium Standard",
+    "group": "shot-types",
+    "description": "Natural perspective, balanced subject-environment relationship",
+    "shotType": "medium",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "35-50mm",
+    "typicalUses": ["dialogue", "two-shot", "action"],
+    "defaultMovement": "static-or-pan",
+    "suggestedModel": "runway"
+  },
+  {
+    "id": "preset-mcu-85",
+    "name": "Medium Close-Up",
+    "group": "shot-types",
+    "description": "Chest-up framing, facial expression emphasis, shallow depth of field",
+    "shotType": "medium-close-up",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "85mm",
+    "typicalUses": ["dialogue", "reaction", "drama"],
+    "defaultMovement": "static-or-dolly",
+    "suggestedModel": "kling"
+  },
+  {
+    "id": "preset-cu-macro",
+    "name": "Close-Up / Macro",
+    "group": "shot-types",
+    "description": "Tight framing on detail or face, maximum shallow depth of field",
+    "shotType": "close-up",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "100mm macro",
+    "typicalUses": ["insert", "detail", "emotional-beat", "product"],
+    "defaultMovement": "static",
+    "suggestedModel": "runway"
+  },
+  {
+    "id": "preset-ecu-extreme",
+    "name": "Extreme Close-Up",
+    "group": "shot-types",
+    "description": "Single feature or detail fills frame — eyes, hands, data interface",
+    "shotType": "extreme-close-up",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "150mm+",
+    "typicalUses": ["eye-close-up", "detail-insert", "data-readout"],
+    "defaultMovement": "static",
+    "suggestedModel": "runway"
+  },
+  {
+    "id": "preset-ots-35",
+    "name": "Over-the-Shoulder",
+    "group": "shot-types",
+    "description": "Shoulder-framed POV, typically for dialogue or pursuit scenes",
+    "shotType": "over-the-shoulder",
+    "aspectRatio": "2.39:1",
+    "lensFocalLength": "35mm",
+    "typicalUses": ["dialogue", "pursuit", "conversation"],
+    "defaultMovement": "tracking",
+    "suggestedModel": "runway"
+  },
+  {
+    "id": "preset-angle-eye",
+    "name": "Eye Level",
+    "group": "angles",
+    "description": "Neutral, natural perspective, character-to-camera relationship",
+    "cameraAngle": "eye-level",
+    "typicalUses": ["dialogue", "normal-scene"]
+  },
+  {
+    "id": "preset-angle-low",
+    "name": "Low Angle",
+    "group": "angles",
+    "description": "Camera below subject, emphasizes power, scale, or menace",
+    "cameraAngle": "low",
+    "typicalUses": ["hero-intro", "monumental", "power-dynamic"]
+  },
+  {
+    "id": "preset-angle-high",
+    "name": "High Angle",
+    "group": "angles",
+    "description": "Camera above subject, emphasizes vulnerability or overview",
+    "cameraAngle": "high",
+    "typicalUses": ["vulnerability", "surveillance", "overview"]
+  },
+  {
+    "id": "preset-angle-dutch",
+    "name": "Dutch / Tilted",
+    "group": "angles",
+    "description": "Horizon line tilted, disorientation or tension",
+    "cameraAngle": "dutch",
+    "typicalUses": ["tension", "unease", "chaos"]
+  },
+  {
+    "id": "preset-move-static",
+    "name": "Static Locked",
+    "group": "movements",
+    "description": "No camera movement, tripod-mounted",
+    "movement": "static",
+    "typicalUses": ["dialogue", "insert", "formal"]
+  },
+  {
+    "id": "preset-move-pan",
+    "name": "Pan",
+    "group": "movements",
+    "description": "Horizontal sweep, reveal or follow action",
+    "movement": "pan",
+    "typicalUses": ["reveal", "follow", "landscape"]
+  },
+  {
+    "id": "preset-move-tilt",
+    "name": "Tilt",
+    "group": "movements",
+    "description": "Vertical tilt, reveal scale or height",
+    "movement": "tilt",
+    "typicalUses": ["scale-reveal", "building", "character-entry"]
+  },
+  {
+    "id": "preset-move-dolly",
+    "name": "Dolly / Tracking",
+    "group": "movements",
+    "description": "Camera moves on tracks, follow or approach",
+    "movement": "dolly",
+    "typicalUses": ["pursuit", "approach", "push-in"]
+  },
+  {
+    "id": "preset-move-crane",
+    "name": "Crane / Boom",
+    "group": "movements",
+    "description": "Vertical camera movement on crane or jib",
+    "movement": "crane",
+    "typicalUses": ["descent", "ascent", "reveal"]
+  },
+  {
+    "id": "preset-move-handheld",
+    "name": "Handheld",
+    "group": "movements",
+    "description": "Deliberate camera shake, documentary or tension style",
+    "movement": "handheld",
+    "typicalUses": ["chaos", "documentary", "pursuit"]
+  },
+  {
+    "id": "preset-light-three-point",
+    "name": "Three-Point Lighting",
+    "group": "lighting",
+    "description": "Key + fill + backlight, standard dramatic look",
+    "lighting": "three-point",
+    "typicalUses": ["dialogue", "interview", "standard-scene"]
+  },
+  {
+    "id": "preset-light-low-key",
+    "name": "Low-Key / Noir",
+    "group": "lighting",
+    "description": "High contrast, deep shadows, single hard key source",
+    "lighting": "low-key",
+    "typicalUses": ["noir", "thriller", "mystery", "shadow-play"]
+  },
+  {
+    "id": "preset-light-screen-face",
+    "name": "Screen-Face / Practical",
+    "group": "lighting",
+    "description": "Face lit by screen or practical light source in scene",
+    "lighting": "screen-face",
+    "typicalUses": ["computer-screen", "phone-light", "neon-glow"]
+  },
+  {
+    "id": "preset-light-golden-hour",
+    "name": "Golden Hour / Warm",
+    "group": "lighting",
+    "description": "Warm directional light, low sun angle",
+    "lighting": "golden-hour",
+    "typicalUses": ["sunset", "warm-scene", "romantic"]
+  },
+  {
+    "id": "preset-atmo-rain",
+    "name": "Rain / Wet",
+    "group": "atmosphere",
+    "description": "Rain, wet surfaces, reflective ground, overcast motivation",
+    "atmosphere": "rain",
+    "typicalUses": ["rain-scene", "night-wet", "moody-exterior"]
+  },
+  {
+    "id": "preset-atmo-fog",
+    "name": "Fog / Mist",
+    "group": "atmosphere",
+    "description": "Atmospheric fog, volumetric light beams",
+    "atmosphere": "fog",
+    "typicalUses": ["mystery", "dream", "transition"]
+  },
+  {
+    "id": "preset-atmo-neon",
+    "name": "Neon / Cyberpunk",
+    "group": "atmosphere",
+    "description": "Neon color washes, magenta-cyan contrast, wet反射",
+    "atmosphere": "neon",
+    "typicalUses": ["cyberpunk", "night-city", "neon-noir"]
+  }
+]

@@ -25,17 +25,32 @@ export const projectsModalTemplate = html`
               <button type="button" class="toolbar-btn projects-modal-new-btn" data-project-action="blank-project">
                 <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-regular fa-file"></i></span>
                 <span class="projects-modal-new-label">Blank project</span>
-                <span class="projects-modal-new-desc">Start from an empty pipeline and hierarchy.</span>
+                <span class="projects-modal-new-desc">Empty script, tree, storyboard, and assets — add structure as you go.</span>
               </button>
-              <button type="button" class="toolbar-btn projects-modal-new-btn" data-project-action="import-baseline">
-                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-file-import"></i></span>
-                <span class="projects-modal-new-label">Import screenplay / bible</span>
-                <span class="projects-modal-new-desc">Coming soon — Fountain, breakdowns, and references.</span>
+              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="script-wizard">
+                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-scroll"></i></span>
+                <span class="projects-modal-new-label">Start from script</span>
+                <span class="projects-modal-new-desc">Paste or write a screenplay, then build characters, locations, and references.</span>
               </button>
-              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="generation-agent">
-                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                <span class="projects-modal-new-label">Project Generation Agent</span>
-                <span class="projects-modal-new-desc">AI walkthrough that gathers creative choices and scaffold.</span>
+              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="visual-wizard">
+                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-image"></i></span>
+                <span class="projects-modal-new-label">Visual-first entry</span>
+                <span class="projects-modal-new-desc">Upload photos, mood boards, or character images to seed the project.</span>
+              </button>
+              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="concept-wizard">
+                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-palette"></i></span>
+                <span class="projects-modal-new-label">Concept / Mood first</span>
+                <span class="projects-modal-new-desc">Begin with style references and background plates to establish the look.</span>
+              </button>
+              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="asset-wizard">
+                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></span>
+                <span class="projects-modal-new-label">Asset library import</span>
+                <span class="projects-modal-new-desc">Load a saved scene kit from a previous project as the foundation.</span>
+              </button>
+              <button type="button" class="toolbar-btn projects-modal-new-btn projects-modal-new-btn--ai btn-ai" data-project-action="storyboard-wizard">
+                <span class="projects-modal-new-icon" aria-hidden="true"><i class="fa-solid fa-pen-ruler"></i></span>
+                <span class="projects-modal-new-label">Storyboard sketch mode</span>
+                <span class="projects-modal-new-desc">Rough thumbnail sketching or text-based beats to frame your story.</span>
               </button>
             </div>
           </aside>

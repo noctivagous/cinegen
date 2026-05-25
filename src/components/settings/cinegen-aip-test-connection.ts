@@ -15,6 +15,8 @@ type ApiKeysVendor = {
   id: string;
   providerId: string;
   apiKey?: string;
+  hasServerKey?: boolean;
+  baseUrl?: string;
 };
 
 type TestTaskArgs = {
@@ -75,12 +77,13 @@ export class CinegenAipTestConnection extends CgLightElement {
 
     if (!key) {
       this._validationError =
-        'No API key saved for this provider. Paste a key and save first (or enter one in the key field above).';
+        'No API key for this provider. Add the key to backends/.env for its slot, or paste a key above and save.';
       return;
     }
 
     const baseUrl =
-      (document.getElementById(`ai-api-baseurl-${this._modality}`) as HTMLInputElement | null)?.value?.trim() ??
+      (document.getElementById(`ai-api-baseurl-${this._modality}`) as HTMLInputElement | null)?.value?.trim() ||
+      String(vendor.baseUrl ?? '').trim() ||
       '';
 
     try {

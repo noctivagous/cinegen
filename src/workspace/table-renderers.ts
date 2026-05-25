@@ -2,6 +2,8 @@
  * Pure HTML table renderers for continuity sheets and shot lists.
  */
 
+import { buildShotListRows, formatShotDisplayLabel } from '@/workspace/shot-frame-bridge';
+
 interface ContinuityData {
   columns?: string[];
   rows?: string[][];
@@ -24,52 +26,8 @@ export function renderContinuityTable(data: ContinuityData): string {
     </div>`;
 }
 
-interface ShotRow {
-  scene: string;
-  type: string;
-  label: string;
-  duration: string;
-  status: string;
-}
-
-interface ShotDef {
-  type: string;
-  label: string;
-  duration: string;
-  bestTake?: boolean;
-}
-
-interface PickupDef {
-  label: string;
-  duration: string;
-}
-
-interface SceneData {
-  title?: string;
-  master?: { label: string; duration: string; status?: string };
-  coverage?: ShotDef[];
-  broll?: PickupDef[];
-  pickups?: PickupDef[];
-}
-
 export function renderShotListTable(): string {
-  const rows: ShotRow[] = [];
-  const scenes = (window as unknown as Record<string, Record<string, SceneData>>).currentSceneData ?? {};
-  Object.entries(scenes).forEach(([, scene]) => {
-    const sceneLabel = (scene.title || '').split(' - ')[0] || '?';
-    if (scene.master) {
-      rows.push({ scene: sceneLabel, type: 'Master Shot', label: scene.master.label, duration: scene.master.duration, status: scene.master.status || '—' });
-    }
-    (scene.coverage || []).forEach((shot: ShotDef) => {
-      rows.push({ scene: sceneLabel, type: shot.type, label: shot.label, duration: shot.duration, status: shot.bestTake ? 'best take' : 'take' });
-    });
-    (scene.broll || []).forEach((b: PickupDef) => {
-      rows.push({ scene: sceneLabel, type: 'B-Roll', label: b.label, duration: b.duration, status: '—' });
-    });
-    (scene.pickups || []).forEach((p: PickupDef) => {
-      rows.push({ scene: sceneLabel, type: 'Pickup', label: p.label, duration: p.duration, status: '—' });
-    });
-  });
+  const rows = buildShotListRows();
 
   if (!rows.length) return '<p class="asset-detail-empty">No shots yet. Add scene coverage to populate this list.</p>';
 
@@ -80,15 +38,30 @@ export function renderShotListTable(): string {
     return `<span class="asset-status-dot asset-status-${cls}" title="${escHtml(status)}"></span>`;
   };
 
+  const framesCell = (row: ReturnType<typeof buildShotListRows>[number]) => {
+    if (row.kind !== 'coverage') return '—';
+    const count = row.frameCount ?? 0;
+    if (!count) return '0';
+    const tip = (row.frameLabels ?? []).join(' · ');
+    return `<span title="${escHtml(tip)}">${count} frame${count === 1 ? '' : 's'}</span>`;
+  };
+
+  const shotNumCell = (row: ReturnType<typeof buildShotListRows>[number]) => {
+    if (row.kind !== 'coverage' || row.shotNumber == null) return '—';
+    return escHtml(formatShotDisplayLabel(row.sceneNumber, row.shotNumber));
+  };
+
   return `
     <div class="continuity-table-wrap">
       <table class="continuity-table">
-        <thead><tr><th>Scene</th><th>Type</th><th>Label</th><th>Duration</th><th>Status</th></tr></thead>
+        <thead><tr><th>Scene</th><th>Shot</th><th>Type</th><th>Label</th><th>Frames</th><th>Duration</th><th>Status</th></tr></thead>
         <tbody>${rows.map((r) => `
-          <tr>
-            <td class="continuity-scene-col">${escHtml(r.scene)}</td>
+          <tr${r.kind === 'coverage' && r.shotId != null ? ` class="shot-list-row" data-scene-id="${escHtml(r.sceneId)}" data-shot-id="${r.shotId}"` : ''}>
+            <td class="continuity-scene-col">${escHtml(r.sceneLabel)}</td>
+            <td>${shotNumCell(r)}</td>
             <td>${escHtml(r.type)}</td>
             <td>${escHtml(r.label)}</td>
+            <td>${framesCell(r)}</td>
             <td>${escHtml(r.duration)}</td>
             <td>${r.status !== '—' ? statusDot(r.status) + ' ' + escHtml(r.status) : '—'}</td>
           </tr>`).join('')}
@@ -97,7 +70,6 @@ export function renderShotListTable(): string {
     </div>`;
 }
 
-/* Helper — assumed available globally in the bundle context */
 function escHtml(str: unknown): string {
   if (typeof str !== 'string') str = String(str ?? '');
   return (str as string)

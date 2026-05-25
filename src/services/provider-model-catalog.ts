@@ -6,10 +6,9 @@
  *
  * ── NOTE ──
  * This file caches model metadata only (model IDs, labels, capabilities) — not
- * API keys. The cache is persisted via the abstracted storageService which may
- * use localStorage (dev mode) or server storage (collaborative mode). In a
- * multi-user deployment, cache data should also be server-backed to avoid
- * each user re-fetching model lists on every load.
+ * API keys. The cache is persisted via server-backed storageService.
+ * Do NOT add direct browser-local persistence (localStorage/sessionStorage/
+ * IndexedDB) so model metadata stays consistent across browser instances.
  * ─────────
  *
  * Each provider returns different metadata for audio model classification.
@@ -365,15 +364,16 @@ export function mergeRoutingModelOptions(providerId: any, modalityKey: any, vend
 }
 
 export function listProvidersWithKeyForModality(modalityKey: any) {
-  const scope = typeof apiScopeForModality === 'function'
-    ? apiScopeForModality(modalityKey)
-    : (modalityKey === 'llm' ? 'language' : modalityKey);
-  const providerIds = new Set();
+  const providerIds = new Set<string>();
   if (typeof loadApiKeys === 'function') {
     loadApiKeys().vendors.forEach((v: any) => {
-      if (typeof vendorHasKeyForScope === 'function' && vendorHasKeyForScope(v, scope)) {
-        providerIds.add(v.providerId);
-      }
+      const configured =
+        typeof (window as any).vendorIsConfigured === 'function'
+          ? (window as any).vendorIsConfigured(v)
+          : typeof vendorHasApiKey === 'function'
+            ? vendorHasApiKey(v)
+            : Boolean(String(v?.apiKey || '').trim());
+      if (configured && v.providerId) providerIds.add(v.providerId);
     });
   }
   if (typeof AI_API_PROVIDERS === 'undefined') return [];

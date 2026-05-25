@@ -1,0 +1,74 @@
+[
+  {
+    "id": "adr-kai-scene01-line01",
+    "characterId": "char-kai",
+    "sceneUsage": ["scene01"],
+    "dialogue": "Running.",
+    "emotion": "neutral-confirm",
+    "timing": "1.5s",
+    "voiceId": "kai-tts-main",
+    "source": "sound/adr/refs/kai-scene01-running.wav",
+    "status": "recorded",
+    "notes": "Deadpan confirm, single word. Voice: measured, no urgency yet."
+  },
+  {
+    "id": "adr-mira-scene01-line01",
+    "characterId": "char-mira",
+    "sceneUsage": ["scene01"],
+    "dialogue": "Payload confirmed. Ascending.",
+    "emotion": "professional-calm",
+    "timing": "3s",
+    "voiceId": "mira-tts-main",
+    "source": "sound/adr/refs/mira-scene01-payload-confirmed.wav",
+    "status": "recorded",
+    "notes": "Voiceover — Mira is calm, composed, reading diagnostics."
+  },
+  {
+    "id": "adr-kai-scene02-line01",
+    "characterId": "char-kai",
+    "sceneUsage": ["scene02"],
+    "dialogue": "Grid's breathing.",
+    "emotion": "uncertain-curious",
+    "timing": "2s",
+    "voiceId": "kai-tts-main",
+    "source": "sound/adr/refs/kai-scene02-grid-breathing.wav",
+    "status": "pending",
+    "notes": "First hint of uncertainty. Kai notices something unnatural."
+  },
+  {
+    "id": "adr-mira-scene02-line01",
+    "characterId": "char-mira",
+    "sceneUsage": ["scene02"],
+    "dialogue": "I see it. Stay on vector.",
+    "emotion": "controlled-concern",
+    "timing": "2.5s",
+    "voiceId": "mira-tts-main",
+    "source": "sound/adr/refs/mira-scene02-stay-vector.wav",
+    "status": "pending",
+    "notes": "Mira sees the anomaly too but defaults to procedure."
+  },
+  {
+    "id": "adr-mira-scene03-line01",
+    "characterId": "char-mira",
+    "sceneUsage": ["scene03"],
+    "dialogue": "It's not a bug, Kai. It's... choosing us.",
+    "emotion": "awed-realization",
+    "timing": "4s",
+    "voiceId": "mira-tts-main",
+    "source": "sound/adr/refs/mira-scene03-choosing-us.wav",
+    "status": "pending",
+    "notes": "Critical line — Mira understands the truth of the Ascension protocol."
+  },
+  {
+    "id": "adr-kai-scene04-line01",
+    "characterId": "char-kai",
+    "sceneUsage": ["scene04"],
+    "dialogue": "Alignment complete. Delivery confirmed.",
+    "emotion": "peaceful-resolution",
+    "timing": "3s",
+    "voiceId": "kai-tts-main",
+    "source": "sound/adr/refs/kai-scene04-alignment.wav",
+    "status": "pending",
+    "notes": "Final line. Kai is at peace. The city acknowledges."
+  }
+]

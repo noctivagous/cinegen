@@ -1,4 +1,9 @@
 import { projectRegistry, projectData } from '@/data/project-data';
+import {
+  activatePersistedProjectTreeSelection,
+  primePersistedProjectTreeUi,
+  resetProjectTreeUiRestoreFlag,
+} from '@/tree/project-tree-service';
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { appShellStore } from '@/stores/app-shell';
 import {
@@ -62,6 +67,8 @@ const App = {
       const exists = projectRegistry.some((p) => p.id === prefs.activeProjectId);
       if (exists) {
         appShellStore.setActiveProjectId(prefs.activeProjectId, { persist: false });
+        resetProjectTreeUiRestoreFlag();
+        window.refreshProjectTree?.();
       }
     }
 
@@ -74,11 +81,11 @@ const App = {
     window.initChipNavigation?.();
     window.initStoryboardNavigation?.();
     window.renderFullTree?.();
+    primePersistedProjectTreeUi();
     window.renderBreakdownTable?.();
     window.renderScriptInfoTables?.();
     window.renderStoryboard?.();
     window.renderTimeline?.();
-    window.setPreprodMode?.('both');
     window.initScriptPaneSegmentedControl?.();
     window.switchScriptPaneTab?.('script');
 
@@ -133,15 +140,15 @@ const App = {
       setPreprodSplitPercent(prefs.preprodSplitPercent, false);
     }
 
-    setTimeout(() => {
+    queueMicrotask(() => {
       if (typeof window.activateProjectTreeNode === 'function') {
-        window.activateProjectTreeNode('Script + Storyboard');
+        activatePersistedProjectTreeSelection();
       } else {
         document
           .querySelector('.tree-item[data-view="preprod-workspace"][data-preprod-mode="both"]')
           ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       }
-    }, 150);
+    });
 
     console.log(
       '%cCineFlow Studio Pro initialized — structure and flow in perfect balance',

@@ -15,6 +15,7 @@ const WORKSPACE_ACTIONS: Record<string, string> = {
   'lock-continuity': 'lockContinuity',
   'add-shot-coverage': 'addShotToCoverage',
   'auto-assemble-timeline': 'autoAssembleTimeline',
+  'togglePrevisTimelineDock': 'togglePrevisTimelineDock',
   'export-timeline': 'exportTimeline',
   'generate-location': 'generateLocation',
   'build-camera-prompt': 'buildCameraPrompt',

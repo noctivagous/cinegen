@@ -3,9 +3,9 @@
  * This file reads AI API settings via storageService.getItem() to determine
  * which provider/model to use for storyboard image generation. This is a
  * read-only consumer of the setting that was written by ai-api-settings-bundle.ts.
- * 
- * In a collaborative deployment, the same abstraction layer serves from the
- * server cache. Do NOT add direct localStorage reads or writes here.
+ *
+ * State must remain server-backed through storageService. Do NOT add browser
+ * local persistence APIs (localStorage/sessionStorage/IndexedDB) here.
  * ─────────
  */
 
@@ -18,14 +18,57 @@ import {
   referenceGenerationStatus,
 } from '@/data/project-data';
 import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinations';
+import {
+  backfillStoryboardPrompts,
+  buildStoryboardPrompt,
+  buildReferenceSlotPrompt,
+  getReferenceImageUrls,
+  STORYBOARD_STYLE_PROMPT,
+} from '@/storyboard/storyboard-prompt-builder';
 import { getCinegenStoryboard } from '@/panels/panel-hosts';
 import { alertCG } from '@/utils/alert-cg';
 import { promptFrameCG } from '@/utils/prompt-frame-cg';
 import { escHtml } from '@/utils/html';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import {
+  assignFrameToShot,
+  createCoverageShotForFrame,
+  getShotForFrame,
+  removeFrameFromAllShots,
+  reorderShotFrameIds,
+  reconcileShotFrameLinks,
+  sceneIdFromStoryboardFrame,
+  sceneNumberFromSceneId,
+} from '@/workspace/shot-frame-bridge';
+import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { patchAppShellState } from '@/stores/app-shell';
 import { storageService } from '@/services/persistence';
 import { emitAiInteractionLog } from '@/services/ai/interaction-log';
+import { ImageGenerationService } from '@/services/ai/image-generation-service';
+import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
+import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
+
+function refreshShotFrameTree(): void {
+  requestProjectTreeRefresh();
+  if (typeof renderFullTree === 'function') renderFullTree();
+}
+
+function inheritShotIdForNewFrame(frame: StoryboardFrame): void {
+  const selected = getSelectedStoryboardFrame();
+  if (selected?.shotId != null && selected.scene === frame.scene) {
+    const sceneId = sceneIdFromStoryboardFrame(frame);
+    assignFrameToShot(sceneId, frame.id, selected.shotId);
+  }
+}
+
+function linkDraftFramesToCoverage(drafts: StoryboardFrame[]): void {
+  const base = Date.now();
+  drafts.forEach((frame, idx) => {
+    createCoverageShotForFrame(frame, base + idx);
+  });
+  if (drafts[0]) reconcileShotFrameLinks(sceneIdFromStoryboardFrame(drafts[0]));
+  refreshShotFrameTree();
+}
 
 /** Storyboard grid, sync, and pre-production actions */
 
@@ -70,7 +113,7 @@ declare global {
   var currentSceneId: string | null;
   var storyboardContextState: { frameId: number } | null;
   var selectedStoryboardFrameId: number | null;
-  var storyboardFrames: Array<{ id: number; scene?: string; label: string; scriptLink?: string; notes?: string; imageUrl?: string; generatingStatus?: string }>;
+  var storyboardFrames: Array<{ id: number; scene?: string; label: string; scriptLink?: string; notes?: string; imageUrl?: string; generatingStatus?: string; generatedPrompt?: string; userPromptOverride?: string }>;
 }
 
 function getScriptEditor(): HTMLTextAreaElement | null {
@@ -79,12 +122,16 @@ function getScriptEditor(): HTMLTextAreaElement | null {
 
 interface StoryboardFrame {
   id: number;
-  scene?: string;
+  scene: string;
+  shotId?: number;
+  durationSeconds?: number;
   label: string;
   scriptLink?: string;
   notes?: string;
   imageUrl?: string;
   generatingStatus?: string;
+  generatedPrompt?: string;
+  userPromptOverride?: string;
 }
 
 type ReferenceCategory = 'characters' | 'locations' | 'interiors' | 'exteriors';
@@ -160,8 +207,6 @@ export function setStoryboardPartVisibility(part: string, visible: boolean): voi
 let autogenBoardsEnabled = false;
 let storyboardGenerationMode: 'review' | 'auto' = 'review';
 const STORYBOARD_GEN_MODE_KEY = 'cinegen.storyboard.generationMode';
-const STORYBOARD_STYLE_PROMPT =
-  'Pencil illustration of film frame, monochrome linework, cinematic composition, clear subject blocking, practical shot intent, no photorealism.';
 
 export function initAutogenCheckbox(): void {
   const cb = document.getElementById('autogen-boards-cb') as HTMLInputElement | null;
@@ -364,6 +409,7 @@ async function generateReferenceSlotImage(slot: StoryboardReferenceSlot): Promis
     label: slot.label,
     scriptLink: slot.prompt,
     notes: `Style: ${STORYBOARD_STYLE_PROMPT}`,
+    userPromptOverride: buildReferenceSlotPrompt(slot),
   };
   slot.imageUrl = await generateFrameImage(pseudoFrame);
   slot.updatedAt = new Date().toISOString();
@@ -554,6 +600,13 @@ export function highlightScriptForFrame(frame: StoryboardFrame): void {
   const line = text.slice(0, idx).split('\n').length;
   editor.scrollTop = Math.max(0, (line - 3) * lh);
   syncScriptRenderScroll();
+  window.setPrevisSelectionState?.({
+    sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
+    shotId: frame.shotId ?? null,
+    frameId: frame.id,
+    scriptRange: { start: idx, end: idx + searchStr.length },
+    timelineItemId: frame.id ? `frame-${frame.id}` : null,
+  });
 }
 
 export function getSelectedStoryboardFrame(): StoryboardFrame | null {
@@ -584,16 +637,19 @@ export async function addStoryboardFrame(): Promise<void> {
   const frame: StoryboardFrame = {
     id: Date.now(),
     scene,
+    durationSeconds: 3,
     label: result.label,
     scriptLink: result.anchor,
     notes: result.notes,
   };
   storyboardFrames.push(frame);
+  inheritShotIdForNewFrame(frame);
   window.selectedStoryboardFrameId = frame.id;
   renderStoryboard();
   updateInspector('storyboard-frame', frame);
   scheduleFountainRender();
   window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
   if (autogenBoardsEnabled) {
     await regenerateThumbnail(frame);
   }
@@ -622,11 +678,14 @@ export function deleteSelectedFrame(): void {
     alertCG('Select a storyboard frame to delete.');
     return;
   }
+  const sceneId = sceneIdFromStoryboardFrame(frame);
+  removeFrameFromAllShots(frame.id);
+  assignFrameToShot(sceneId, frame.id, null);
   window.storyboardFrames = storyboardFrames.filter(item => item.id !== frame.id);
   deletedStoryboardFrames.unshift({ ...frame, deletedAt: new Date().toISOString() });
   window.selectedStoryboardFrameId = null;
   renderStoryboard();
-  renderFullTree();
+  refreshShotFrameTree();
   updateInspector('scrap', { items: deletedStoryboardFrames });
   window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
 }
@@ -642,14 +701,19 @@ export function duplicateSelectedFrame(): void {
   const copy: StoryboardFrame = {
     ...frame,
     id: Date.now(),
+    durationSeconds: frame.durationSeconds ?? 3,
     label: `${frame.label} (copy)`,
     generatingStatus: undefined,
   };
   storyboardFrames.splice(idx + 1, 0, copy);
+  if (frame.shotId != null) {
+    assignFrameToShot(sceneIdFromStoryboardFrame(copy), copy.id, frame.shotId);
+  }
   window.selectedStoryboardFrameId = copy.id;
   renderStoryboard();
   updateInspector('storyboard-frame', copy);
   window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
 }
 
 function moveSelectedFrame(direction: -1 | 1): void {
@@ -664,8 +728,12 @@ function moveSelectedFrame(direction: -1 | 1): void {
   if (target < 0 || target >= storyboardFrames.length) return;
   const [item] = storyboardFrames.splice(idx, 1);
   storyboardFrames.splice(target, 0, item);
+  if (item.shotId != null) {
+    reorderShotFrameIds(sceneIdFromStoryboardFrame(item), item.shotId);
+  }
   renderStoryboard();
   window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
 }
 
 export function moveSelectedFrameUp(): void {
@@ -685,6 +753,7 @@ export function restoreLastDeletedFrame(): void {
   const frame: StoryboardFrame = {
     id: Date.now(),
     scene: restored.scene || '1',
+    durationSeconds: restored.durationSeconds ?? 3,
     label: restored.label || 'Restored Frame',
     scriptLink: restored.scriptLink,
     notes: restored.notes,
@@ -708,6 +777,13 @@ export function highlightStoryboardForScriptSelection(): void {
     || storyboardFrames.find(item => item.scriptLink && item.scriptLink.toLowerCase().includes(normalized));
   if (!frame) return;
   window.selectedStoryboardFrameId = frame.id;
+  window.setPrevisSelectionState?.({
+    sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
+    shotId: frame.shotId ?? null,
+    frameId: frame.id,
+    scriptRange: { start: editor.selectionStart, end: editor.selectionEnd },
+    timelineItemId: frame.id ? `frame-${frame.id}` : null,
+  });
   renderStoryboard();
   const frameEl = document.querySelector(
     `cinegen-storyboard .storyboard-frame[data-frame-id="${frame.id}"]`
@@ -747,6 +823,7 @@ export async function generateBoards(): Promise<void> {
 
   const drafts = buildStoryboardDraftFrames(scene, sceneHeading, anchor, sceneBodyLines);
   drafts.forEach((frame) => storyboardFrames.push(frame));
+  linkDraftFramesToCoverage(drafts);
   window.selectedStoryboardFrameId = drafts[0]?.id || null;
   renderStoryboard();
   if (drafts[0]) updateInspector('storyboard-frame', drafts[0]);
@@ -836,11 +913,13 @@ export async function makeStoryboardFrameForText(): Promise<void> {
     scriptLink: text,
   };
   storyboardFrames.push(frame);
+  createCoverageShotForFrame(frame);
   window.selectedStoryboardFrameId = frame.id;
   renderStoryboard();
   updateInspector('storyboard-frame', frame);
   scheduleFountainRender();
   window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
   const msgTrunc = text.length > 50 ? text.slice(0, 50) + '…' : text;
   alertCG(`New storyboard frame created from selected text: "${msgTrunc}"`);
   if (autogenBoardsEnabled) {
@@ -850,70 +929,7 @@ export async function makeStoryboardFrameForText(): Promise<void> {
 
 /* ── Image generation helpers ─────────────────────────────────────────────── */
 
-const PROXY_BASE = '';
-
-const PROVIDER_TARGET_MAP: Record<string, string> = {
-  'openai-compatible': 'openai',
-  'fal-ai': 'fal',
-  'replicate-api': 'replicate',
-  'google-gemini-api': 'google',
-  'luma-api': 'luma',
-};
-
-const VENDOR_TARGET_MAP: Record<string, string> = {
-  openai: 'openai',
-  xai: 'xai',
-  together: 'together',
-  groq: 'groq',
-  mistral: 'mistral',
-  deepseek: 'deepseek',
-  anthropic: 'anthropic',
-  google: 'google',
-  elevenlabs: 'elevenlabs',
-  fal: 'fal',
-  replicate: 'replicate',
-  runway: 'runway',
-  luma: 'luma',
-};
-
-interface ImageGenSettings {
-  provider: string;
-  target: string;
-  model: string;
-  apiKey: string;
-  baseUrl: string;
-  vendorId: string;
-}
-
-function getImageGenSettings(): ImageGenSettings | null {
-  try {
-    const raw = storageService.getItem('cinegen.aiApiSettings');
-    if (!raw) return null;
-    const settings = JSON.parse(raw);
-    const imageCfg = settings?.modalities?.image;
-    if (!imageCfg?.provider || !imageCfg?.model) return null;
-
-      let target = '';
-      if (imageCfg.vendorId && typeof window.loadApiKeys === 'function') {
-        const keys = window.loadApiKeys();
-        const vendor = (keys?.vendors || []).find((v: any) => v.id === imageCfg.vendorId);
-        const slotId = (vendor as any)?.slotId || imageCfg.vendorId;
-        if (slotId) target = VENDOR_TARGET_MAP[slotId] || slotId;
-      }
-    if (!target) target = PROVIDER_TARGET_MAP[imageCfg.provider] || imageCfg.provider;
-
-    return {
-      provider: imageCfg.provider,
-      target,
-      model: imageCfg.model,
-      apiKey: '',
-      baseUrl: imageCfg.baseUrl || '',
-      vendorId: imageCfg.vendorId || '',
-    };
-  } catch {
-    return null;
-  }
-}
+const imageGenerationService = new ImageGenerationService();
 
 async function fetchImageAsDataUrl(url: string): Promise<string> {
   const res = await fetch(url, { mode: 'cors' });
@@ -928,57 +944,41 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
 }
 
 async function generateFrameImage(frame: StoryboardFrame): Promise<string> {
-  const settings = getImageGenSettings();
-  if (!settings) {
+  const route = resolveModalityVendorRoute('image');
+  if (!route) {
     throw new Error('No image generation provider configured. Open Settings → AI Models & Modalities to set one up.');
   }
 
-  const { provider, target, model, apiKey, baseUrl } = settings;
-  const styleFromNotes = extractStoryboardStyleFromNotes(frame.notes);
-  const stylePrompt = styleFromNotes || STORYBOARD_STYLE_PROMPT;
-  const sceneKey = `scene${parseInt(String(frame.scene || currentSceneNumber()), 10) || 1}`;
-  const refsText = referenceDescriptorText(sceneKey);
-  const prompt = frame.scriptLink
-    ? `${frame.label}: ${frame.scriptLink}. ${stylePrompt}${refsText ? ` ${refsText}` : ''}`
-    : `${frame.label}. ${stylePrompt}${refsText ? ` ${refsText}` : ''}`;
+  const { vendor, model } = route;
 
-  if (provider === 'openai-compatible') {
-    const size = model === 'dall-e-3' ? '1024x1024' : '1024x1024';
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Cinegen-Target': target };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-    if (baseUrl) headers['X-Cinegen-Base-Url'] = baseUrl;
-    const res = await fetch(`${PROXY_BASE}/proxy/v1/images/generations`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ model, prompt, n: 1, size, response_format: 'b64_json' }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error (HTTP ${res.status})`);
-    }
-    const data = await res.json();
-    const b64 = data.data?.[0]?.b64_json;
-    if (b64) return `data:image/png;base64,${b64}`;
-    const url = data.data?.[0]?.url;
-    if (url) return fetchImageAsDataUrl(url);
-    throw new Error('No image data in API response');
+  // Build prompt: user override takes precedence, otherwise use enriched builder
+  let prompt: string;
+  let size: string;
+  let refImages: string[];
+
+  if (frame.userPromptOverride) {
+    prompt = frame.userPromptOverride;
+    size = '1024x1024';
+    refImages = [];
+  } else {
+    const result = buildStoryboardPrompt(frame);
+    prompt = result.prompt;
+    size = result.size;
+    refImages = result.refImageUrls;
+    frame.generatedPrompt = prompt;
   }
 
-  if (provider === 'fal-ai') {
-    const refImages = referenceImageUrls(sceneKey).slice(0, 4);
-    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Cinegen-Target': target };
-    if (apiKey) headers['Authorization'] = `Key ${apiKey}`;
-    if (baseUrl) headers['X-Cinegen-Base-Url'] = baseUrl;
+  if (vendor.providerId === 'fal-ai') {
     const body: Record<string, unknown> = { prompt };
     if (refImages.length) body.image_urls = refImages;
-    const res = await fetch(`${PROXY_BASE}/proxy/${model}`, {
+    const res = await fetch(proxyPath(`/${model}`), {
       method: 'POST',
-      headers,
+      headers: buildProxyHeaders(vendor),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `API error (HTTP ${res.status})`);
+      throw new Error((err as { error?: { message?: string } })?.error?.message || `API error (HTTP ${res.status})`);
     }
     const data = await res.json();
     const imgUrl = data.images?.[0]?.url || data.image?.url;
@@ -986,7 +986,28 @@ async function generateFrameImage(frame: StoryboardFrame): Promise<string> {
     throw new Error('No image URL in fal.ai response');
   }
 
-  throw new Error(`Provider "${provider}" image generation not yet implemented`);
+  const result = await imageGenerationService.generate({
+    vendor,
+    model,
+    prompt,
+    count: 1,
+    size,
+  });
+
+  if (!result.response.ok) {
+    const errMsg =
+      (result.data as { error?: { message?: string } } | null)?.error?.message ||
+      result.rawText ||
+      `API error (HTTP ${result.response.status})`;
+    throw new Error(errMsg);
+  }
+
+  const data = result.data as { data?: Array<{ b64_json?: string; url?: string }> } | null;
+  const b64 = data?.data?.[0]?.b64_json;
+  if (b64) return `data:image/png;base64,${b64}`;
+  const url = data?.data?.[0]?.url;
+  if (url) return fetchImageAsDataUrl(url);
+  throw new Error('No image data in API response');
 }
 
 function referenceDescriptorText(sceneKey: string): string {
@@ -1019,41 +1040,72 @@ function extractStoryboardStyleFromNotes(notes?: string): string {
 }
 
 export async function regenerateThumbnail(frame: StoryboardFrame): Promise<void> {
-  if (frame.generatingStatus && !frame.generatingStatus.startsWith('error:')) {
+  const live = storyboardFrames.find((f) => f.id === frame.id) ?? frame;
+
+  if (live.generatingStatus && !live.generatingStatus.startsWith('error:')) {
     return;
   }
 
-  frame.generatingStatus = 'Starting…';
+  live.generatingStatus = 'Starting…';
   renderStoryboard();
 
   const started = Date.now();
   try {
-    frame.generatingStatus = 'Generating…';
+    live.generatingStatus = 'Generating…';
     renderStoryboard();
 
-    const dataUrl = await generateFrameImage(frame);
+    const dataUrl = await generateFrameImage(live);
 
-    frame.imageUrl = dataUrl;
-    frame.generatingStatus = undefined;
+    live.imageUrl = dataUrl;
+    live.generatingStatus = undefined;
     renderStoryboard();
     window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+    updateInspector('storyboard-frame', live);
 
     if (typeof triggerModelActivityBlink === 'function') triggerModelActivityBlink('image');
     emitStoryboardRunLog('thumbnail-success', {
-      frameId: frame.id,
-      scene: frame.scene,
+      frameId: live.id,
+      scene: live.scene,
       elapsedMs: Date.now() - started,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    frame.generatingStatus = `error:${msg}`;
+    live.generatingStatus = `error:${msg}`;
     renderStoryboard();
+    updateInspector('storyboard-frame', live);
     emitStoryboardRunLog('thumbnail-error', {
-      frameId: frame.id,
-      scene: frame.scene,
+      frameId: live.id,
+      scene: live.scene,
       elapsedMs: Date.now() - started,
       error: msg,
     });
+  }
+}
+
+function refreshFrameEditorPromptDisplay(): void {
+  const modal = document.getElementById('storyboard-frame-editor');
+  if (!modal || modal.hidden) return;
+  const data: StoryboardFrame = (modal as any)._frameData;
+  if (!data) return;
+
+  const promptText = modal.querySelector<HTMLElement>('.sfe-prompt-text');
+  const autoBadge = modal.querySelector<HTMLElement>('.sfe-prompt-badge--auto');
+  const overrideBadge = modal.querySelector<HTMLElement>('.sfe-prompt-badge--override');
+  const overrideTextarea = modal.querySelector<HTMLTextAreaElement>('.sfe-input-override');
+
+  // Show generated or override prompt
+  const displayPrompt = data.userPromptOverride || data.generatedPrompt;
+  if (promptText) {
+    promptText.textContent = displayPrompt || '(Prompt will be generated when you click Regenerate Thumbnail)';
+  }
+
+  // Toggle badges
+  if (autoBadge) autoBadge.classList.toggle('hidden', !!data.userPromptOverride);
+  if (overrideBadge) overrideBadge.classList.toggle('hidden', !data.userPromptOverride);
+
+  // Sync override textarea
+  if (overrideTextarea) {
+    overrideTextarea.value = data.userPromptOverride || '';
   }
 }
 
@@ -1083,6 +1135,8 @@ export function openStoryboardFrameEditor(frame: StoryboardFrame): void {
       ? '<i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail'
       : '<i class="fa-solid fa-arrows-rotate"></i> Generate Thumbnail';
   }
+
+  refreshFrameEditorPromptDisplay();
 }
 
 export function closeStoryboardFrameEditor(): void {
@@ -1126,7 +1180,7 @@ function wireFrameEditor(): void {
 
   modal.addEventListener('click', (e: MouseEvent) => {
     const t = e.target as HTMLElement;
-    if (t.dataset.cgClose === 'storyboard-frame-editor') {
+    if (t.closest('[data-cg-close="storyboard-frame-editor"]')) {
       backdropClose();
       return;
     }
@@ -1170,20 +1224,26 @@ function wireFrameEditor(): void {
   syncField('.sfe-input-scene', 'scene');
   syncField('.sfe-input-anchor', 'scriptLink');
   syncField('.sfe-input-notes', 'notes');
+
+  // Override textarea: store value and refresh prompt display
+  const overrideTextarea = modal.querySelector<HTMLTextAreaElement>('.sfe-input-override');
+  if (overrideTextarea) {
+    overrideTextarea.addEventListener('input', () => {
+      const data = (modal as any)._frameData;
+      if (!data) return;
+      data.userPromptOverride = overrideTextarea.value.trim() || undefined;
+      const frame = storyboardFrames.find((f: StoryboardFrame) => f.id === data.id);
+      if (frame) {
+        frame.userPromptOverride = data.userPromptOverride;
+      }
+      refreshFrameEditorPromptDisplay();
+      updateInspector('storyboard-frame', data);
+    });
+  }
 }
 
 export function initStoryboardFrameEditor(): void {
   wireFrameEditor();
-  document.addEventListener('click', (e) => {
-    const modal = document.getElementById('storyboard-frame-editor');
-    if (!modal || modal.hidden) return;
-    if ((e.target as HTMLElement).closest('.storyboard-frame-editor-dialog')) return;
-    if ((e.target as HTMLElement).closest('[data-cg-close]')) return;
-    const target = e.target as HTMLElement;
-    if (target.dataset.cgClose === 'storyboard-frame-editor') {
-      closeStoryboardFrameEditor();
-    }
-  });
 }
 
 function insertAtCursor(text: string): void {
@@ -1436,4 +1496,10 @@ export function installStoryboardBundleGlobals(): void {
     initStoryboardGenerationModeControls();
     syncReferenceGateControls();
   }, 600);
+  setTimeout(() => {
+    const count = backfillStoryboardPrompts();
+    if (count > 0) {
+      console.log(`CineGen: backfilled ${count} storyboard frame prompts.`);
+    }
+  }, 800);
 }

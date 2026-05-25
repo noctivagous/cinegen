@@ -3,7 +3,7 @@ import '@/components/primitives/index';
 import '@/components/layout/index';
 import '@/components/panels/shell-index';
 import '@/components/modals/shell-modals';
-import '@/console/console-element';
+// import '@/console/console-element';
 
 import { installCompatBridges } from '@/bridge/compat';
 import { initCineGenPreferences } from '@/services/preferences';
@@ -15,9 +15,9 @@ import { getPackageLoadErrors } from '@/data/cine-project-loader';
 import { preloadPanelChunksIdle } from '@/components/panels/panel-loader';
 import { alertCG } from '@/utils/alert-cg';
 import { initKeybindings } from '@/keybindings/init-keybindings';
-import { initConsoleCommands } from '@/console/init-console';
+// import { initConsoleCommands } from '@/console/init-console';
 import { initDebugModule } from '@/debug/init-debug';
-import { initMcpBridge } from '@/console/mcp-bridge';
+// import { initMcpBridge } from '@/console/mcp-bridge';
 import { preloadServerPersistence } from '@/services/persistence';
 import { initStateSync } from '@/services/state-sync';
 import { subscribeModalSync, loadModalState } from '@/services/modal-manager';
@@ -63,18 +63,14 @@ async function loadServerState(): Promise<Record<string, unknown> | null> {
 }
 
 async function bootstrap(): Promise<void> {
-  const mode = (import.meta.env.VITE_PROJECT_PERSISTENCE_MODE as string) || 'local';
-
-  if (mode === 'server') {
-    const healthy = await checkServerHealth();
-    if (!healthy) {
-      console.warn('[CineGen] Server persistence not available. Falling back to local defaults.');
-      const modal = document.createElement('cinegen-no-persistence-modal');
-      modal.id = 'no-persistence-modal';
-      document.body.appendChild(modal);
-    }
-    await preloadServerPersistence(SERVER_PRELOAD_KEYS);
+  const healthy = await checkServerHealth();
+  if (!healthy) {
+    console.warn('[CineGen] Server persistence not available. Some state may not load or save.');
+    const modal = document.createElement('cinegen-no-persistence-modal');
+    modal.id = 'no-persistence-modal';
+    document.body.appendChild(modal);
   }
+  await preloadServerPersistence(SERVER_PRELOAD_KEYS);
 
   initCineGenPreferences();
   markBootReady('preferences');
@@ -88,26 +84,54 @@ async function bootstrap(): Promise<void> {
   syncAppShellFromSources();
   markBootReady('store');
 
-  if (mode === 'server') {
-    const serverState = await loadServerState();
-    if (serverState && Object.keys(serverState).length) {
-      appShellStore.patchServerState(serverState);
-    }
-    try {
-      const modalRes = await fetch('/api/state/modal');
-      if (modalRes.ok) {
-        const modalState = await modalRes.json();
-        loadModalState(modalState);
-      }
-    } catch { /* ignore */ }
-    initStateSync();
-    appShellStore.startServerSync();
-    subscribeModalSync();
+  const serverState = await loadServerState();
+  if (serverState && Object.keys(serverState).length) {
+    appShellStore.patchServerState(serverState);
   }
+  try {
+    const modalRes = await fetch('/api/state/modal');
+    if (modalRes.ok) {
+      const modalState = await modalRes.json();
+      loadModalState(modalState);
+    }
+  } catch { /* ignore */ }
+  initStateSync();
+  appShellStore.startServerSync();
+  subscribeModalSync();
 
   const { initCoreServices } = await import('./services/init-core-services');
   initCoreServices();
   markBootReady('coreServices');
+
+  // Expose agent service on window.CineGen.agents (non-blocking)
+  import('./services/ai/agents-service').then((mod) => {
+    window.CineGen.agents = {
+      analyzeScript: mod.analyzeScript,
+      getProductionContext: mod.getProductionContext,
+      updateProductionContext: mod.updateProductionContext,
+      getReviewQueue: mod.getReviewQueue,
+      approveReviewItem: mod.approveReviewItem,
+      rejectReviewItem: mod.rejectReviewItem,
+      getAgentHealth: mod.getAgentHealth,
+      runScriptWizardStep2: mod.runScriptWizardStep2,
+      buildCharacterBibles: mod.buildCharacterBibles,
+      buildLocationBibles: mod.buildLocationBibles,
+      generateStoryboardFrames: mod.generateStoryboardFrames,
+      buildGenerationPrompt: mod.buildGenerationPrompt,
+      routeGenerationJob: mod.routeGenerationJob,
+      auditGeneratedClip: mod.auditGeneratedClip,
+      translateSpatialAnnotations: mod.translateSpatialAnnotations,
+      prepareAudioPlan: mod.prepareAudioPlan,
+      assembleSequence: mod.assembleSequence,
+      colorGradeSequence: mod.colorGradeSequence,
+      identifyVisualElements: mod.identifyVisualElements,
+      extractColorPalette: mod.extractColorPalette,
+      generateScriptFromVisuals: mod.generateScriptFromVisuals,
+      generateConcepts: mod.generateConcepts,
+      generateConceptImage: mod.generateConceptImage,
+      generateOutlineFromBeats: mod.generateOutlineFromBeats,
+    };
+  }).catch(() => { /* agent layer unavailable — not a fatal error */ });
 
   const { initProjectTree } = await import('./tree/init-project-tree');
   initProjectTree();
@@ -129,6 +153,18 @@ async function bootstrap(): Promise<void> {
   initSetupAssistant();
   markBootReady('setupAssistant');
 
+  const { initVisualWizard } = await import('./wizard/init-visual-wizard');
+  initVisualWizard();
+
+  const { initConceptWizard } = await import('./wizard/init-concept-wizard');
+  initConceptWizard();
+
+  const { initAssetWizard } = await import('./wizard/init-asset-wizard');
+  initAssetWizard();
+
+  const { initBeatBoard } = await import('./wizard/init-beat-board');
+  initBeatBoard();
+
   const { initShell } = await import('./shell/init-shell');
   initShell();
   markBootReady('shell');
@@ -136,14 +172,14 @@ async function bootstrap(): Promise<void> {
   initKeybindings();
   markBootReady('keybindings');
 
-  initConsoleCommands();
-  markBootReady('console');
+  // initConsoleCommands();
+  // markBootReady('console');
 
   initDebugModule();
   markBootReady('debug');
 
-  initMcpBridge();
-  markBootReady('mcpBridge');
+  // initMcpBridge();
+  // markBootReady('mcpBridge');
 
   initApp();
   markBootReady('app');

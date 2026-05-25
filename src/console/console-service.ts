@@ -1,32 +1,39 @@
 /**
  * ── NOTE ──
- * Console command history is stored in raw localStorage for convenience.
+ * Console command history is stored via server-backed persistence.
  * This is terminal input history only — not API keys or settings.
- * 
- * If this were to contain sensitive command arguments in the future,
- * it should be migrated to the server-backed storageService instead.
  * ─────────
  */
 
-import type { Terminal } from '@xterm/xterm';
+// import type { Terminal } from '@xterm/xterm';
 import { executeConsoleCommand, getAllConsoleCommands } from '@/console/command-registry';
 import { ensureConsoleTerminal } from '@/console/console-terminal';
+import { storageService } from '@/services/persistence';
 
 const CONSOLE_HISTORY_KEY = 'cg:console:history';
 const MAX_HISTORY = 200;
 
-let _terminal: Terminal | null = null;
+/** Minimal terminal surface (xterm disabled). */
+type ConsoleTerminal = {
+  writeln: (data: string) => void;
+  write: (data: string) => void;
+  onData: (cb: (data: string) => void) => void;
+  focus: () => void;
+  clear?: () => void;
+};
+
+let _terminal: ConsoleTerminal | null = null;
 let _drawerVisible = false;
 let _isBreakout = false;
 let _history: string[] = [];
 let _historyIndex = -1;
 let _currentInput = '';
 
-export function getTerminal(): Terminal | null {
+export function getTerminal(): ConsoleTerminal | null {
   return _terminal;
 }
 
-export function setTerminal(t: Terminal | null): void {
+export function setTerminal(t: ConsoleTerminal | null): void {
   _terminal = t;
 }
 
@@ -46,7 +53,7 @@ export function toggleConsoleDrawer(): void {
   el.classList.toggle('console--visible', _drawerVisible);
   el.classList.toggle('console--breakout', false);
   if (_drawerVisible) {
-    void ensureConsoleTerminal().then((term) => term?.focus());
+    void ensureConsoleTerminal();
   }
 }
 
@@ -79,7 +86,7 @@ export function readAppConsole(): string {
 
 function loadHistory(): void {
   try {
-    const raw = localStorage.getItem(CONSOLE_HISTORY_KEY);
+    const raw = storageService.getItem(CONSOLE_HISTORY_KEY);
     if (raw) _history = JSON.parse(raw);
   } catch {
     _history = [];
@@ -88,9 +95,9 @@ function loadHistory(): void {
 
 function saveHistory(): void {
   try {
-    localStorage.setItem(CONSOLE_HISTORY_KEY, JSON.stringify(_history.slice(-MAX_HISTORY)));
+    storageService.setItem(CONSOLE_HISTORY_KEY, JSON.stringify(_history.slice(-MAX_HISTORY)));
   } catch {
-    /* ignore quota errors */
+    /* noop */
   }
 }
 
@@ -102,7 +109,7 @@ function addHistory(line: string): void {
   saveHistory();
 }
 
-export function initConsoleInput(terminal: Terminal): void {
+export function initConsoleInput(terminal: ConsoleTerminal): void {
   loadHistory();
   _terminal = terminal;
 
@@ -145,7 +152,7 @@ export function initConsoleInput(terminal: Terminal): void {
   });
 }
 
-function clearInputLine(terminal: Terminal): void {
+function clearInputLine(terminal: ConsoleTerminal): void {
   const len = _currentInput.length;
   terminal.write('\x1b[2K\r');
   terminal.write('\x1b[32mcinegen>\x1b[0m ');

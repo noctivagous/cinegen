@@ -1,0 +1,57 @@
+{
+  "id": "temp-mix-v1",
+  "name": "Temp Mix v1 — Scene Assembly",
+  "version": 1,
+  "created": "2026-05-22",
+  "tracks": [
+    {
+      "id": "track-dialogue",
+      "name": "Dialogue",
+      "type": "dialogue",
+      "gain": 0.0,
+      "mute": false,
+      "solo": false,
+      "clips": ["adr-kai-scene01-line01", "adr-mira-scene01-line01"]
+    },
+    {
+      "id": "track-ambience",
+      "name": "Ambience",
+      "type": "ambience",
+      "gain": -6.0,
+      "mute": false,
+      "solo": false,
+      "clips": ["prod-sound-ambience-rain-01", "prod-sound-ambience-city-01"]
+    },
+    {
+      "id": "track-foley",
+      "name": "Foley",
+      "type": "foley",
+      "gain": -4.0,
+      "mute": false,
+      "solo": false,
+      "clips": ["foley-kai-footsteps-rain-01", "foley-kai-cloth-01", "foley-pod-door-01"]
+    },
+    {
+      "id": "track-sfx",
+      "name": "Sound Effects",
+      "type": "sfx",
+      "gain": -3.0,
+      "mute": false,
+      "solo": false,
+      "clips": ["sfx-hud-fractal-01", "sfx-neon-hum-01"]
+    },
+    {
+      "id": "track-music",
+      "name": "Music / Score",
+      "type": "music",
+      "gain": -8.0,
+      "mute": false,
+      "solo": false,
+      "clips": ["music-scene01-rain-01", "music-main-title-01"]
+    }
+  ],
+  "masterGain": 0.0,
+  "exportPath": "sound/temp-mix/refs/temp-mix-v1.wav",
+  "status": "in-progress",
+  "notes": "Rough balance for scene 01 only. Music levels need adjustment. Foley needs more cloth passes."
+}

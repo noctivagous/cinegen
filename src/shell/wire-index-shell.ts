@@ -20,6 +20,12 @@ export function wireIndexShellControls(): void {
     inspectorToggle.addEventListener('click', () => toggleInspectorPanel());
   }
 
+  const previsToggle = document.getElementById('previs-timeline-toggle-btn');
+  if (previsToggle && previsToggle.dataset.cgBound !== '1') {
+    previsToggle.dataset.cgBound = '1';
+    previsToggle.addEventListener('click', () => window.togglePrevisTimelineDock?.());
+  }
+
   const inspectorClose = document.getElementById('inspector-panel-close-btn');
   if (inspectorClose && inspectorClose.dataset.cgBound !== '1') {
     inspectorClose.dataset.cgBound = '1';

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "motref-dolly-pursuit-01",
+    "name": "Sky-Bridge Pursuit Camera",
+    "desc": "Smooth tracking camera following a fast-moving subject through neon-lit corridor, speed lines and motion blur",
+    "sceneUsage": ["scene02"],
+    "type": "camera-motion",
+    "source": "cinematography/motion-references/refs/pursuit-camera-motion.mp4",
+    "duration": "12s",
+    "cameraMovement": "tracking-forward",
+    "speed": "fast",
+    "keywords": ["pursuit", "tracking", "forward-motion", "neon-streaks"]
+  },
+  {
+    "id": "motref-crane-descent-01",
+    "name": "Crane Descent — Spire Reveal",
+    "desc": "Slow crane descent from skyline down through rain to ground level, city lights glinting off wet surfaces",
+    "sceneUsage": ["scene01"],
+    "type": "camera-motion",
+    "source": "cinematography/motion-references/refs/crane-descent-spire.mp4",
+    "duration": "15s",
+    "cameraMovement": "crane-down",
+    "speed": "slow",
+    "keywords": ["crane", "descent", "reveal", "rain", "city-lights"]
+  },
+  {
+    "id": "motref-dolly-recognition-01",
+    "name": "Slow Push — Recognition Beat",
+    "desc": "Extremely slow dolly-in on character's face as realization dawns, subtle focus pull",
+    "sceneUsage": ["scene02", "scene03", "scene04"],
+    "type": "camera-motion",
+    "source": "cinematography/motion-references/refs/slow-push-recognition.mp4",
+    "duration": "8s",
+    "cameraMovement": "dolly-in",
+    "speed": "very-slow",
+    "keywords": ["dolly", "push-in", "recognition", "slow", "emotional-beat"]
+  },
+  {
+    "id": "motref-motion-transfer-rain-01",
+    "name": "Rain Particle Motion Reference",
+    "desc": "Heavy rain particle motion with wind shear, useful for motion transfer on atmospheric elements",
+    "sceneUsage": ["scene01", "scene02", "scene04"],
+    "type": "atmospheric-motion",
+    "source": "cinematography/motion-references/refs/rain-motion-transfer.mp4",
+    "duration": "6s",
+    "cameraMovement": "static",
+    "speed": "medium",
+    "keywords": ["rain", "particles", "wind", "atmospheric", "motion-transfer"]
+  },
+  {
+    "id": "motref-motion-brush-data-01",
+    "name": "Data Stream Motion Brush",
+    "desc": "Golden data particles flowing along defined path, for motion brush annotation target",
+    "sceneUsage": ["scene02", "scene04"],
+    "type": "data-motion",
+    "source": "cinematography/motion-references/refs/data-stream-motion-brush.mp4",
+    "duration": "4s",
+    "cameraMovement": "static",
+    "speed": "medium",
+    "keywords": ["data", "particles", "golden", "flow", "motion-brush"]
+  }
+]

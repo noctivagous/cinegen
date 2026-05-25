@@ -1,17 +1,20 @@
 import { timelineClips } from '@/data/project-data';
 import { getCinegenTimeline } from '@/panels/panel-hosts';
 import { alertCG } from '@/utils/alert-cg';
+import { buildPrevisTimelineTracks, formatPrevisDuration } from '@/workspace/shot-frame-bridge';
 
 interface TimelineClip {
   id?: number;
   scene: string;
   label: string;
   duration: string;
+  durationSeconds?: number;
 }
 
 /** Assembly timeline */
 
 export function renderTimeline(): void {
+  const tracks = buildPrevisTimelineTracks();
   const panel = getCinegenTimeline();
   if (panel) {
     panel.refresh();
@@ -22,14 +25,14 @@ export function renderTimeline(): void {
   track.innerHTML = (timelineClips as TimelineClip[])
     .map(
       (clip: TimelineClip) => `
-    <div class="timeline-clip" data-duration="${clip.duration}" draggable="true" ondragstart="dragStart(event)">
-      ${clip.label}<br><span class="text-[10px] opacity-75">SC${clip.scene}</span>
+    <div class="timeline-clip" data-duration="${clip.duration}" style="--clip-seconds:${clip.durationSeconds ?? 3}" draggable="true" ondragstart="dragStart(event)">
+      ${clip.label}
     </div>`
     )
     .join('');
   const durationEl = document.getElementById('timeline-duration');
   if (durationEl) {
-    durationEl.textContent = `${(timelineClips as TimelineClip[]).reduce((acc, c: TimelineClip) => acc + parseInt(c.duration, 10), 0)}s`;
+    durationEl.textContent = formatPrevisDuration(tracks.totalRuntimeSeconds || 1);
   }
 }
 
@@ -38,9 +41,9 @@ export function dragStart(e: DragEvent) {
 }
 
 export function autoAssembleTimeline() {
-  timelineClips.push({ id: Date.now(), scene: "03", label: "AI Suggested Transition", duration: "9s" });
+  buildPrevisTimelineTracks();
   renderTimeline();
-  alertCG('AI assembled rough cut using best takes from all scenes. Continuity respected.');
+  alertCG('Previs timeline assembled from Scene/Shot/Frame durations.');
 }
 
 export function installTimelineBundleGlobals(): void {

@@ -2,6 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   clamp,
   getPanelWidthPx,
+  getPrevisDrawerMaxHeightPx,
   getWorkspaceRowRect,
   LAYOUT_DIVIDER_WIDTH_PX,
   LAYOUT_LIMITS,
@@ -9,10 +10,17 @@ import {
 import {
   setInspectorWidthPx,
   setPreprodSplitPercent,
+  setPrevisDrawerHeightPx,
+  setPrevisPaneSplitPercent,
   setSidebarWidthPx,
 } from '@/services/layout-service';
 
-export type LayoutResizeTarget = 'sidebar' | 'inspector' | 'preprod';
+export type LayoutResizeTarget =
+  | 'sidebar'
+  | 'inspector'
+  | 'preprod'
+  | 'previs-pane-split'
+  | 'previs-drawer';
 
 /** Pointer-driven resize for a single `cg-split-divider` (Lit reactive controller). */
 export class LayoutResizeController implements ReactiveController {
@@ -36,6 +44,14 @@ export class LayoutResizeController implements ReactiveController {
   }
 
   private _canStart(): boolean {
+    if (this.target === 'previs-pane-split') {
+      return document.getElementById('previs-drawer-stack')?.classList.contains('mode-both') ?? false;
+    }
+    if (this.target === 'previs-drawer') {
+      const dock = document.getElementById('previs-timeline-dock');
+      if (!dock?.classList.contains('previs-timeline-dock--expanded')) return false;
+      return !dock.querySelector('.previs-drawer-unit.is-open.is-fullscreen');
+    }
     if (this.target === 'preprod') {
       return document.getElementById('preprod-body')?.classList.contains('mode-both') ?? false;
     }
@@ -47,11 +63,18 @@ export class LayoutResizeController implements ReactiveController {
     return Boolean(inspector && inspector.style.display !== 'none');
   }
 
+  private _cursorForTarget(): string {
+    if (this.target === 'previs-pane-split' || this.target === 'previs-drawer') {
+      return 'row-resize';
+    }
+    return 'col-resize';
+  }
+
   private _onMouseDown = (e: MouseEvent): void => {
     if (!this._canStart()) return;
     e.preventDefault();
     this._dragging = true;
-    document.body.style.cursor = 'col-resize';
+    document.body.style.cursor = this._cursorForTarget();
     document.body.style.userSelect = 'none';
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mouseup', this._onMouseUp, { once: true });
@@ -59,6 +82,29 @@ export class LayoutResizeController implements ReactiveController {
 
   private _onMouseMove = (e: MouseEvent): void => {
     if (!this._dragging) return;
+
+    if (this.target === 'previs-drawer') {
+      const statusTop =
+        document.querySelector('cinegen-status-bar')?.getBoundingClientRect().top ??
+        window.innerHeight;
+      const head = document.querySelector<HTMLElement>('.previs-timeline-dock-head');
+      const headHeight = head?.getBoundingClientRect().height ?? 28;
+      const nextHeight = statusTop - e.clientY - headHeight;
+      setPrevisDrawerHeightPx(
+        clamp(nextHeight, LAYOUT_LIMITS.minPrevisDrawerPx, getPrevisDrawerMaxHeightPx()),
+        true
+      );
+      return;
+    }
+
+    if (this.target === 'previs-pane-split') {
+      const stack = document.getElementById('previs-drawer-stack');
+      if (!stack?.classList.contains('mode-both')) return;
+      const rect = stack.getBoundingClientRect();
+      const percent = ((e.clientY - rect.top) / rect.height) * 100;
+      setPrevisPaneSplitPercent(percent, true);
+      return;
+    }
 
     if (this.target === 'preprod') {
       const preprodBody = document.getElementById('preprod-body');

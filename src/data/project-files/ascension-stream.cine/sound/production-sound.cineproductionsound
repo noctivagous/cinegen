@@ -1,0 +1,46 @@
+[
+  {
+    "id": "prod-sound-ambience-rain-01",
+    "name": "Heavy Rain — Arcology Exterior",
+    "sceneUsage": ["scene01", "scene04"],
+    "type": "ambience",
+    "source": "sound/production-sound/refs/rain-arcology-exterior.wav",
+    "duration": "120s",
+    "notes": "Continuous rain bed for all exterior spire scenes. Stereo recording with city rumble low end.",
+    "gain": -3.0,
+    "track": "ambience"
+  },
+  {
+    "id": "prod-sound-ambience-city-01",
+    "name": "Neon City — Sky-Bridge Hum",
+    "sceneUsage": ["scene02"],
+    "type": "ambience",
+    "source": "sound/production-sound/refs/neon-city-skybridge-hum.wav",
+    "duration": "90s",
+    "notes": "Low electrical hum with distant traffic and neon transformer buzz. Continuous loop.",
+    "gain": -6.0,
+    "track": "ambience"
+  },
+  {
+    "id": "prod-sound-ambience-nexus-01",
+    "name": "Control Nexus — Server Room Tone",
+    "sceneUsage": ["scene03"],
+    "type": "ambience",
+    "source": "sound/production-sound/refs/nexus-server-room-tone.wav",
+    "duration": "60s",
+    "notes": "Quiet server hum, cooling fans, occasional screen flicker buzz. Low presence.",
+    "gain": -8.0,
+    "track": "ambience"
+  },
+  {
+    "id": "prod-sound-whoosh-transition-01",
+    "name": "Sky-Bridge Pod Whoosh",
+    "sceneUsage": ["scene02", "scene04"],
+    "type": "sfx-background",
+    "source": "sound/production-sound/refs/pod-whoosh-passby.wav",
+    "duration": "3s",
+    "notes": "Fast pod passby whoosh with doppler effect for speed transitions.",
+    "gain": -4.0,
+    "track": "sfx"
+  }
+]

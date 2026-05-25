@@ -218,6 +218,32 @@ export class CinegenToolbar extends CgLightElement {
           </div>
         </cg-toolbar-split>
         <cg-toolbar-split
+          id="wizards-split"
+          menu-id="wizards-menu"
+          menu-wide
+          main-title="Wizards — guided project setup"
+        >
+          <span slot="main"><i class="fa-solid fa-wand-magic-sparkles"></i> Wizards</span>
+          <div slot="menu">
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="script-wizard">
+              <i class="fa-solid fa-scroll"></i> Start from Script…
+            </button>
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="visual-wizard">
+              <i class="fa-solid fa-image"></i> Visual-First…
+            </button>
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="concept-wizard">
+              <i class="fa-solid fa-palette"></i> Concept/Mood First…
+            </button>
+            <div class="toolbar-split-menu-sep" role="separator" aria-hidden="true"></div>
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="asset-wizard">
+              <i class="fa-solid fa-cubes"></i> Asset Library Import…
+            </button>
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="storyboard-wizard">
+              <i class="fa-solid fa-pen-ruler"></i> Storyboard Sketch Mode…
+            </button>
+          </div>
+        </cg-toolbar-split>
+        <cg-toolbar-split
           id="ai-assist-split"
           menu-id="ai-assist-menu"
           menu-wide
@@ -303,6 +329,15 @@ export class CinegenToolbar extends CgLightElement {
             </button>
           </div>
         </cg-toolbar-split>
+        <button
+          type="button"
+          id="previs-timeline-toggle-btn"
+          class="toolbar-btn"
+          title="Expand or collapse Previs timeline drawer"
+          aria-pressed="false"
+        >
+          <i class="fa-solid fa-wave-square"></i> Previs
+        </button>
         <button
           type="button"
           id="project-sidebar-toggle-btn"

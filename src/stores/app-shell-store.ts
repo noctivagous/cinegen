@@ -97,7 +97,7 @@ export class AppShellStore {
     return result;
   }
 
-  /** Merge server-fetched state into the local shell (used on boot in server mode). */
+  /** Merge server-fetched state into the local shell. */
   patchServerState(serverState: Record<string, unknown>): void {
     if (!isAppShellInitialized()) return;
     const patch: Partial<AppShellState> = {};
@@ -127,8 +127,6 @@ export class AppShellStore {
   }
 
   private _debouncedSaveToServer(): void {
-    const mode = (import.meta.env.VITE_PROJECT_PERSISTENCE_MODE as string) || 'local';
-    if (mode !== 'server') return;
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
     _saveDebounceTimer = setTimeout(() => {
       _saveDebounceTimer = null;

@@ -3,6 +3,7 @@
     {
       "id": 1,
       "scene": "1",
+      "shotId": 1,
       "label": "Wide - Arcology Spire Night",
       "scriptLink": "EXT. ARCOLOGY SPIRE",
       "notes": "Controlled rain, towers as blades of light, under-sprawl haze below."
@@ -10,6 +11,7 @@
     {
       "id": 2,
       "scene": "1",
+      "shotId": 2,
       "label": "MS - Kai on Sky-Bridge",
       "scriptLink": "KAI",
       "notes": "Courier pod hovering, implant glow under skin, effortless stance."
@@ -17,6 +19,7 @@
     {
       "id": 3,
       "scene": "1",
+      "shotId": 2,
       "label": "POV - Golden Code Overlay",
       "scriptLink": "He touches his temple",
       "notes": "Streams of golden code across vision. Mira V.O. payload confirm."
@@ -24,6 +27,7 @@
     {
       "id": 4,
       "scene": "2",
+      "shotId": 3,
       "label": "Tracking - Sky-Bridge Pursuit",
       "scriptLink": "EXT. SKY-BRIDGE NETWORK",
       "notes": "Neon arches, quantum tunnel blur, liquid starlight ribbons."
@@ -31,6 +35,7 @@
     {
       "id": 5,
       "scene": "2",
+      "shotId": 4,
       "label": "Insert - Grid Breathes",
       "scriptLink": "The city lights below flicker once",
       "notes": "Rhythmic pulse under city. HUD fractals organic then rigid."
@@ -38,6 +43,7 @@
     {
       "id": 6,
       "scene": "3",
+      "shotId": 5,
       "label": "Wide - Control Nexus",
       "scriptLink": "INT. CONTROL NEXUS",
       "notes": "Mira at feeds, silver crown. Intercut Kai junction."
@@ -45,6 +51,7 @@
     {
       "id": 7,
       "scene": "4",
+      "shotId": 6,
       "label": "Wide - Receiving Spire Dock",
       "scriptLink": "EXT. FINAL APPROACH",
       "notes": "Docking port glow. Lights and data merge—alive pattern."
@@ -52,6 +59,7 @@
     {
       "id": 8,
       "scene": "4",
+      "shotId": 7,
       "label": "CU - Kai Almost Smiles",
       "scriptLink": "KAI / It's fine. Continuing.",
       "notes": "Deliberate pause off vector. Golden surge into tower. FADE OUT."

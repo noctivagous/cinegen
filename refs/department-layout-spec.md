@@ -46,7 +46,7 @@ A persistent department switcher replaces the current flat view hierarchy. It ap
 
 - Each department button shows a **status dot** when agents have pending tasks or review items in that department.
 - Keyboard shortcuts: `Cmd/Ctrl + Shift + [1-7]` to switch departments.
-- Department selection persists per project in `localStorage`.
+- Department selection persists per project through server-backed persistence (never browser-local storage).
 
 ### Department Shell Template
 

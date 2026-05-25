@@ -17,6 +17,9 @@ export function mountDebugModalIfNeeded(): void {
   while (wrap.firstChild) {
     host.appendChild(wrap.firstChild);
   }
+  document.querySelectorAll('[data-cg-close="debug-modal"]').forEach((el) => {
+    el.addEventListener('click', () => (window as any).closeDebugModal?.());
+  });
   mounted = true;
 }
 

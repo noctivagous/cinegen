@@ -1,0 +1,44 @@
+[
+  {
+    "id": "cost-scene01-master-01",
+    "sceneId": "scene01",
+    "provider": "runway",
+    "model": "gen-3",
+    "type": "video",
+    "duration": 75,
+    "cost": 0.45,
+    "tokens": null,
+    "timestamp": "2026-05-21T14:00:00Z",
+    "status": "completed",
+    "retries": 0,
+    "jobId": "genjob-scene01-master-01"
+  },
+  {
+    "id": "cost-scene03-master-01",
+    "sceneId": "scene03",
+    "provider": "kling",
+    "model": "kling-3.0",
+    "type": "video",
+    "duration": 45,
+    "cost": 0.38,
+    "tokens": null,
+    "timestamp": "2026-05-21T16:00:00Z",
+    "status": "completed",
+    "retries": 0,
+    "jobId": "genjob-scene03-master-01"
+  },
+  {
+    "id": "cost-scene01-ref-gen-01",
+    "sceneId": "scene01",
+    "provider": "fal",
+    "model": "flux-pro",
+    "type": "image",
+    "count": 4,
+    "cost": 0.08,
+    "tokens": null,
+    "timestamp": "2026-05-20T10:00:00Z",
+    "status": "completed",
+    "retries": 0,
+    "jobId": "genjob-char-kai-refs-01"
+  }
+]

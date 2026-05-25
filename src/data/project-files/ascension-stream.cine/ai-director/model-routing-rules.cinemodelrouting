@@ -1,0 +1,58 @@
+{
+  "defaultRules": {
+    "video": {
+      "preferred": "runway",
+      "fallbacks": ["kling", "veo", "seedance"],
+      "reasoning": "Runway for general video, Kling for complex motion, Veo for photorealistic, Seedance for stylized"
+    },
+    "image": {
+      "preferred": "fal",
+      "fallbacks": ["replicate", "openai"],
+      "reasoning": "Fal (Flux Pro) for high-quality stills, Replicate for variations, OpenAI DALL-E for quick concepts"
+    },
+    "audio": {
+      "preferred": "elevenlabs",
+      "fallbacks": [],
+      "reasoning": "ElevenLabs for TTS and SFX. Suno/Udio for music (manual selection)."
+    }
+  },
+  "shotTypeOverrides": [
+    {
+      "shotType": "wide",
+      "preferred": "runway",
+      "fallbacks": ["kling"],
+      "reason:": "Runway handles wide establishing shots well with consistent environment rendering"
+    },
+    {
+      "shotType": "extreme-close-up",
+      "preferred": "runway",
+      "fallbacks": ["kling"],
+      "reason": "Close-up detail rendering is strong on Runway gen-3"
+    },
+    {
+      "shotType": "over-the-shoulder",
+      "preferred": "runway",
+      "fallbacks": ["kling"],
+      "reason": "Tracking OTS shots benefit from Runway's motion coherence"
+    },
+    {
+      "shotType": "medium",
+      "preferred": "kling",
+      "fallbacks": ["runway"],
+      "reason": "Kling 3.0 provides better character consistency in medium frames"
+    }
+  ],
+  "costLimits": {
+    "perJobMax": 2.00,
+    "dailyBudget": 20.00,
+    "autoRetryThreshold": 0.50,
+    "fallbackOnCostExceeded": true
+  },
+  "autoRetryRules": {
+    "enabled": true,
+    "maxRetries": 2,
+    "retryDelayMs": 5000,
+    "fallbackOnModelError": true,
+    "fallbackOnCostExceeded": false
+  }
+}

@@ -1,5 +1,7 @@
+import { html, type TemplateResult } from 'lit';
 import type { CgModalTileGrid } from '@/components/primitives/cg-modal-tile-grid';
 import type { CinegenGuideModalBody } from '@/components/modals/cinegen-guide-modal-body';
+import type { CinegenEntryWizardBody } from '@/components/modals/cinegen-entry-wizard-body';
 import {
   CG_PROJECT_OPEN,
   type CgProjectOpenDetail,
@@ -26,7 +28,15 @@ import {
   createBlankProject,
   hydrateProjectRegistryFromPersistence,
   openProject as openProjectFromService,
+  persistActiveProjectSettings,
+  prepareActiveProjectTreeUiForSwitch,
 } from '@/services/project-service';
+import { activeProjectId, getActiveProjectRegistryEntry } from '@/data/project-data';
+import {
+  activatePersistedProjectTreeSelection,
+  primePersistedProjectTreeUi,
+  resetProjectTreeUiRestoreFlag,
+} from '@/tree/project-tree-service';
 import { PREFS_KEY } from '@/services/preferences';
 import { storageService } from '@/services/persistence';
 import {
@@ -40,6 +50,2231 @@ import {
 import { buildCheckboxTreeNodes, getCurrentSectionKey } from '@/services/section-visibility-service';
 
 let guideModalSectionIndex = 0;
+
+/* ── Entry-point wizard slide data ─────────────────────────────────────────── */
+
+type WizardSlide = {
+  title: string;
+  body?: string;
+  tip?: string;
+  renderFn?: (host: CinegenEntryWizardBody) => TemplateResult;
+};
+
+/* ── Script Wizard State & Helpers ─────────────────────────────────────────── */
+
+interface ScriptWizardCharacter {
+  name: string;
+  age: string;
+  build: string;
+  vibe: string;
+}
+
+interface ScriptWizardLocation {
+  name: string;
+  description: string;
+  isInterior: boolean;
+}
+
+interface ScriptWizardState {
+  projectId: string | null;
+  scriptText: string;
+  detectedCharacters: string[];
+  detectedLocations: string[];
+  characters: ScriptWizardCharacter[];
+  locations: ScriptWizardLocation[];
+  styleNotes: string;
+  referencesGenerated: boolean;
+  references: Array<{ label: string; imageUrl?: string; category: string }>;
+  storyboardsGenerated: boolean;
+  storyboardFrameCount: number;
+}
+
+let scriptWizardState: ScriptWizardState = createEmptyScriptWizardState();
+
+function createEmptyScriptWizardState(): ScriptWizardState {
+  return {
+    projectId: null,
+    scriptText: '',
+    detectedCharacters: [],
+    detectedLocations: [],
+    characters: [],
+    locations: [],
+    styleNotes: '',
+    referencesGenerated: false,
+    references: [],
+    storyboardsGenerated: false,
+    storyboardFrameCount: 0,
+  };
+}
+
+function resetScriptWizardState(): void {
+  scriptWizardState = createEmptyScriptWizardState();
+}
+
+function uniqueByName(names: string[]): string[] {
+  const seen = new Set<string>();
+  return names.filter((n) => {
+    const key = n.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function extractEntitiesFromText(text: string): { characters: string[]; locations: string[] } {
+  const lines = text.split('\n');
+  const characters: string[] = [];
+  const locations: string[] = [];
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    if (/^[A-Z][A-Z0-9 .'\-()]+$/.test(trimmed) && trimmed.length <= 40) {
+      const cleaned = trimmed.replace(/\s*\([^)]*\)\s*$/, '').trim();
+      if (cleaned && !characters.includes(cleaned)) characters.push(cleaned);
+    }
+    if (/^\s*(INT\.?|EXT\.?|EST\.?|INT\/EXT\.?|I\/E\.?)\s+/i.test(trimmed)) {
+      let slug = trimmed.replace(/^(INT\.?|EXT\.?|EST\.?|INT\/EXT\.?|I\/E\.?)\s*/i, '').trim();
+      slug = slug.split(/\s+-\s+/)[0].trim();
+      if (slug && !locations.includes(slug)) locations.push(slug);
+    }
+  });
+
+  return { characters: uniqueByName(characters), locations: uniqueByName(locations) };
+}
+
+function inferInteriorFromName(name: string, scriptText: string): boolean {
+  const re = new RegExp(`^\\s*(INT\\.?|EXT\\.?)\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'im');
+  const match = scriptText.match(re);
+  if (match) return /^INT/i.test(match[1]);
+  return false;
+}
+
+function populateScriptWizardAssets(): void {
+  const state = scriptWizardState;
+  addItemsToLibrary(
+    'characters',
+    state.characters.map((c) => c.name),
+    'fa-user',
+    'Added from script wizard'
+  );
+  addItemsToLibrary(
+    'locations',
+    state.locations.map((l) => l.name),
+    'fa-map-location-dot',
+    'Added from script wizard'
+  );
+}
+
+const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
+  'script-wizard-modal': [
+    /* Slide 1 — Script Import & Review */
+    {
+      title: 'Script Import & Review',
+      renderFn: () => {
+        const state = scriptWizardState;
+        const onCreate = () => {
+          if (!state.scriptText.trim()) {
+            alertCG('Please paste or type a script first.');
+            return;
+          }
+          const created = createBlankProject();
+          appShellStore.setActiveProjectId(created.id);
+          syncActiveProjectName(created.name);
+          setProjectFountainText(state.scriptText);
+          hydrateScriptEditorFromProject();
+          const refresh = window as unknown as Record<string, (() => void) | undefined>;
+          refresh.renderFullTree?.();
+          refresh.renderBreakdownTable?.();
+          refresh.renderStoryboard?.();
+          refresh.renderTimeline?.();
+          refresh.hydrateScriptEditorFromProject?.();
+          window.renderProjectsMenu?.();
+          renderProjectsModalList();
+          const { characters, locations } = extractEntitiesFromText(state.scriptText);
+          state.projectId = created.id;
+          state.detectedCharacters = characters;
+          state.detectedLocations = locations;
+          renderEntryWizardSlide('script-wizard-modal', 1);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Paste your Fountain screenplay below. CineGen will automatically detect scene headings, characters, and locations.</p>
+            <textarea
+              class="cg-field"
+              style="min-height:160px;"
+              placeholder="Paste your script here..."
+              .value=${state.scriptText}
+              @input=${(e: Event) => { state.scriptText = (e.target as HTMLTextAreaElement).value; }}
+            ></textarea>
+            <button class="toolbar-btn btn-ai" @click=${onCreate}>Create Project & Analyze Script</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 2 — Core Elements Extraction */
+    {
+      title: 'Core Elements Extraction',
+      renderFn: (host) => {
+        const state = scriptWizardState;
+        const removeChar = (name: string) => {
+          state.detectedCharacters = state.detectedCharacters.filter((n) => n !== name);
+          host.requestUpdate();
+        };
+        const removeLoc = (name: string) => {
+          state.detectedLocations = state.detectedLocations.filter((n) => n !== name);
+          host.requestUpdate();
+        };
+        const addChar = () => {
+          const input = host.querySelector<HTMLInputElement>('#sw-add-char');
+          const name = input?.value.trim();
+          if (name && !state.detectedCharacters.includes(name)) {
+            state.detectedCharacters.push(name);
+            if (input) input.value = '';
+            host.requestUpdate();
+          }
+        };
+        const addLoc = () => {
+          const input = host.querySelector<HTMLInputElement>('#sw-add-loc');
+          const name = input?.value.trim();
+          if (name && !state.detectedLocations.includes(name)) {
+            state.detectedLocations.push(name);
+            if (input) input.value = '';
+            host.requestUpdate();
+          }
+        };
+        const onConfirm = () => {
+          state.characters = state.detectedCharacters.map((name) => ({
+            name,
+            age: '',
+            build: '',
+            vibe: '',
+          }));
+          state.locations = state.detectedLocations.map((name) => ({
+            name,
+            description: '',
+            isInterior: inferInteriorFromName(name, state.scriptText),
+          }));
+          renderEntryWizardSlide('script-wizard-modal', 2);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Review the characters and locations detected from your script. Remove false positives or add missing ones.</p>
+            <div class="script-wizard-section">
+              <h4>Characters (${state.detectedCharacters.length})</h4>
+              <div class="script-wizard-chip-list">
+                ${state.detectedCharacters.map((name) => html`
+                  <span class="entity-chip entity-chip--character">
+                    ${name}
+                    <button type="button" class="remove-chip-btn" @click=${() => removeChar(name)} aria-label="Remove ${name}">×</button>
+                  </span>
+                `)}
+              </div>
+              <div class="script-wizard-add-row">
+                <input id="sw-add-char" class="cg-field" type="text" placeholder="Add character..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addChar()} />
+                <button class="toolbar-btn" @click=${addChar}>Add</button>
+              </div>
+            </div>
+            <div class="script-wizard-section">
+              <h4>Locations (${state.detectedLocations.length})</h4>
+              <div class="script-wizard-chip-list">
+                ${state.detectedLocations.map((name) => html`
+                  <span class="entity-chip entity-chip--location">
+                    ${name}
+                    <button type="button" class="remove-chip-btn" @click=${() => removeLoc(name)} aria-label="Remove ${name}">×</button>
+                  </span>
+                `)}
+              </div>
+              <div class="script-wizard-add-row">
+                <input id="sw-add-loc" class="cg-field" type="text" placeholder="Add location..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addLoc()} />
+                <button class="toolbar-btn" @click=${addLoc}>Add</button>
+              </div>
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onConfirm}>Confirm & Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 3 — Casting Setup */
+    {
+      title: 'Casting Setup',
+      renderFn: () => {
+        const state = scriptWizardState;
+        const onNext = () => {
+          renderEntryWizardSlide('script-wizard-modal', 3);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Add basic details for each character. These become casting notes and reference prompts.</p>
+            <div class="script-wizard-cards">
+              ${state.characters.map((char, i) => html`
+                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-user" aria-hidden="true"></i> ${char.name}</legend>
+                  <div class="cg-fieldset-body">
+                    <div class="script-wizard-field-row">
+                      <span>Age</span>
+                      <input class="cg-field" type="text" .value=${char.age} @input=${(e: Event) => { state.characters[i].age = (e.target as HTMLInputElement).value; }} placeholder="e.g. 30s" />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Build</span>
+                      <input class="cg-field" type="text" .value=${char.build} @input=${(e: Event) => { state.characters[i].build = (e.target as HTMLInputElement).value; }} placeholder="e.g. Athletic, slender" />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Vibe</span>
+                      <textarea class="cg-field" .value=${char.vibe} @input=${(e: Event) => { state.characters[i].vibe = (e.target as HTMLTextAreaElement).value; }} placeholder="General personality, energy, archetype..."></textarea>
+                    </div>
+                  </div>
+                </fieldset>
+              `)}
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 4 — Production Design Setup */
+    {
+      title: 'Production Design Setup',
+      renderFn: () => {
+        const state = scriptWizardState;
+        const onNext = () => {
+          populateScriptWizardAssets();
+          renderBreakdownTable();
+          scheduleFountainRender();
+          renderEntryWizardSlide('script-wizard-modal', 4);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Define each primary location. Descriptions help keep generated references consistent.</p>
+            <div class="script-wizard-cards">
+              ${state.locations.map((loc, i) => html`
+                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> ${loc.name}</legend>
+                  <div class="cg-fieldset-body">
+                    <div class="script-wizard-field-row">
+                      <span>Type</span>
+                      <select class="cg-field" .value=${loc.isInterior ? 'int' : 'ext'} @change=${(e: Event) => { state.locations[i].isInterior = (e.target as HTMLSelectElement).value === 'int'; }}>
+                        <option value="int">Interior</option>
+                        <option value="ext">Exterior</option>
+                      </select>
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Description</span>
+                      <textarea class="cg-field" .value=${loc.description} @input=${(e: Event) => { state.locations[i].description = (e.target as HTMLTextAreaElement).value; }} placeholder="Atmosphere, period, key architectural notes..."></textarea>
+                    </div>
+                  </div>
+                </fieldset>
+              `)}
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 5 — Style Foundation */
+    {
+      title: 'Style Foundation',
+      renderFn: (host) => {
+        const state = scriptWizardState;
+        const presets = ['Cinematic noir', 'Warm naturalistic', 'High-contrast sci-fi', 'Muted period drama', 'Vibrant comedy'];
+        const applyPreset = (p: string) => {
+          state.styleNotes = p;
+          host.requestUpdate();
+        };
+        const onNext = () => {
+          renderEntryWizardSlide('script-wizard-modal', 5);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Set the overall aesthetic for the project. This influences storyboard and reference generation.</p>
+            <textarea
+              class="cg-field"
+              style="min-height:100px;"
+              .value=${state.styleNotes}
+              @input=${(e: Event) => { state.styleNotes = (e.target as HTMLTextAreaElement).value; }}
+              placeholder="Describe the overall look: lighting style, color palette, mood, era..."
+            ></textarea>
+            <div class="script-wizard-presets">
+              ${presets.map((p) => html`
+                <button class="toolbar-btn script-wizard-preset" @click=${() => applyPreset(p)}>${p}</button>
+              `)}
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 6 — Minimal References */
+    {
+      title: 'Minimal References',
+      renderFn: (host) => {
+        const state = scriptWizardState;
+        const onGenerate = async () => {
+          try {
+            await generateStoryboardReferences();
+            const bank = (window as any).storyboardReferenceBank as Record<string, Array<{ label: string; imageUrl?: string }>>;
+            state.references = [];
+            for (const [category, slots] of Object.entries(bank)) {
+              for (const slot of slots) {
+                state.references.push({ label: slot.label, imageUrl: slot.imageUrl, category });
+              }
+            }
+            state.referencesGenerated = true;
+            host.requestUpdate();
+          } catch (err) {
+            alertCG('Reference generation failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const onNext = () => {
+          renderEntryWizardSlide('script-wizard-modal', 6);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Generate starter reference images for the first scene using the characters and locations you defined.</p>
+            ${!state.referencesGenerated
+              ? html`<button class="toolbar-btn btn-ai" @click=${onGenerate}>Generate Starter References</button>`
+              : html`
+                  <div class="script-wizard-ref-grid">
+                    ${state.references.map((ref) => html`
+                      <div class="script-wizard-ref-item">
+                        ${ref.imageUrl ? html`<img src=${ref.imageUrl} alt=${ref.label} />` : html`<div class="script-wizard-ref-placeholder">Generating...</div>`}
+                        <span class="script-wizard-ref-label">${ref.label}</span>
+                        <span class="script-wizard-ref-cat">${ref.category}</span>
+                      </div>
+                    `)}
+                  </div>
+                  <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+                `}
+          </div>
+        `;
+      },
+    },
+    /* Slide 7 — Scene Kit Preview & Confirmation */
+    {
+      title: 'Scene Kit Preview & Confirmation',
+      renderFn: () => {
+        const state = scriptWizardState;
+        const onBack = () => renderEntryWizardSlide('script-wizard-modal', 4);
+        const onNext = () => renderEntryWizardSlide('script-wizard-modal', 7);
+        return html`
+          <div class="script-wizard-form">
+            <p>Here is what CineGen has assembled for your first scene kit.</p>
+            <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+              <legend class="cg-fieldset-legend"><i class="fa-solid fa-cube" aria-hidden="true"></i> Scene Kit Summary</legend>
+              <div class="cg-fieldset-body script-wizard-summary">
+                <div class="script-wizard-summary-row">
+                  <strong>Characters:</strong> ${state.characters.length} — ${state.characters.map((c) => c.name).join(', ')}
+                </div>
+                <div class="script-wizard-summary-row">
+                  <strong>Locations:</strong> ${state.locations.length} — ${state.locations.map((l) => l.name).join(', ')}
+                </div>
+                <div class="script-wizard-summary-row">
+                  <strong>References:</strong> ${state.references.length} generated
+                </div>
+                <div class="script-wizard-summary-row">
+                  <strong>Style:</strong> ${state.styleNotes || 'Not specified'}
+                </div>
+              </div>
+            </fieldset>
+            <div class="script-wizard-actions">
+              <button class="toolbar-btn" @click=${onBack}>Go Back</button>
+              <button class="toolbar-btn btn-ai" @click=${onNext}>Looks Good — Continue</button>
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 8 — Generate Initial Storyboards */
+    {
+      title: 'Generate Initial Storyboards',
+      renderFn: (host) => {
+        const state = scriptWizardState;
+        const onGenerate = async () => {
+          try {
+            const before = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;
+            await generateBoards();
+            const after = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;
+            state.storyboardFrameCount = after - before;
+            state.storyboardsGenerated = true;
+            host.requestUpdate();
+          } catch (err) {
+            alertCG('Storyboard generation failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const onFinish = () => {
+          closeScriptWizardModal();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Create the first set of storyboard frames from the scene kit and style foundation.</p>
+            ${!state.storyboardsGenerated
+              ? html`<button class="toolbar-btn btn-ai" @click=${onGenerate}>Generate Storyboards</button>`
+              : html`
+                  <div class="script-wizard-success">
+                    <p><strong>${state.storyboardFrameCount}</strong> draft frame(s) created.</p>
+                    <p>You can review and generate thumbnails in the Pre-production workspace.</p>
+                  </div>
+                  <button class="toolbar-btn btn-ai" @click=${onFinish}>Finish & Close Wizard</button>
+                `}
+          </div>
+        `;
+      },
+    },
+  ],
+  'visual-wizard-modal': [
+    /* Slide 1 — Upload Visual Anchors */
+    {
+      title: 'Upload Visual Anchors',
+      renderFn: (host) => {
+        const onFileChange = async (e: Event) => {
+          const input = e.target as HTMLInputElement;
+          const files = input?.files;
+          if (!files?.length) return;
+          const vw = (window as any).CineGen?.visualWizard;
+          if (!vw) return;
+          for (const file of Array.from(files)) {
+            if (file.type.startsWith('image/')) {
+              await vw.addImage(file, 'character');
+            }
+          }
+          input.value = '';
+          host.requestUpdate();
+        };
+        const onRemove = (id: string) => {
+          (window as any).CineGen?.visualWizard?.removeImage(id);
+          host.requestUpdate();
+        };
+        const onCategoryChange = (id: string, val: string) => {
+          (window as any).CineGen?.visualWizard?.setCategory(id, val);
+        };
+        const onCreateProject = () => {
+          const vw = (window as any).CineGen?.visualWizard;
+          if (!vw) return;
+          const state = vw.getState();
+          if (!state.uploadedImages.length) {
+            alertCG('Please upload at least one image first.');
+            return;
+          }
+          const created = createBlankProject();
+          appShellStore.setActiveProjectId(created.id);
+          syncActiveProjectName(created.name);
+          vw.setProjectId(created.id);
+          const refresh = window as unknown as Record<string, (() => void) | undefined>;
+          refresh.renderFullTree?.();
+          refresh.renderBreakdownTable?.();
+          refresh.renderStoryboard?.();
+          refresh.renderTimeline?.();
+          refresh.hydrateScriptEditorFromProject?.();
+          window.renderProjectsMenu?.();
+          renderProjectsModalList();
+          const nextIndex = 1;
+          const slides = WIZARD_SLIDES['visual-wizard-modal'];
+          if (slides?.[nextIndex]) renderEntryWizardSlide('visual-wizard-modal', nextIndex);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Upload photos, mood boards, or existing character images. CineGen will auto-detect characters, settings, and props.</p>
+            <div class="vw-drop-zone" style="border:2px dashed #555;border-radius:8px;padding:32px;text-align:center;margin-bottom:16px;">
+              <i class="fa-solid fa-cloud-arrow-up" style="font-size:2em;display:block;margin-bottom:8px;"></i>
+              <label for="vw-file-input" class="toolbar-btn" style="cursor:pointer;">Select Images</label>
+              <input id="vw-file-input" type="file" multiple accept="image/*" @change=${onFileChange} style="display:none;" />
+              <p style="margin-top:8px;color:#888;">or drag & drop images here</p>
+            </div>
+            ${(window as any).CineGen?.visualWizard?.getState().uploadedImages.length > 0 ? html`
+              <div class="vw-thumbnail-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px;">
+                ${(window as any).CineGen?.visualWizard?.getState().uploadedImages.map((img: any) => html`
+                  <div class="vw-thumb-item" style="position:relative;border:1px solid #444;border-radius:6px;overflow:hidden;">
+                    <img src=${img.dataUrl} alt=${img.name} style="width:100%;height:100px;object-fit:cover;display:block;" />
+                    <div style="padding:4px;">
+                      <select class="cg-field" style="font-size:11px;width:100%;" .value=${img.category} @change=${(e: Event) => onCategoryChange(img.id, (e.target as HTMLSelectElement).value)}>
+                        <option value="character">Character</option>
+                        <option value="mood-board">Mood Board</option>
+                        <option value="location">Location</option>
+                        <option value="prop">Prop</option>
+                        <option value="style-reference">Style Ref</option>
+                      </select>
+                    </div>
+                    <button type="button" class="remove-chip-btn" @click=${() => onRemove(img.id)} style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;">×</button>
+                  </div>
+                `)}
+              </div>
+              <button class="toolbar-btn btn-ai" @click=${onCreateProject}>Create Project & Analyze</button>
+            ` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 2 — Auto-Identify Elements */
+    {
+      title: 'Auto-Identify Elements',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const onIdentify = async () => {
+          const vwApi = (window as any).CineGen?.visualWizard;
+          const agents = (window as any).CineGen?.agents;
+          if (!vwApi || !agents?.identifyVisualElements) {
+            alertCG('AI agent layer not available. Add detected elements manually.');
+            return;
+          }
+          try {
+            const projectId = vwApi.getState().projectId || 'temp';
+            const images = vwApi.getIdentifyImages();
+            const result = await agents.identifyVisualElements(projectId, images);
+            for (const c of result.characters || []) vwApi.addCharacter(c.name);
+            for (const l of result.locations || []) vwApi.addLocation(l.name, l.intExt || 'EXT');
+            for (const p of result.props || []) vwApi.addProp(p.name);
+            host.requestUpdate();
+          } catch (err) {
+            alertCG('Auto-identify failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const addChar = () => {
+          const input = host.querySelector<HTMLInputElement>('#vw-add-char');
+          const name = input?.value.trim();
+          if (name) { vw?.addCharacter(name); if (input) input.value = ''; host.requestUpdate(); }
+        };
+        const addLoc = () => {
+          const input = host.querySelector<HTMLInputElement>('#vw-add-loc');
+          const name = input?.value.trim();
+          if (name) { vw?.addLocation(name, 'EXT'); if (input) input.value = ''; host.requestUpdate(); }
+        };
+        const onNext = () => renderEntryWizardSlide('visual-wizard-modal', 2);
+        return html`
+          <div class="script-wizard-form">
+            <p>Review the detected elements from your uploaded images. You can add or remove items manually.</p>
+            <button class="toolbar-btn btn-ai" @click=${onIdentify} style="margin-bottom:16px;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Identify Elements
+            </button>
+            <div class="script-wizard-section">
+              <h4>Characters (${state.characters?.length || 0})</h4>
+              <div class="script-wizard-chip-list">
+                ${(state.characters || []).map((c: any) => html`
+                  <span class="entity-chip entity-chip--character">
+                    ${c.name}
+                    <button type="button" class="remove-chip-btn" @click=${() => { vw?.removeCharacter(c.id); host.requestUpdate(); }}>×</button>
+                  </span>
+                `)}
+              </div>
+              <div class="script-wizard-add-row">
+                <input id="vw-add-char" class="cg-field" type="text" placeholder="Add character..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addChar()} />
+                <button class="toolbar-btn" @click=${addChar}>Add</button>
+              </div>
+            </div>
+            <div class="script-wizard-section">
+              <h4>Locations (${state.locations?.length || 0})</h4>
+              <div class="script-wizard-chip-list">
+                ${(state.locations || []).map((l: any) => html`
+                  <span class="entity-chip entity-chip--location">
+                    ${l.name} (${l.intExt})
+                    <button type="button" class="remove-chip-btn" @click=${() => { vw?.removeLocation(l.id); host.requestUpdate(); }}>×</button>
+                  </span>
+                `)}
+              </div>
+              <div class="script-wizard-add-row">
+                <input id="vw-add-loc" class="cg-field" type="text" placeholder="Add location..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addLoc()} />
+                <button class="toolbar-btn" @click=${addLoc}>Add</button>
+              </div>
+            </div>
+            <div class="script-wizard-section">
+              <h4>Props (${state.props?.length || 0})</h4>
+              <div class="script-wizard-chip-list">
+                ${(state.props || []).map((p: any) => html`
+                  <span class="entity-chip entity-chip--default">
+                    ${p.name}
+                    <button type="button" class="remove-chip-btn" @click=${() => { vw?.removeProp(p.id); host.requestUpdate(); }}>×</button>
+                  </span>
+                `)}
+              </div>
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 3 — Casting Refinement */
+    {
+      title: 'Casting Refinement',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const charImages = (state.uploadedImages || []).filter((i: any) => i.category === 'character');
+        const onAssign = (charId: string, imageId: string, slot: string) => {
+          vw?.assignImageToChar(charId, imageId, slot);
+          host.requestUpdate();
+        };
+        const onNext = () => renderEntryWizardSlide('visual-wizard-modal', 3);
+        return html`
+          <div class="script-wizard-form">
+            <p>Assign uploaded character images to specific angles for each character. These will be used to build multi-view character sheets.</p>
+            <div class="script-wizard-cards">
+              ${(state.characters || []).map((char: any) => html`
+                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-user" aria-hidden="true"></i> ${char.name}</legend>
+                  <div class="cg-fieldset-body">
+                    <div class="script-wizard-field-row">
+                      <span>Name</span>
+                      <input class="cg-field" type="text" .value=${char.name} @input=${(e: Event) => { vw?.updateCharacter(char.id, { name: (e.target as HTMLInputElement).value }); }} />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Age</span>
+                      <input class="cg-field" type="text" .value=${char.age} @input=${(e: Event) => { vw?.updateCharacter(char.id, { age: (e.target as HTMLInputElement).value }); }} placeholder="e.g. 30s" />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Build</span>
+                      <input class="cg-field" type="text" .value=${char.build} @input=${(e: Event) => { vw?.updateCharacter(char.id, { build: (e.target as HTMLInputElement).value }); }} placeholder="e.g. Athletic" />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Vibe</span>
+                      <textarea class="cg-field" .value=${char.vibe} @input=${(e: Event) => { vw?.updateCharacter(char.id, { vibe: (e.target as HTMLTextAreaElement).value }); }} placeholder="Personality, energy..."></textarea>
+                    </div>
+                    <div class="vw-angle-assign" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;">
+                      ${['faceImage', 'profileImage', 'threeQuarterImage', 'fullBodyImage'].map((slot) => html`
+                        <div style="font-size:12px;">
+                          <strong>${slot.replace('Image','')}:</strong>
+                          <select class="cg-field" style="width:100%;font-size:11px;" @change=${(e: Event) => onAssign(char.id, (e.target as HTMLSelectElement).value, slot)}>
+                            <option value="">— none —</option>
+                            ${charImages.map((img: any) => html`<option value=${img.id}>${img.name}</option>`)}
+                          </select>
+                        </div>
+                      `)}
+                    </div>
+                    ${char.faceImage ? html`<img src=${char.faceImage.dataUrl} style="width:80px;height:80px;object-fit:cover;border-radius:6px;margin-top:8px;" />` : ''}
+                  </div>
+                </fieldset>
+              `)}
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 4 — Production Design Mapping */
+    {
+      title: 'Production Design Mapping',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const locImages = (state.uploadedImages || []).filter((i: any) => i.category === 'location');
+        const onAssign = (locId: string, imageId: string, interior: boolean) => {
+          vw?.assignImageToLoc(locId, imageId, interior);
+          host.requestUpdate();
+        };
+        const onNext = () => renderEntryWizardSlide('visual-wizard-modal', 4);
+        return html`
+          <div class="script-wizard-form">
+            <p>Define each location and assign uploaded images as background plates. Toggle interior/exterior for each.</p>
+            <div class="script-wizard-cards">
+              ${(state.locations || []).map((loc: any) => html`
+                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> ${loc.name}</legend>
+                  <div class="cg-fieldset-body">
+                    <div class="script-wizard-field-row">
+                      <span>Name</span>
+                      <input class="cg-field" type="text" .value=${loc.name} @input=${(e: Event) => { vw?.updateLocation(loc.id, { name: (e.target as HTMLInputElement).value }); }} />
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Type</span>
+                      <select class="cg-field" .value=${loc.intExt} @change=${(e: Event) => { vw?.updateLocation(loc.id, { intExt: (e.target as HTMLSelectElement).value }); }}>
+                        <option value="INT">Interior</option>
+                        <option value="EXT">Exterior</option>
+                        <option value="INT/EXT">Interior / Exterior</option>
+                      </select>
+                    </div>
+                    <div class="script-wizard-field-row">
+                      <span>Description</span>
+                      <textarea class="cg-field" .value=${loc.description} @input=${(e: Event) => { vw?.updateLocation(loc.id, { description: (e.target as HTMLTextAreaElement).value }); }} placeholder="Atmosphere, period, key notes..."></textarea>
+                    </div>
+                    <div style="margin-top:8px;">
+                      <strong style="font-size:12px;">Assign Location Images:</strong>
+                      <select class="cg-field" style="width:100%;font-size:11px;" @change=${(e: Event) => onAssign(loc.id, (e.target as HTMLSelectElement).value, loc.intExt !== 'EXT')}>
+                        <option value="">— select image —</option>
+                        ${locImages.map((img: any) => html`<option value=${img.id}>${img.name}</option>`)}
+                      </select>
+                    </div>
+                    ${(loc.exteriorImages || []).map((img: any) => html`<img src=${img.dataUrl} style="width:80px;height:60px;object-fit:cover;border-radius:4px;margin-top:4px;" title="Exterior plate" />`)}
+                    ${(loc.interiorImages || []).map((img: any) => html`<img src=${img.dataUrl} style="width:80px;height:60px;object-fit:cover;border-radius:4px;margin-top:4px;" title="Interior plate" />`)}
+                  </div>
+                </fieldset>
+              `)}
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 5 — Script/Outline Generation */
+    {
+      title: 'Script/Outline Generation',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const onGenerate = async () => {
+          const agents = (window as any).CineGen?.agents;
+          if (!agents?.generateScriptFromVisuals) {
+            alertCG('AI agent layer not available for script generation.');
+            return;
+          }
+          try {
+            const projectId = state.projectId || 'temp';
+            const payload = vw?.buildOutlinePayload();
+            const result = await agents.generateScriptFromVisuals(projectId, payload);
+            if (result?.outline) {
+              vw?.setScriptGenerated(result.outline);
+              host.requestUpdate();
+            }
+          } catch (err) {
+            alertCG('Script generation failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const onSkip = () => renderEntryWizardSlide('visual-wizard-modal', 5);
+        const onNext = () => renderEntryWizardSlide('visual-wizard-modal', 5);
+        return html`
+          <div class="script-wizard-form">
+            <p>Optionally generate a script outline from your uploaded visuals and detected elements. This can serve as a starting point for your screenplay.</p>
+            ${!state.scriptGenerated
+              ? html`<div>
+                  <button class="toolbar-btn btn-ai" @click=${onGenerate}><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Script Outline</button>
+                  <button class="toolbar-btn" @click=${onSkip} style="margin-left:8px;">Skip — I'll write later</button>
+                </div>`
+              : html`
+                  <textarea class="cg-field" style="min-height:200px;font-family:monospace;font-size:13px;" .value=${state.scriptOutline} @input=${(e: Event) => { const t = (e.target as HTMLTextAreaElement).value; vw?.setScriptGenerated(t); }}></textarea>
+                  <div style="margin-top:8px;display:flex;gap:8px;">
+                    <button class="toolbar-btn btn-ai" @click=${onNext}>Accept & Continue</button>
+                    <button class="toolbar-btn" @click=${() => { vw?.setScriptGenerated(''); host.requestUpdate(); }}>Discard</button>
+                  </div>
+                `}
+          </div>
+        `;
+      },
+    },
+    /* Slide 6 — Style Lock */
+    {
+      title: 'Style Lock',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const lightingPresets = ['Natural daylight', 'Warm golden hour', 'Cool moonlight', 'Dramatic noir', 'High contrast', 'Soft diffused', 'Neon cyberpunk', 'Vintage film'];
+        const onExtract = async () => {
+          const agents = (window as any).CineGen?.agents;
+          if (!agents?.extractColorPalette) {
+            alertCG('Color extraction agent not available. Add colors manually.');
+            return;
+          }
+          try {
+            const projectId = state.projectId || 'temp';
+            const images = vw?.getColorImages();
+            const result = await agents.extractColorPalette(projectId, images);
+            if (result?.palette?.length) {
+              vw?.setPalette(result.palette);
+              if (result.mood) vw?.setLightingMood(result.mood);
+              host.requestUpdate();
+            }
+          } catch (err) {
+            alertCG('Color extraction failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const applyPreset = (mood: string) => { vw?.setLightingMood(mood); host.requestUpdate(); };
+        const onNext = () => renderEntryWizardSlide('visual-wizard-modal', 6);
+        return html`
+          <div class="script-wizard-form">
+            <p>Define the visual style for the project. Extract a color palette from your uploaded images or set mood and lighting manually.</p>
+            <button class="toolbar-btn btn-ai" @click=${onExtract} style="margin-bottom:16px;">
+              <i class="fa-solid fa-palette"></i> Extract Color Palette from Images
+            </button>
+            <div class="script-wizard-section">
+              <h4>Color Palette</h4>
+              <cg-color-palette
+                .palette=${state.colorPalette ?? []}
+                style="display:block;"
+                @cg-palette-change=${(e: any) => {
+                  vw?.setPalette(e.detail.palette);
+                  host.requestUpdate();
+                }}
+              ></cg-color-palette>
+            </div>
+            <div class="script-wizard-section">
+              <h4>Lighting & Mood</h4>
+              <div class="script-wizard-presets" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+                ${lightingPresets.map((p) => html`
+                  <button class="toolbar-btn ${state.lightingMood === p ? 'btn-ai' : ''}" style="font-size:12px;padding:4px 10px;" @click=${() => applyPreset(p)}>${p}</button>
+                `)}
+              </div>
+            </div>
+            <div class="script-wizard-section">
+              <h4>Style Notes</h4>
+              <textarea class="cg-field" style="min-height:80px;" .value=${state.styleNotes} @input=${(e: Event) => { vw?.setStyleNotes((e.target as HTMLTextAreaElement).value); }} placeholder="Overall aesthetic direction, era, visual influences..."></textarea>
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 7 — Scene Kit Assembly */
+    {
+      title: 'Scene Kit Assembly',
+      renderFn: () => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const hasCharacters = state.characters?.length > 0;
+        const hasLocations = state.locations?.length > 0;
+        const hasPalette = state.colorPalette?.length > 0;
+        const onBuildKit = async () => {
+          const agents = (window as any).CineGen?.agents;
+          const projectId = state.projectId;
+          if (!projectId) { alertCG('No active project. Create a project first.'); return; }
+          const payload = vw?.buildKitPayload();
+          vw?.setKitBuilt();
+          if (agents?.updateProductionContext) {
+            try {
+              await agents.updateProductionContext(projectId, {
+                characterBible: (payload.characters || []).map((c: any) => ({
+                  id: c.id,
+                  name: c.name,
+                  role: c.role || 'supporting',
+                  physicalDescription: [c.age, c.build, c.vibe].filter(Boolean).join(', '),
+                  performanceNotes: c.vibe || '',
+                  sceneAppearances: [],
+                  references: { face: c.faceImage?.dataUrl, costume: [] },
+                  voice: null,
+                })),
+                locationBible: (payload.locations || []).map((l: any) => ({
+                  id: l.id,
+                  name: l.name,
+                  intExt: l.intExt,
+                  description: l.description,
+                  atmosphere: '',
+                  references: [...(l.exteriorImages || []), ...(l.interiorImages || [])].map((img: any) => img.dataUrl),
+                  sceneAppearances: [],
+                })),
+                styleGuide: {
+                  colorPalette: (payload.style?.palette || []).join(', '),
+                  lightingMood: payload.style?.lightingMood || '',
+                  visualTone: payload.style?.notes || '',
+                },
+              });
+            } catch (err) {
+              console.warn('[vw] Scene kit save warning:', err);
+            }
+          }
+          renderEntryWizardSlide('visual-wizard-modal', 7);
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Review your assembled scene kit. This bundles all visual references, characters, and style information into a reusable package.</p>
+            <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+              <legend class="cg-fieldset-legend"><i class="fa-solid fa-cube" aria-hidden="true"></i> Scene Kit Summary</legend>
+              <div class="cg-fieldset-body script-wizard-summary">
+                <div class="script-wizard-summary-row"><strong>Characters:</strong> ${state.characters?.length || 0} — ${(state.characters || []).map((c: any) => c.name).join(', ') || 'none'}</div>
+                <div class="script-wizard-summary-row"><strong>Locations:</strong> ${state.locations?.length || 0} — ${(state.locations || []).map((l: any) => l.name).join(', ') || 'none'}</div>
+                <div class="script-wizard-summary-row"><strong>Props:</strong> ${state.props?.length || 0}</div>
+                <div class="script-wizard-summary-row"><strong>Color Palette:</strong> ${state.colorPalette?.length || 0} colors</div>
+                <div class="script-wizard-summary-row"><strong>Mood:</strong> ${state.lightingMood || 'Not set'}</div>
+                <div class="script-wizard-summary-row"><strong>Script Outline:</strong> ${state.scriptGenerated ? 'Generated' : 'Not generated'}</div>
+              </div>
+            </fieldset>
+            <div class="script-wizard-actions" style="margin-top:12px;">
+              ${!state.sceneKitBuilt
+                ? html`<button class="toolbar-btn btn-ai" @click=${onBuildKit}>
+                    <i class="fa-solid fa-cubes"></i> Build Scene Kit
+                  </button>`
+                : html`<p style="color:#4ade80;"><i class="fa-solid fa-circle-check"></i> Scene kit built successfully!</p>`
+              }
+            </div>
+            ${state.sceneKitBuilt ? html`<button class="toolbar-btn btn-ai" @click=${() => renderEntryWizardSlide('visual-wizard-modal', 7)} style="margin-top:12px;">Continue</button>` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 8 — Storyboard or Video Preview */
+    {
+      title: 'Storyboard or Video Preview',
+      renderFn: (host) => {
+        const vw = (window as any).CineGen?.visualWizard;
+        const state = vw?.getState() || {};
+        const onGenerate = async () => {
+          const agents = (window as any).CineGen?.agents;
+          const projectId = state.projectId;
+          if (!projectId) { alertCG('No active project.'); return; }
+          if (!agents?.generateStoryboardFrames) {
+            alertCG('Storyboard generation not available.');
+            return;
+          }
+          try {
+            const result = await agents.generateStoryboardFrames(projectId);
+            const count = result?.data?.frameCount || 4;
+            vw?.setBoardsGenerated(count);
+            host.requestUpdate();
+          } catch (err) {
+            alertCG('Storyboard generation failed: ' + (err instanceof Error ? err.message : String(err)));
+          }
+        };
+        const onFinish = () => {
+          resetScriptWizardState();
+          closeVisualWizardModal();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p>Generate initial storyboard frames from your scene kit. These will appear in the Pre-production workspace.</p>
+            ${!state.storyboardsGenerated
+              ? html`<button class="toolbar-btn btn-ai" @click=${onGenerate}><i class="fa-solid fa-image"></i> Generate Initial Storyboards</button>`
+              : html`
+                  <div class="script-wizard-success">
+                    <p><i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> <strong>${state.storyboardFrameCount}</strong> draft frame(s) created.</p>
+                    <p style="color:#888;">Review and refine them in the Pre-production workspace.</p>
+                  </div>
+                `}
+            <div style="margin-top:16px;">
+              <button class="toolbar-btn btn-ai" @click=${onFinish}>Finish & Close Wizard</button>
+            </div>
+          </div>
+        `;
+      },
+    },
+  ],
+  'concept-wizard-modal': [
+    /* Slide 1 — Concept Dashboard (master-detail input) */
+    {
+      title: 'Concept Dashboard',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const getState = () => cw?.getState() ?? {};
+        const s = getState();
+        const onMoodInput = (e: Event) => { cw?.setMoodDescription((e.target as HTMLTextAreaElement).value); };
+        const onSceneInput = (e: Event) => { cw?.setSceneSettings((e.target as HTMLTextAreaElement).value); };
+        const onLightingInput = (e: Event) => { cw?.setLightingDesc((e.target as HTMLTextAreaElement).value); };
+        const onAtmoInput = (e: Event) => { cw?.setAtmosphereNotes((e.target as HTMLTextAreaElement).value); };
+        const onTagAdd = () => {
+          const el = host.querySelector('#cw-atmo-input') as HTMLInputElement;
+          if (el?.value?.trim()) { cw?.addAtmosphereTag(el.value.trim()); el.value = ''; host.requestUpdate(); }
+        };
+        const onTagRemove = (tag: string) => { cw?.removeAtmosphereTag(tag); host.requestUpdate(); };
+        const onFileChange = async (e: Event) => {
+          const input = e.target as HTMLInputElement;
+          if (!input?.files?.length) return;
+          for (const file of Array.from(input.files)) {
+            if (file.type.startsWith('image/')) await cw?.addImage(file, 'mood-board');
+          }
+          input.value = '';
+          host.requestUpdate();
+        };
+        const onRemoveImage = (id: string) => { cw?.removeImage(id); host.requestUpdate(); };
+        const onVibeChange = (key: string) => (e: Event) => {
+          cw?.setVibe({ [key]: parseInt((e.target as HTMLInputElement).value, 10) });
+        };
+        const onCreateProject = () => {
+          const state = cw?.getState();
+          const created = createBlankProject();
+          appShellStore.setActiveProjectId(created.id);
+          syncActiveProjectName(created.name);
+          cw?.setProjectId(created.id);
+          const refresh = window as unknown as Record<string, (() => void) | undefined>;
+          refresh.renderFullTree?.();
+          refresh.renderBreakdownTable?.();
+          refresh.renderStoryboard?.();
+          refresh.renderTimeline?.();
+          refresh.hydrateScriptEditorFromProject?.();
+          window.renderProjectsMenu?.();
+          renderProjectsModalList();
+        };
+        const onGenerateConcepts = async () => {
+          if (!cw) return;
+          const state = cw.getState();
+          if (!state.projectId) {
+            const created = createBlankProject();
+            appShellStore.setActiveProjectId(created.id);
+            syncActiveProjectName(created.name);
+            cw.setProjectId(created.id);
+            const refresh = window as unknown as Record<string, (() => void) | undefined>;
+            refresh.renderFullTree?.();
+            refresh.renderBreakdownTable?.();
+            refresh.renderStoryboard?.();
+            refresh.renderTimeline?.();
+            refresh.hydrateScriptEditorFromProject?.();
+            window.renderProjectsMenu?.();
+            renderProjectsModalList();
+          }
+          cw.setGenerating(true);
+          host.requestUpdate();
+          try {
+            const payload = cw.buildConceptPayload();
+            const { generateConcepts } = await import('../services/ai/agents-service');
+            const result = await generateConcepts(payload.projectId, {
+              moodDescription: payload.moodDescription,
+              vibe: payload.vibe,
+              colorPalette: payload.colorPalette,
+              sceneSettings: payload.sceneSettings,
+              lightingDesc: payload.lightingDesc,
+              atmosphereNotes: payload.atmosphereNotes,
+              atmosphereTags: payload.atmosphereTags,
+              imageDataUrls: payload.imageDataUrls,
+            });
+            cw.applyConcepts(result);
+            cw.setGenerating(false);
+            const nextIdx = 1;
+            const slides = WIZARD_SLIDES['concept-wizard-modal'];
+            if (slides?.[nextIdx]) renderEntryWizardSlide('concept-wizard-modal', nextIdx);
+          } catch (err) {
+            console.error('[concept-wizard] generate error:', err);
+            cw.setGenerating(false);
+            host.requestUpdate();
+            alertCG('Failed to generate concepts. Check your API key and try again.');
+          }
+        };
+        const vibeSlider = (label: string, key: string, min: number, max: number) => html`
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px;color:#aaa;">${label}: ${s.currentVibe?.[key] ?? 0}</label>
+            <input type="range" min=${min} max=${max} value=${s.currentVibe?.[key] ?? 0}
+              @input=${onVibeChange(key)} style="width:100%;" />
+          </div>
+        `;
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:16px;">Describe the mood and atmosphere of your project. Fill in as much or as little as you want — then click <strong>Generate Concepts</strong> to create atmosphere tags, color palette, locations, and character archetypes.</p>
+
+            <div style="margin-bottom:16px;">
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Overall Mood / Vibe</label>
+              <textarea class="cg-field" style="width:100%;min-height:80px;resize:vertical;" placeholder="E.g. A neon-drenched cyberpunk love story set in a rain-soaked Tokyo-like city..."
+                .value=${s.moodDescription ?? ''} @input=${onMoodInput}></textarea>
+            </div>
+
+            <details style="margin-bottom:12px;" ?open=${s.uploadedImages?.length > 0}>
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;">Mood Boards / Reference Images</summary>
+              <div style="margin-top:8px;border:2px dashed #555;border-radius:8px;padding:24px;text-align:center;margin-bottom:12px;">
+                <label for="cw-file-input" class="toolbar-btn" style="cursor:pointer;">Upload Images</label>
+                <input id="cw-file-input" type="file" multiple accept="image/*" @change=${onFileChange} style="display:none;" />
+              </div>
+              ${(s.uploadedImages ?? []).length > 0 ? html`
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:6px;margin-bottom:12px;">
+                  ${s.uploadedImages.map((img: any) => html`
+                    <div style="position:relative;border:1px solid #444;border-radius:6px;overflow:hidden;">
+                      <img src=${img.dataUrl} alt=${img.name} style="width:100%;height:80px;object-fit:cover;display:block;" />
+                      <button type="button" class="remove-chip-btn" @click=${() => onRemoveImage(img.id)} style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;line-height:20px;text-align:center;font-size:14px;">×</button>
+                    </div>
+                  `)}
+                </div>
+              ` : ''}
+            </details>
+
+            <details style="margin-bottom:12px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;">Color Palette</summary>
+              <div style="margin-top:8px;">
+                <cg-color-palette
+                  .palette=${s.colorPalette ?? []}
+                  style="display:block;"
+                  @cg-palette-change=${(e: any) => {
+                    s.colorPalette = e.detail.palette;
+                    host.requestUpdate();
+                  }}
+                ></cg-color-palette>
+              </div>
+            </details>
+
+            <details style="margin-bottom:12px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;">Scene Settings & Lighting</summary>
+              <div style="margin-top:8px;">
+                <label style="font-size:12px;color:#aaa;">Scene / Location Settings</label>
+                <textarea class="cg-field" style="width:100%;min-height:50px;resize:vertical;margin-bottom:8px;" placeholder="E.g. Neon-lit alleyways, rain-slicked streets, cramped noodle bars..."
+                  .value=${s.sceneSettings ?? ''} @input=${onSceneInput}></textarea>
+                <label style="font-size:12px;color:#aaa;">Lighting Description</label>
+                <textarea class="cg-field" style="width:100%;min-height:50px;resize:vertical;margin-bottom:8px;" placeholder="E.g. Mixed neon and shadow, high contrast, cool blue moonlight with warm amber accents..."
+                  .value=${s.lightingDesc ?? ''} @input=${onLightingInput}></textarea>
+              </div>
+            </details>
+
+            <details style="margin-bottom:12px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;">Atmosphere & Sound</summary>
+              <div style="margin-top:8px;">
+                <label style="font-size:12px;color:#aaa;">Atmosphere Notes</label>
+                <textarea class="cg-field" style="width:100%;min-height:50px;resize:vertical;margin-bottom:8px;" placeholder="E.g. Gritty urban cyberpunk, oppressive humidity, distant neon hum..."
+                  .value=${s.atmosphereNotes ?? ''} @input=${onAtmoInput}></textarea>
+                <label style="font-size:12px;color:#aaa;">Atmosphere Tags</label>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+                  ${(s.atmosphereTags ?? []).map((tag: string) => html`
+                    <span style="display:inline-flex;align-items:center;gap:3px;background:#2a4;padding:2px 8px;border-radius:12px;font-size:11px;">
+                      ${tag}
+                      <button type="button" class="remove-chip-btn" @click=${() => onTagRemove(tag)} style="background:none;border:none;color:#fff;cursor:pointer;font-size:12px;">×</button>
+                    </span>
+                  `)}
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <input id="cw-atmo-input" type="text" class="cg-field" placeholder="Wind in trees, distant traffic, synthwave..." style="flex:1;" />
+                  <button class="toolbar-btn" @click=${onTagAdd}>Add Tag</button>
+                </div>
+              </div>
+            </details>
+
+            <details style="margin-bottom:16px;">
+              <summary style="cursor:pointer;font-size:13px;font-weight:600;">Vibe Sliders</summary>
+              <div style="margin-top:8px;">
+                ${vibeSlider('Cool ↔ Warm', 'temperature', -5, 5)}
+                ${vibeSlider('Peaceful ↔ Tense', 'tension', -5, 5)}
+                ${vibeSlider('Night ↔ Day', 'lighting', -5, 5)}
+                ${vibeSlider('Calm ↔ Energetic', 'energy', -5, 5)}
+                <div style="margin-bottom:8px;">
+                  <label style="font-size:12px;color:#aaa;">Grounded ↔ Stylized: ${s.currentVibe?.stylization ?? 50}%</label>
+                  <input type="range" min="0" max="100" value=${s.currentVibe?.stylization ?? 50}
+                    @input=${onVibeChange('stylization')} style="width:100%;" />
+                </div>
+              </div>
+            </details>
+
+            <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+              ${s.conceptsGenerating ? html`<span style="color:#888;padding:8px;">Generating concepts...</span>` : html`
+                <button class="toolbar-btn btn-ai" @click=${onGenerateConcepts}>
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Concepts
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 2 — Atmosphere & Sound (pre-populated) */
+    {
+      title: 'Atmosphere & Sound',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const tags = s.generatedAtmosphereTags ?? [];
+        const onToggleTag = (tag: string) => {
+          const state = cw?.getState();
+          const has = (state.atmosphereTags ?? []).includes(tag);
+          if (has) cw?.removeAtmosphereTag(tag);
+          else cw?.addAtmosphereTag(tag);
+          host.requestUpdate();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review the generated atmosphere and sound elements. Toggle tags to include them in your project.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;">
+              ${tags.map((tag: string) => {
+                const active = (s.atmosphereTags ?? []).includes(tag);
+                return html`
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;
+                    background:${active ? '#2a4' : '#333'};border:1px solid ${active ? '#4c6' : '#555'};"
+                    @click=${() => onToggleTag(tag)}>
+                    ${active ? html`<i class="fa-solid fa-check" style="font-size:10px;"></i>` : ''}
+                    ${tag}
+                  </span>
+                `;
+              })}
+            </div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Lighting Mood</label>
+            <div style="background:#222;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;">${s.lightingMood ?? '—'}</div>
+            <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Style Notes</label>
+            <div style="background:#222;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:13px;">${s.styleNotes ?? '—'}</div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 3 — Color & Style Palette (pre-populated) */
+    {
+      title: 'Color & Style Palette',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const palette = s.generatedColorPalette ?? [];
+        const onGenerateImage = async () => {
+          const { generateConceptImage } = await import('../services/ai/agents-service');
+          const prompt = `Style reference image for: ${s.lightingMood ?? 'mood'} — palette: ${palette.join(', ')} — ${s.styleNotes ?? ''}`;
+          try {
+            const result = await generateConceptImage(prompt);
+            cw?.addGeneratedImage(prompt, result.url, 'style-reference');
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[concept-wizard] style image error:', err);
+            alertCG('Failed to generate style image. Check your image generation provider key.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review the generated color palette and lighting mood. Generate a style reference image from these settings.</p>
+            <cg-color-palette
+              .palette=${palette}
+              ?readonly=${true}
+              style="display:block;margin-bottom:16px;"
+            ></cg-color-palette>
+            <button class="toolbar-btn btn-ai" @click=${onGenerateImage}>
+              <i class="fa-solid fa-image"></i> Generate Style Image
+            </button>
+            ${(s.generatedImages ?? []).filter((i: any) => i.category === 'style-reference').length > 0 ? html`
+              <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;">
+                ${s.generatedImages.filter((i: any) => i.category === 'style-reference').map((img: any) => html`
+                  <div style="border:1px solid #444;border-radius:6px;overflow:hidden;">
+                    <img src=${img.url} alt="Style ref" style="width:100%;height:120px;object-fit:cover;display:block;" />
+                  </div>
+                `)}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 4 — Core Location Sketch (pre-populated) */
+    {
+      title: 'Core Location Sketch',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const locs = s.locations ?? [];
+        const onUpdateLoc = (id: string, key: string) => (e: Event) => {
+          cw?.updateLocation(id, { [key]: (e.target as HTMLInputElement).value });
+        };
+        const onRemoveLoc = (id: string) => { cw?.removeLocation(id); host.requestUpdate(); };
+        const onAddLoc = () => {
+          const name = host.querySelector('#cw-new-loc-name') as HTMLInputElement;
+          if (name?.value?.trim()) {
+            cw?.addLocation(name.value.trim());
+            name.value = '';
+            host.requestUpdate();
+          }
+        };
+        const onGeneratePlate = async (loc: any) => {
+          const { generateConceptImage } = await import('../services/ai/agents-service');
+          const prompt = `Background plate: ${loc.name} — ${loc.description} — ${loc.intExt} — mood: ${s.lightingMood ?? ''}`;
+          try {
+            const result = await generateConceptImage(prompt);
+            cw?.addGeneratedImage(prompt, result.url, 'background-plate');
+            const imgs = cw?.getState().generatedImages ?? [];
+            const last = imgs[imgs.length - 1];
+            if (last) cw?.assignPlateToLocation(loc.id, last.id);
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[concept-wizard] plate generation error:', err);
+            alertCG('Failed to generate background plate.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review the suggested locations. Edit details or generate background plates.</p>
+            ${locs.map((loc: any) => {
+              const plateImg = s.generatedImages?.find((i: any) => i.id === loc.generatedImageId);
+              return html`
+                <div style="border:1px solid #444;border-radius:6px;padding:10px;margin-bottom:8px;">
+                  <div style="display:flex;gap:8px;margin-bottom:6px;">
+                    <input class="cg-field" style="flex:2;" .value=${loc.name} @input=${onUpdateLoc(loc.id, 'name')} />
+                    <select class="cg-field" style="flex:0 0 100px;" .value=${loc.intExt} @change=${onUpdateLoc(loc.id, 'intExt')}>
+                      <option value="INT">INT</option>
+                      <option value="EXT">EXT</option>
+                      <option value="INT/EXT">INT/EXT</option>
+                    </select>
+                    <button class="remove-chip-btn" @click=${() => onRemoveLoc(loc.id)} style="background:none;border:none;color:#f88;cursor:pointer;">×</button>
+                  </div>
+                  <textarea class="cg-field" style="width:100%;min-height:40px;resize:vertical;margin-bottom:6px;" .value=${loc.description} @input=${onUpdateLoc(loc.id, 'description')}></textarea>
+                  <button class="toolbar-btn" style="font-size:11px;" @click=${() => onGeneratePlate(loc)}>
+                    <i class="fa-solid fa-image"></i> ${plateImg ? 'Regenerate Plate' : 'Generate Plate'}
+                  </button>
+                  ${plateImg ? html`<img src=${plateImg.url} alt="Plate" style="margin-top:6px;width:100%;max-height:120px;object-fit:cover;border-radius:4px;" />` : ''}
+                </div>
+              `;
+            })}
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <input id="cw-new-loc-name" type="text" class="cg-field" placeholder="Add location..." style="flex:1;" />
+              <button class="toolbar-btn" @click=${onAddLoc}>Add</button>
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 5 — Character Archetypes (pre-populated) */
+    {
+      title: 'Character Archetypes',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const archs = s.archetypes ?? [];
+        const onUpdateArch = (id: string, key: string) => (e: Event) => {
+          cw?.updateArchetype(id, { [key]: (e.target as HTMLInputElement).value });
+        };
+        const onRemoveArch = (id: string) => { cw?.removeArchetype(id); host.requestUpdate(); };
+        const onAddArch = () => {
+          const arch = host.querySelector('#cw-new-arch-type') as HTMLInputElement;
+          const name = host.querySelector('#cw-new-arch-name') as HTMLInputElement;
+          if (arch?.value?.trim() && name?.value?.trim()) {
+            cw?.addArchetype(arch.value.trim(), name.value.trim());
+            arch.value = '';
+            name.value = '';
+            host.requestUpdate();
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review the generated character archetypes. Edit names, roles, or add new archetypes.</p>
+            ${archs.map((a: any) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:10px;margin-bottom:8px;">
+                <div style="display:flex;gap:8px;margin-bottom:6px;">
+                  <input class="cg-field" style="flex:1;" .value=${a.archetype} @input=${onUpdateArch(a.id, 'archetype')} placeholder="Archetype" />
+                  <input class="cg-field" style="flex:1;" .value=${a.name} @input=${onUpdateArch(a.id, 'name')} placeholder="Name" />
+                  <select class="cg-field" style="flex:0 0 120px;" .value=${a.role} @change=${onUpdateArch(a.id, 'role')}>
+                    <option value="protagonist">Protagonist</option>
+                    <option value="antagonist">Antagonist</option>
+                    <option value="supporting">Supporting</option>
+                    <option value="extra">Extra</option>
+                  </select>
+                  <button class="remove-chip-btn" @click=${() => onRemoveArch(a.id)} style="background:none;border:none;color:#f88;cursor:pointer;">×</button>
+                </div>
+                <input class="cg-field" style="width:100%;margin-bottom:4px;" .value=${a.vibe} @input=${onUpdateArch(a.id, 'vibe')} placeholder="Vibe (e.g. Mysterious, Brooding)" />
+                <textarea class="cg-field" style="width:100%;min-height:50px;resize:vertical;" .value=${a.description} @input=${onUpdateArch(a.id, 'description')} placeholder="Description..."></textarea>
+              </div>
+            `)}
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <input id="cw-new-arch-type" type="text" class="cg-field" placeholder="Archetype (e.g. The Hero)" style="flex:1;" />
+              <input id="cw-new-arch-name" type="text" class="cg-field" placeholder="Name" style="flex:1;" />
+              <button class="toolbar-btn" @click=${onAddArch}>Add</button>
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 6 — Asset Generation Guidance */
+    {
+      title: 'Asset Generation Guidance',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const locs = s.locations ?? [];
+        const archs = s.archetypes ?? [];
+        const defaultPrompts = [
+          ...locs.map((l: any) => `Background plate for ${l.name}: ${l.description}`),
+          ...archs.map((a: any) => `Character portrait for ${a.name} (${a.archetype}): ${a.description}`),
+          `Style/look reference image: ${s.styleNotes ?? ''}`,
+        ];
+        if (!s.generationPrompts?.length && defaultPrompts.length) {
+          cw?.setGenerationPrompts(defaultPrompts);
+        }
+        const prompts = s.generationPrompts ?? defaultPrompts;
+        const onGenerate = async (prompt: string) => {
+          const { generateConceptImage } = await import('../services/ai/agents-service');
+          try {
+            const result = await generateConceptImage(prompt);
+            cw?.addGeneratedImage(prompt, result.url, 'style-reference');
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[concept-wizard] asset gen error:', err);
+            alertCG('Failed to generate asset image.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review and trigger generation of foundational assets. Each prompt creates a reference image.</p>
+            ${prompts.map((prompt: string) => {
+              const existing = (s.generatedImages ?? []).find((i: any) => i.prompt === prompt);
+              return html`
+                <div style="border:1px solid #444;border-radius:6px;padding:10px;margin-bottom:8px;">
+                  <p style="font-size:12px;margin-bottom:6px;">${prompt}</p>
+                  <button class="toolbar-btn" style="font-size:11px;" @click=${() => onGenerate(prompt)}>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                  </button>
+                  ${existing ? html`<img src=${existing.url} alt="Generated" style="margin-top:6px;width:100%;max-height:120px;object-fit:cover;border-radius:4px;" />` : ''}
+                </div>
+              `;
+            })}
+          </div>
+        `;
+      },
+    },
+    /* Slide 7 — Script Outline Suggestion */
+    {
+      title: 'Script Outline Suggestion',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const onGenerateOutline = async () => {
+          const { generateScriptFromVisuals } = await import('../services/ai/agents-service');
+          const payload = cw?.buildOutlinePayload();
+          if (!payload || !s.projectId) {
+            alertCG('Please ensure a project is created and concepts are generated first.');
+            return;
+          }
+          try {
+            const result = await generateScriptFromVisuals(s.projectId, payload);
+            cw?.setScriptOutline(result.outline);
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[concept-wizard] outline error:', err);
+            alertCG('Failed to generate script outline.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Generate a Fountain-format script outline based on your characters, locations, and style.</p>
+            ${s.scriptOutline ? html`
+              <div style="background:#1a1a1a;padding:12px;border-radius:6px;border:1px solid #444;margin-bottom:12px;max-height:300px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;font-size:12px;">
+                ${s.scriptOutline}
+              </div>
+              <button class="toolbar-btn" @click=${onGenerateOutline} style="margin-right:8px;">
+                <i class="fa-solid fa-rotate"></i> Regenerate
+              </button>
+            ` : html`
+              <button class="toolbar-btn btn-ai" @click=${onGenerateOutline}>
+                <i class="fa-solid fa-scroll"></i> Generate Outline
+              </button>
+            `}
+          </div>
+        `;
+      },
+    },
+    /* Slide 8 — Scene Kit Initialization */
+    {
+      title: 'Scene Kit Initialization',
+      renderFn: (host) => {
+        const cw = (window as any).CineGen?.conceptWizard;
+        const s = cw?.getState() ?? {};
+        const onBuildKit = () => {
+          const payload = cw?.buildConceptPayload();
+          const { updateProductionContext } = (window as any).CineGen?.agents ?? {};
+          if (updateProductionContext && payload) {
+            updateProductionContext(s.projectId, {
+              conceptMood: {
+                moodDescription: s.moodDescription,
+                lightingMood: s.lightingMood,
+                styleNotes: s.styleNotes,
+                colorPalette: s.generatedColorPalette,
+                atmosphereTags: s.generatedAtmosphereTags,
+              },
+              characters: s.archetypes?.map((a: any) => ({
+                name: a.name,
+                archetype: a.archetype,
+                description: a.description,
+                role: a.role,
+              })) ?? [],
+              locations: s.locations?.map((l: any) => ({
+                name: l.name,
+                description: l.description,
+                intExt: l.intExt,
+              })) ?? [],
+            });
+          }
+          cw?.setKitBuilt();
+          host.requestUpdate();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Your Concept/Mood project is ready. Review what was created and build the scene kit to initialize it in the workspace.</p>
+            <div style="background:#1a1a1a;padding:12px;border-radius:6px;margin-bottom:12px;">
+              <p><strong>Mood:</strong> ${s.lightingMood || '—'}</p>
+              <p><strong>Atmosphere Tags:</strong> ${(s.generatedAtmosphereTags ?? []).length}</p>
+              <p><strong>Characters:</strong> ${(s.archetypes ?? []).length} archetypes</p>
+              <p><strong>Locations:</strong> ${(s.locations ?? []).length} settings</p>
+              <p><strong>Generated Images:</strong> ${(s.generatedImages ?? []).length}</p>
+              <p><strong>Script Outline:</strong> ${s.scriptOutline ? 'Generated' : 'Not generated'}</p>
+            </div>
+            ${s.sceneKitBuilt ? html`
+              <div style="color:#4c6;margin-bottom:12px;"><i class="fa-solid fa-check-circle"></i> Scene kit built successfully!</div>
+            ` : html`
+              <button class="toolbar-btn btn-ai" @click=${onBuildKit}>
+                <i class="fa-solid fa-boxes-stacked"></i> Build Scene Kit
+              </button>
+            `}
+            <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+              <button class="toolbar-btn btn-ai" @click=${() => closeModal('concept-wizard-modal')}>
+                <i class="fa-solid fa-check"></i> Finish & Close Wizard
+              </button>
+            </div>
+          </div>
+        `;
+      },
+    },
+  ],
+  'asset-wizard-modal': [
+    /* Slide 1 — Library Selection */
+    {
+      title: 'Library Selection',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        if (!s.sourceProjects?.length) aw?.refreshProjectList();
+        const projects = aw?.getState()?.sourceProjects ?? [];
+        const onSelect = (id: string) => {
+          aw?.selectSource(id);
+          host.requestUpdate();
+          const nextIdx = 1;
+          const slides = WIZARD_SLIDES['asset-wizard-modal'];
+          if (slides?.[nextIdx]) renderEntryWizardSlide('asset-wizard-modal', nextIdx);
+        };
+        const tabs = [
+          { label: 'Your Projects', filter: (p: any) => p.source === 'local' },
+          { label: 'Sample Projects', filter: (p: any) => p.source === 'cine' },
+        ];
+        const activeTabIdx = 0;
+        const filtered = tabs[activeTabIdx] ? projects.filter(tabs[activeTabIdx].filter) : projects;
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Choose a project to import assets from. Characters, locations, and props will be extracted and available for selection.</p>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+              ${tabs.map((tab, i) => html`
+                <span style="padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;background:${i === activeTabIdx ? '#368' : '#333'};"
+                  @click=${() => { /* tab switch handled by re-render */ }}>
+                  ${tab.label}
+                </span>
+              `)}
+            </div>
+            ${filtered.length === 0 ? html`<p style="color:#888;">No projects found. Create a project first using another entry wizard.</p>` : ''}
+            ${filtered.map((p: any) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <strong>${p.name}</strong>
+                  ${p.source === 'cine' ? html`<span style="font-size:11px;color:#888;margin-left:6px;">(sample)</span>` : ''}
+                  ${p.updatedAt ? html`<span style="font-size:11px;color:#666;margin-left:6px;">${p.updatedAt}</span>` : ''}
+                  <div style="font-size:12px;color:#aaa;margin-top:2px;">
+                    Characters: ${p.assetCounts?.characters ?? 0} &middot;
+                    Locations: ${p.assetCounts?.locations ?? 0} &middot;
+                    Props: ${p.assetCounts?.props ?? 0}
+                  </div>
+                </div>
+                <button class="toolbar-btn btn-ai" @click=${() => onSelect(p.id)}>Import</button>
+              </div>
+            `)}
+          </div>
+        `;
+      },
+    },
+    /* Slide 2 — Asset Browser */
+    {
+      title: 'Asset Browser',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const chars = s.pendingCharacters ?? [];
+        const locs = s.pendingLocations ?? [];
+        const props = s.pendingProps ?? [];
+        const onToggleChar = (id: string) => { aw?.toggleChar(id); host.requestUpdate(); };
+        const onToggleLoc = (id: string) => { aw?.toggleLoc(id); host.requestUpdate(); };
+        const onToggleProp = (id: string) => { aw?.toggleProp(id); host.requestUpdate(); };
+        const selectedCount = [...chars, ...locs, ...props].filter((x: any) => x.selected).length;
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Select which assets to import. Only checked items will be carried forward.</p>
+            ${selectedCount > 0 ? html`<p style="font-size:12px;color:#6c6;margin-bottom:8px;">${selectedCount} asset(s) selected</p>` : ''}
+
+            ${chars.length > 0 ? html`
+              <h4 style="font-size:13px;margin:8px 0 4px;"><i class="fa-solid fa-user"></i> Characters (${chars.length})</h4>
+              ${chars.map((c: any) => html`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #333;">
+                  <input type="checkbox" ?checked=${c.selected} @change=${() => onToggleChar(c.id)} />
+                  <span style="flex:1;font-size:13px;">${c.name}</span>
+                  <span style="font-size:11px;color:#888;">${c.role}</span>
+                </div>
+              `)}
+            ` : ''}
+
+            ${locs.length > 0 ? html`
+              <h4 style="font-size:13px;margin:12px 0 4px;"><i class="fa-solid fa-location-dot"></i> Locations (${locs.length})</h4>
+              ${locs.map((l: any) => html`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #333;">
+                  <input type="checkbox" ?checked=${l.selected} @change=${() => onToggleLoc(l.id)} />
+                  <span style="flex:1;font-size:13px;">${l.name}</span>
+                  <span style="font-size:11px;color:#888;">${l.intExt}</span>
+                </div>
+              `)}
+            ` : ''}
+
+            ${props.length > 0 ? html`
+              <h4 style="font-size:13px;margin:12px 0 4px;"><i class="fa-solid fa-wrench"></i> Props (${props.length})</h4>
+              ${props.map((p: any) => html`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #333;">
+                  <input type="checkbox" ?checked=${p.selected} @change=${() => onToggleProp(p.id)} />
+                  <span style="flex:1;font-size:13px;">${p.name}</span>
+                </div>
+              `)}
+            ` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 3 — Alignment & Rename */
+    {
+      title: 'Alignment & Rename',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const chars = (s.pendingCharacters ?? []).filter((c: any) => c.selected);
+        const locs = (s.pendingLocations ?? []).filter((l: any) => l.selected);
+        const props = (s.pendingProps ?? []).filter((p: any) => p.selected);
+        const onCharUpdate = (id: string, key: string) => (e: Event) => {
+          aw?.updateChar(id, { [key]: (e.target as HTMLInputElement).value });
+        };
+        const onLocUpdate = (id: string, key: string) => (e: Event) => {
+          aw?.updateLoc(id, { [key]: (e.target as HTMLInputElement).value });
+        };
+        const onPropUpdate = (id: string, key: string) => (e: Event) => {
+          aw?.updateProp(id, { [key]: (e.target as HTMLInputElement).value });
+        };
+        const onRemoveChar = (id: string) => { aw?.removeChar(id); host.requestUpdate(); };
+        const onRemoveLoc = (id: string) => { aw?.removeLoc(id); host.requestUpdate(); };
+        const onRemoveProp = (id: string) => { aw?.removeProp(id); host.requestUpdate(); };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Rename and configure imported assets to fit your new project context. Remove any you don't need.</p>
+
+            ${chars.map((c: any) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;gap:6px;margin-bottom:4px;">
+                  <input class="cg-field" style="flex:2;" .value=${c.name} @input=${onCharUpdate(c.id, 'name')} placeholder="Name" />
+                  <select class="cg-field" style="flex:0 0 120px;" .value=${c.role} @change=${onCharUpdate(c.id, 'role')}>
+                    <option value="protagonist">Protagonist</option>
+                    <option value="antagonist">Antagonist</option>
+                    <option value="supporting">Supporting</option>
+                    <option value="extra">Extra</option>
+                  </select>
+                  <button class="remove-chip-btn" @click=${() => onRemoveChar(c.id)} style="background:none;border:none;color:#f88;cursor:pointer;">×</button>
+                </div>
+                <input class="cg-field" style="width:100%;" .value=${c.description} @input=${onCharUpdate(c.id, 'description')} placeholder="Description" />
+              </div>
+            `)}
+
+            ${locs.map((l: any) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;gap:6px;margin-bottom:4px;">
+                  <input class="cg-field" style="flex:2;" .value=${l.name} @input=${onLocUpdate(l.id, 'name')} placeholder="Name" />
+                  <select class="cg-field" style="flex:0 0 100px;" .value=${l.intExt} @change=${onLocUpdate(l.id, 'intExt')}>
+                    <option value="INT">INT</option>
+                    <option value="EXT">EXT</option>
+                    <option value="INT/EXT">INT/EXT</option>
+                  </select>
+                  <button class="remove-chip-btn" @click=${() => onRemoveLoc(l.id)} style="background:none;border:none;color:#f88;cursor:pointer;">×</button>
+                </div>
+                <input class="cg-field" style="width:100%;" .value=${l.description} @input=${onLocUpdate(l.id, 'description')} placeholder="Description" />
+              </div>
+            `)}
+
+            ${props.map((p: any) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;gap:6px;margin-bottom:4px;">
+                  <input class="cg-field" style="flex:2;" .value=${p.name} @input=${onPropUpdate(p.id, 'name')} placeholder="Prop name" />
+                  <button class="remove-chip-btn" @click=${() => onRemoveProp(p.id)} style="background:none;border:none;color:#f88;cursor:pointer;">×</button>
+                </div>
+                <input class="cg-field" style="width:100%;" .value=${p.description} @input=${onPropUpdate(p.id, 'description')} placeholder="Description" />
+              </div>
+            `)}
+          </div>
+        `;
+      },
+    },
+    /* Slide 4 — Gap Analysis */
+    {
+      title: 'Gap Analysis',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const onAnalyze = () => {
+          const screenplay = (window as any).projectScreenplay?.text ?? '';
+          if (!screenplay) { alertCG('No screenplay found. Gap analysis requires a script in the current project.'); return; }
+          aw?.runGapAnalysis(screenplay);
+          host.requestUpdate();
+        };
+        const gap = s.gapAnalysis ?? { missingChars: [], missingLocs: [] };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Compare your imported assets against the current project's script. Missing characters or locations will be flagged so you can go back and include them.</p>
+            <button class="toolbar-btn btn-ai" @click=${onAnalyze} style="margin-bottom:12px;">
+              <i class="fa-solid fa-magnifying-glass"></i> Run Gap Analysis
+            </button>
+            ${gap.missingChars.length > 0 ? html`
+              <h4 style="font-size:13px;color:#e88;margin:8px 0 4px;">Missing Characters</h4>
+              ${gap.missingChars.map((name: string) => html`<div style="padding:2px 0;font-size:12px;color:#e88;">${name}</div>`)}
+            ` : html`<p style="color:#6c6;font-size:12px;">No missing characters detected.</p>`}
+            ${gap.missingLocs.length > 0 ? html`
+              <h4 style="font-size:13px;color:#e88;margin:12px 0 4px;">Missing Locations</h4>
+              ${gap.missingLocs.map((name: string) => html`<div style="padding:2px 0;font-size:12px;color:#e88;">${name}</div>`)}
+            ` : html`<p style="color:#6c6;font-size:12px;">No missing locations detected.</p>`}
+          </div>
+        `;
+      },
+    },
+    /* Slide 5 — Style Review */
+    {
+      title: 'Style Review',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const onToggleAdopt = () => { aw?.setStyleAdopted(!s.styleAdopted); host.requestUpdate(); };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Review the style references from the source project. Optionally carry them into your new project.</p>
+            <div style="background:#1a1a1a;padding:12px;border-radius:6px;margin-bottom:12px;">
+              <div style="margin-bottom:8px;">
+                <label style="font-size:12px;color:#aaa;display:block;">Lighting Mood</label>
+                <div style="font-size:13px;">${s.sourceLightingMood || '—'}</div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <label style="font-size:12px;color:#aaa;display:block;">Style Notes</label>
+                <div style="font-size:13px;">${s.sourceStyleNotes || '—'}</div>
+              </div>
+              ${s.sourceColorPalette?.length > 0 ? html`
+                <div>
+                  <label style="font-size:12px;color:#aaa;display:block;">Color Palette</label>
+                  <div style="display:flex;gap:6px;margin-top:4px;">
+                    ${s.sourceColorPalette.map((c: string) => html`
+                      <span style="display:inline-block;width:24px;height:24px;border-radius:4px;background:${c};border:1px solid #555;"></span>
+                    `)}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" ?checked=${s.styleAdopted} @change=${onToggleAdopt} />
+              <span style="font-size:13px;">Adopt these style references into the new project</span>
+            </label>
+          </div>
+        `;
+      },
+    },
+    /* Slide 6 — Build Scene Kit */
+    {
+      title: 'Build Scene Kit',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const onBuildKit = () => {
+          const payload = aw?.buildImportPayload();
+          if (!payload || (!payload.characters?.length && !payload.locations?.length && !payload.props?.length)) {
+            alertCG('No assets selected. Go back and select at least one asset to import.');
+            return;
+          }
+          const state = aw?.getState();
+          const lib = (window as any).assetLibrary ?? {};
+          if (!lib.characters) lib.characters = [];
+          if (!lib.locations) lib.locations = [];
+          if (!lib.props) lib.props = [];
+          for (const c of payload.characters ?? []) {
+            lib.characters.push({ id: c.id, name: c.name, role: c.role ?? 'supporting', desc: c.description, type: 'actor', usageRefs: [] });
+          }
+          for (const l of payload.locations ?? []) {
+            lib.locations.push({ id: l.id, name: l.name, tags: l.intExt, desc: l.description, usageRefs: [] });
+          }
+          for (const p of payload.props ?? []) {
+            lib.props.push({ id: p.id, name: p.name, desc: p.description, usageRefs: [] });
+          }
+          const { captureRuntimeProjectSnapshot, persistActiveProjectSettings } = window as any;
+          if (typeof captureRuntimeProjectSnapshot === 'function' && typeof persistActiveProjectSettings === 'function') {
+            persistActiveProjectSettings(s.projectId);
+          }
+          aw?.setKitBuilt();
+          host.requestUpdate();
+        };
+        const counts = {
+          chars: (s.pendingCharacters ?? []).filter((c: any) => c.selected).length,
+          locs: (s.pendingLocations ?? []).filter((l: any) => l.selected).length,
+          props: (s.pendingProps ?? []).filter((p: any) => p.selected).length,
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Ready to import ${counts.chars + counts.locs + counts.props} asset(s) into the current project.</p>
+            <div style="background:#1a1a1a;padding:12px;border-radius:6px;margin-bottom:12px;">
+              <p><strong>Characters:</strong> ${counts.chars}</p>
+              <p><strong>Locations:</strong> ${counts.locs}</p>
+              <p><strong>Props:</strong> ${counts.props}</p>
+            </div>
+            ${s.sceneKitBuilt ? html`
+              <div style="color:#4c6;margin-bottom:12px;"><i class="fa-solid fa-check-circle"></i> Assets imported successfully!</div>
+            ` : html`
+              <button class="toolbar-btn btn-ai" @click=${onBuildKit}>
+                <i class="fa-solid fa-boxes-stacked"></i> Import Assets into Project
+              </button>
+            `}
+          </div>
+        `;
+      },
+    },
+    /* Slide 7 — Script & Finish */
+    {
+      title: 'Script & Finish',
+      renderFn: (host) => {
+        const aw = (window as any).CineGen?.assetWizard;
+        const s = aw?.getState() ?? {};
+        const onGenerateOutline = async () => {
+          const payload = aw?.buildOutlinePayload();
+          if (!payload || (!payload.characters?.length && !payload.locations?.length)) {
+            alertCG('No characters or locations available. Import at least one character or location first.');
+            return;
+          }
+          const { generateScriptFromVisuals } = await import('../services/ai/agents-service');
+          try {
+            const result = await generateScriptFromVisuals(s.projectId, payload);
+            aw?.setScriptGenerated();
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[asset-wizard] outline error:', err);
+            alertCG('Failed to generate script outline.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Your imported assets are ready. Optionally generate a Fountain-format script outline based on the imported characters and locations.</p>
+            <div style="margin-bottom:12px;">
+              ${s.scriptGenerated ? html`
+                <div style="color:#4c6;margin-bottom:8px;"><i class="fa-solid fa-check-circle"></i> Script outline generated</div>
+                <button class="toolbar-btn" @click=${onGenerateOutline}><i class="fa-solid fa-rotate"></i> Regenerate</button>
+              ` : html`
+                <button class="toolbar-btn btn-ai" @click=${onGenerateOutline}>
+                  <i class="fa-solid fa-scroll"></i> Generate Script Outline
+                </button>
+              `}
+            </div>
+            <div style="margin-top:24px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #444;padding-top:16px;">
+              <button class="toolbar-btn btn-ai" @click=${() => closeModal('asset-wizard-modal')}>
+                <i class="fa-solid fa-check"></i> Finish & Close Wizard
+              </button>
+            </div>
+          </div>
+        `;
+      },
+    },
+  ],
+  'storyboard-wizard-modal': [
+    /* Slide 0 — Beat/Thumbnail Input */
+    {
+      title: 'Beat/Thumbnail Input',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const beats = s.beats ?? [];
+        const totalDuration = beats.reduce((sum: number, b: any) => sum + (b.durationSeconds || 5), 0);
+        const onAdd = () => {
+          const input = host.querySelector('#bb-add-title') as HTMLInputElement;
+          const desc = host.querySelector('#bb-add-desc') as HTMLTextAreaElement;
+          const cam = host.querySelector('#bb-add-cam') as HTMLInputElement;
+          if (!input?.value?.trim()) return;
+          bb?.addBeat(input.value.trim(), desc?.value?.trim() || '', cam?.value?.trim() || '');
+          if (input) input.value = '';
+          if (desc) desc.value = '';
+          if (cam) cam.value = '';
+          host.requestUpdate();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <div style="margin-bottom:12px;">
+              <input class="cg-field" id="bb-add-title" placeholder="Beat title (e.g. Opening)" style="width:100%;margin-bottom:6px;" />
+              <textarea class="cg-field" id="bb-add-desc" placeholder="Description — what happens in this beat?" style="width:100%;min-height:48px;margin-bottom:6px;"></textarea>
+              <input class="cg-field" id="bb-add-cam" placeholder="Camera notes (optional)" style="width:100%;margin-bottom:6px;" />
+              <button class="toolbar-btn btn-ai" @click=${onAdd} style="width:100%;">
+                <i class="fa-solid fa-plus"></i> Add Beat
+              </button>
+            </div>
+            ${beats.length === 0 ? html`<p style="color:#888;font-size:13px;text-align:center;">No beats yet. Add your first beat above.</p>` : ''}
+            ${beats.map((b: any, i: number) => html`
+              <div style="border:1px solid #444;border-radius:6px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <strong style="font-size:13px;">#${i + 1} ${b.title}</strong>
+                  <div style="display:flex;gap:4px;">
+                    <button class="toolbar-btn" style="font-size:11px;padding:2px 6px;" ?disabled=${i === 0} @click=${() => { bb?.reorderBeat(b.id, -1); host.requestUpdate(); }}>
+                      <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                    <button class="toolbar-btn" style="font-size:11px;padding:2px 6px;" ?disabled=${i >= beats.length - 1} @click=${() => { bb?.reorderBeat(b.id, 1); host.requestUpdate(); }}>
+                      <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                    <button class="toolbar-btn" style="font-size:11px;padding:2px 6px;color:#f88;" @click=${() => { bb?.removeBeat(b.id); host.requestUpdate(); }}>
+                      <i class="fa-solid fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:#aaa;">${b.description}</div>
+                ${b.cameraNotes ? html`<div style="font-size:11px;color:#888;margin-top:2px;"><i class="fa-solid fa-camera"></i> ${b.cameraNotes}</div>` : ''}
+                <div style="font-size:11px;color:#666;margin-top:2px;">${b.durationSeconds}s</div>
+              </div>
+            `)}
+            ${beats.length > 0 ? html`<div style="font-size:12px;color:#888;text-align:right;">Total: ${totalDuration}s (${beats.length} beat${beats.length > 1 ? 's' : ''})</div>` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 1 — Script Outline Creation */
+    {
+      title: 'Script Outline Creation',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const onGenerate = async () => {
+          const payload = bb?.buildOutlinePayload();
+          if (!payload || !payload.beats?.length) { (window as any).alertCG?.('Add at least one beat first.'); return; }
+          try {
+            const { generateOutlineFromBeats } = await import('../services/ai/agents-service');
+            const result = await generateOutlineFromBeats(s.projectId || 'proj', payload);
+            const data = typeof result.data === 'string' ? JSON.parse(result.data) : result.data;
+            bb?.setScriptOutline(data.outline || data.text || '');
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[beat-board] outline error:', err);
+            (window as any).alertCG?.('Failed to generate outline.');
+          }
+        };
+        const detectedChars = (() => { try { return JSON.parse(s.scriptOutline || '{}')?.detectedCharacters || []; } catch { return []; } })();
+        const detectedLocs = (() => { try { return JSON.parse(s.scriptOutline || '{}')?.detectedLocations || []; } catch { return []; } })();
+        const outlineText = (() => { try { const o = JSON.parse(s.scriptOutline || '{}'); return o.outline || o.text || ''; } catch { return ''; } })();
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Generate a Fountain-format script outline from your beats. Characters and locations will be automatically detected.</p>
+            <button class="toolbar-btn btn-ai" @click=${onGenerate} ?disabled=${s.generationStatus === 'generating'} style="margin-bottom:12px;">
+              <i class="fa-solid fa-scroll"></i> Generate Outline from Beats
+            </button>
+            ${s.scriptGenerated ? html`
+              ${detectedChars.length > 0 ? html`
+                <div style="margin-bottom:8px;">
+                  <strong style="font-size:12px;">Detected Characters:</strong>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                    ${detectedChars.map((n: string) => html`<span style="background:#333;padding:2px 8px;border-radius:10px;font-size:11px;">${n}</span>`)}
+                  </div>
+                </div>
+              ` : ''}
+              ${detectedLocs.length > 0 ? html`
+                <div style="margin-bottom:8px;">
+                  <strong style="font-size:12px;">Detected Locations:</strong>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                    ${detectedLocs.map((n: string) => html`<span style="background:#333;padding:2px 8px;border-radius:10px;font-size:11px;">${n}</span>`)}
+                  </div>
+                </div>
+              ` : ''}
+              ${outlineText ? html`
+                <div style="background:#1a1a1a;padding:8px;border-radius:4px;max-height:160px;overflow-y:auto;font-size:11px;font-family:monospace;white-space:pre-wrap;">${outlineText}</div>
+              ` : ''}
+              <button class="toolbar-btn" @click=${onGenerate} style="margin-top:8px;"><i class="fa-solid fa-rotate"></i> Regenerate</button>
+            ` : ''}
+          </div>
+        `;
+      },
+    },
+    /* Slide 2 — Character & Location Placeholders */
+    {
+      title: 'Character & Location Placeholders',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const chars = s.characters ?? [];
+        const locs = s.locations ?? [];
+        const onAddChar = () => {
+          const el = host.querySelector('#bb-char-name') as HTMLInputElement;
+          if (!el?.value?.trim()) return;
+          bb?.addCharacter(el.value.trim());
+          el.value = '';
+          host.requestUpdate();
+        };
+        const onAddLoc = () => {
+          const el = host.querySelector('#bb-loc-name') as HTMLInputElement;
+          const sel = host.querySelector('#bb-loc-ie') as HTMLSelectElement;
+          if (!el?.value?.trim()) return;
+          bb?.addLocation(el.value.trim(), sel?.value || 'INT/EXT');
+          el.value = '';
+          host.requestUpdate();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+              <div>
+                <h4 style="font-size:13px;margin-bottom:6px;"><i class="fa-solid fa-user"></i> Characters</h4>
+                <div style="display:flex;gap:4px;margin-bottom:6px;">
+                  <input class="cg-field" id="bb-char-name" placeholder="Name" style="flex:1;" />
+                  <button class="toolbar-btn btn-ai" @click=${onAddChar} style="padding:4px 8px;"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                ${chars.map((c: any) => html`
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #333;font-size:12px;">
+                    <span>${c.name}</span>
+                    <button class="toolbar-btn" style="font-size:10px;padding:1px 4px;color:#f88;" @click=${() => { bb?.removeCharacter(c.id); host.requestUpdate(); }}><i class="fa-solid fa-times"></i></button>
+                  </div>
+                `)}
+              </div>
+              <div>
+                <h4 style="font-size:13px;margin-bottom:6px;"><i class="fa-solid fa-location-dot"></i> Locations</h4>
+                <div style="display:flex;gap:4px;margin-bottom:6px;">
+                  <input class="cg-field" id="bb-loc-name" placeholder="Name" style="flex:1;" />
+                  <select class="cg-field" id="bb-loc-ie" style="width:80px;font-size:11px;">
+                    <option value="INT">INT</option>
+                    <option value="EXT">EXT</option>
+                    <option value="INT/EXT" selected>INT/EXT</option>
+                  </select>
+                  <button class="toolbar-btn btn-ai" @click=${onAddLoc} style="padding:4px 8px;"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                ${locs.map((l: any) => html`
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #333;font-size:12px;">
+                    <span>${l.name} <span style="color:#888;">(${l.intExt})</span></span>
+                    <button class="toolbar-btn" style="font-size:10px;padding:1px 4px;color:#f88;" @click=${() => { bb?.removeLocation(l.id); host.requestUpdate(); }}><i class="fa-solid fa-times"></i></button>
+                  </div>
+                `)}
+              </div>
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 3 — Reference Recommendation */
+    {
+      title: 'Reference Recommendation',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const queue = s.referenceQueue ?? [];
+        const onScan = () => { bb?.runReferenceSuggestion(); host.requestUpdate(); };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Scan your beats for potential missing assets that may need reference images or sheets.</p>
+            <button class="toolbar-btn btn-ai" @click=${onScan} style="margin-bottom:12px;">
+              <i class="fa-solid fa-magnifying-glass"></i> Scan for Missing References
+            </button>
+            ${queue.length === 0 ? html`<p style="color:#888;font-size:13px;">No reference suggestions yet. Click the scan button above.</p>` : ''}
+            ${queue.map((item: any, i: number) => html`
+              <div style="display:flex;align-items:center;gap:8px;padding:6px;border:1px solid #444;border-radius:4px;margin-bottom:4px;">
+                <span style="font-size:11px;color:#888;width:24px;">#${i + 1}</span>
+                <span style="flex:1;font-size:12px;">${item.label}</span>
+                <span style="font-size:10px;background:#333;padding:1px 6px;border-radius:8px;color:#aaa;">${item.assetType}</span>
+                <span style="font-size:10px;color:#888;">P${item.priority}</span>
+              </div>
+            `)}
+          </div>
+        `;
+      },
+    },
+    /* Slide 4 — Style & Mood Layer */
+    {
+      title: 'Style & Mood Layer',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const moods = ['neutral', 'warm', 'cool', 'tense', 'dreamy'];
+        return html`
+          <div class="script-wizard-form">
+            <div style="margin-bottom:12px;">
+              <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Mood</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${moods.map((m) => html`
+                  <span style="padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;background:${s.styleMood === m ? '#368' : '#333'};"
+                    @click=${() => { bb?.setStyleMood(m); host.requestUpdate(); }}>
+                    ${m}
+                  </span>
+                `)}
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Lighting</label>
+              <input class="cg-field" style="width:100%;" .value=${s.lightingMood || ''} @input=${(e: any) => { bb?.setLightingMood(e.target.value); host.requestUpdate(); }} placeholder="e.g. Soft golden hour, harsh noon sun" />
+            </div>
+            <div style="margin-bottom:12px;">
+              <label style="font-size:12px;color:#aaa;display:block;margin-bottom:4px;">Color Palette</label>
+              <cg-color-palette
+                .palette=${s.colorPalette ?? []}
+                style="display:block;"
+                @cg-palette-change=${(e: any) => {
+                  bb?.setColorPalette(e.detail.palette);
+                  host.requestUpdate();
+                }}
+              ></cg-color-palette>
+            </div>
+          </div>
+        `;
+      },
+    },
+    /* Slide 5 — Asset Generation Prompts */
+    {
+      title: 'Asset Generation Prompts',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const chars = s.characters ?? [];
+        const locs = s.locations ?? [];
+        const onGenerate = async () => {
+          (window as any).alertCG?.('Asset generation will create character sheets and background plates. This feature is coming soon.');
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Generate reference assets for your characters and locations. These will be used when refining storyboards.</p>
+            <div style="background:#1a1a1a;padding:10px;border-radius:6px;margin-bottom:12px;">
+              <p style="font-size:12px;margin-bottom:4px;"><strong>Characters:</strong> ${chars.length > 0 ? chars.map((c: any) => c.name).join(', ') : 'none'}</p>
+              <p style="font-size:12px;"><strong>Locations:</strong> ${locs.length > 0 ? locs.map((l: any) => `${l.name} (${l.intExt})`).join(', ') : 'none'}</p>
+            </div>
+            <button class="toolbar-btn btn-ai" @click=${onGenerate} ?disabled=${chars.length === 0 && locs.length === 0} style="width:100%;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate References
+            </button>
+          </div>
+        `;
+      },
+    },
+    /* Slide 6 — Refine Storyboards */
+    {
+      title: 'Refine Storyboards',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const beats = s.beats ?? [];
+        const onGenerateFrames = async () => {
+          if (beats.length === 0) { (window as any).alertCG?.('Add at least one beat first.'); return; }
+          try {
+            const { generateStoryboardFrames } = await import('../services/ai/agents-service');
+            const result = await generateStoryboardFrames(s.projectId || 'proj');
+            bb?.setStoryboardsGenerated(beats.length);
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[beat-board] storyboard error:', err);
+            (window as any).alertCG?.('Failed to generate storyboard frames.');
+          }
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Generate storyboard frames from your ${beats.length} beat(s). Each beat will produce a storyboard frame that can be refined later.</p>
+            <div style="background:#1a1a1a;padding:10px;border-radius:6px;margin-bottom:12px;">
+              <p style="font-size:12px;"><strong>Beats:</strong> ${beats.length}</p>
+              <p style="font-size:12px;"><strong>Characters:</strong> ${(s.characters ?? []).length}</p>
+              <p style="font-size:12px;"><strong>Locations:</strong> ${(s.locations ?? []).length}</p>
+            </div>
+            ${s.storyboardsGenerated ? html`
+              <div style="color:#4c6;margin-bottom:8px;"><i class="fa-solid fa-check-circle"></i> ${s.storyboardFrameCount} frame(s) generated</div>
+              <button class="toolbar-btn" @click=${onGenerateFrames}><i class="fa-solid fa-rotate"></i> Regenerate</button>
+            ` : html`
+              <button class="toolbar-btn btn-ai" @click=${onGenerateFrames} style="width:100%;">
+                <i class="fa-solid fa-film"></i> Generate Storyboard Frames from Beats
+              </button>
+            `}
+          </div>
+        `;
+      },
+    },
+    /* Slide 7 — Full Project Assembly */
+    {
+      title: 'Full Project Assembly',
+      renderFn: (host) => {
+        const bb = (window as any).CineGen?.beatBoard;
+        const s = bb?.getState?.() ?? {};
+        const beats = s.beats ?? [];
+        const chars = s.characters ?? [];
+        const locs = s.locations ?? [];
+        const onBuildKit = () => {
+          const payload = bb?.buildImportPayload();
+          if (!payload || (!payload.characters?.length && !payload.locations?.length)) {
+            (window as any).alertCG?.('No assets to import.');
+            return;
+          }
+          bb?.setKitBuilt();
+          host.requestUpdate();
+        };
+        return html`
+          <div class="script-wizard-form">
+            <p style="margin-bottom:12px;">Your storyboard sketch is ready for project assembly. Review the summary below then build your scene kit.</p>
+            <div style="background:#1a1a1a;padding:12px;border-radius:6px;margin-bottom:12px;">
+              <p style="font-size:12px;margin-bottom:4px;"><i class="fa-solid fa-list"></i> <strong>${beats.length}</strong> beats</p>
+              <p style="font-size:12px;margin-bottom:4px;"><i class="fa-solid fa-user"></i> <strong>${chars.length}</strong> characters</p>
+              <p style="font-size:12px;margin-bottom:4px;"><i class="fa-solid fa-location-dot"></i> <strong>${locs.length}</strong> locations</p>
+              <p style="font-size:12px;margin-bottom:4px;"><i class="fa-solid fa-film"></i> <strong>${s.storyboardsGenerated ? s.storyboardFrameCount : 0}</strong> storyboard frames</p>
+              <p style="font-size:12px;"><i class="fa-solid fa-palette"></i> Style: ${s.styleMood || 'none'} ${s.lightingMood ? `(${s.lightingMood})` : ''}</p>
+            </div>
+            ${s.sceneKitBuilt ? html`
+              <div style="color:#4c6;margin-bottom:12px;"><i class="fa-solid fa-check-circle"></i> Scene kit built successfully!</div>
+            ` : html`
+              <button class="toolbar-btn btn-ai" @click=${onBuildKit} style="width:100%;margin-bottom:8px;">
+                <i class="fa-solid fa-boxes-stacked"></i> Build Scene Kit
+              </button>
+            `}
+            <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #444;padding-top:12px;">
+              <button class="toolbar-btn btn-ai" @click=${() => closeModal('storyboard-wizard-modal')}>
+                <i class="fa-solid fa-check"></i> Finish & Close Wizard
+              </button>
+            </div>
+          </div>
+        `;
+      },
+    },
+  ],
+};
+
+const wizardIndices: Record<string, number> = {};
 
 const DEBUG_SETTINGS_STORAGE_KEYS = [
   PREFS_KEY,
@@ -60,6 +2295,20 @@ declare const projectData: { name: string };
 declare const loadProjectFromCineFile: (filename: string) => void;
 declare let currentSceneId: string | undefined;
 declare const currentSceneData: Record<string, { broll?: Array<{ id: number; label: string }> }>;
+declare function addItemsToLibrary(bucket: string, values: string[], icon?: string, desc?: string): void;
+declare function generateBoards(): Promise<void>;
+declare function generateStoryboardReferences(): Promise<void>;
+declare function hydrateScriptEditorFromProject(): void;
+declare function setProjectFountainText(text: string): void;
+declare function renderBreakdownTable(): void;
+declare function renderGlobalAssets(tabIndex?: number): void;
+declare function renderScriptInfoTables(): void;
+declare function scheduleFountainRender(): void;
+declare function renderStoryboard(): void;
+declare function refreshShotFrameTree(): void;
+declare function updateInspector(kind: string, data: unknown): void;
+declare function renderFullTree(): void;
+declare function renderTimeline(): void;
 
 function getGuideSectionIndex(id: string): number {
   return GUIDE_SECTIONS.findIndex((s) => s.id === id);
@@ -103,6 +2352,91 @@ export function guideModalStep(delta: number): void {
   const next = guideModalSectionIndex + delta;
   if (next < 0 || next >= GUIDE_SECTIONS.length) return;
   renderGuideModalSection(next);
+}
+
+/* ── Entry-point wizard navigation (generic + per-modal) ───────────────────── */
+
+function renderEntryWizardSlide(modalId: string, index: number): void {
+  const slides = WIZARD_SLIDES[modalId];
+  const slide = slides?.[index];
+  const modal = document.getElementById(modalId);
+  const titleEl = document.getElementById(`${modalId}-title`);
+  const bodyEl = document.querySelector<CinegenEntryWizardBody>(`#${modalId} cinegen-entry-wizard-body`);
+  const progressEl = document.getElementById(`${modalId}-progress`);
+  const prevBtn = document.getElementById(`${modalId}-prev`) as HTMLButtonElement | null;
+  const nextBtn = document.getElementById(`${modalId}-next`) as HTMLButtonElement | null;
+  if (!slide || !modal || !titleEl || !bodyEl) return;
+
+  wizardIndices[modalId] = index;
+  bodyEl.slides = slides;
+  bodyEl.showSlide(index);
+  titleEl.innerHTML = `<i class="${escHtml(getWizardIcon(modalId))}" aria-hidden="true"></i> ${escHtml(slide.title)}`;
+  if (progressEl) progressEl.textContent = `${index + 1} of ${slides.length}`;
+  if (prevBtn) prevBtn.disabled = index <= 0;
+  if (nextBtn) nextBtn.disabled = index >= slides.length - 1;
+}
+
+function getWizardIcon(modalId: string): string {
+  const map: Record<string, string> = {
+    'script-wizard-modal': 'fa-solid fa-scroll',
+    'visual-wizard-modal': 'fa-solid fa-image',
+    'concept-wizard-modal': 'fa-solid fa-palette',
+    'asset-wizard-modal': 'fa-solid fa-boxes-stacked',
+    'storyboard-wizard-modal': 'fa-solid fa-pen-ruler',
+  };
+  return map[modalId] ?? 'fa-solid fa-wand-magic-sparkles';
+}
+
+function entryWizardStep(modalId: string, delta: number): void {
+  const current = wizardIndices[modalId] ?? 0;
+  const next = current + delta;
+  const slides = WIZARD_SLIDES[modalId];
+  if (!slides || next < 0 || next >= slides.length) return;
+  renderEntryWizardSlide(modalId, next);
+}
+
+async function openEntryWizardModal(modalId: string): Promise<void> {
+  closeAllToolbarSplitMenus();
+  closeAllModalsExcept(modalId);
+  await openModalAsync(modalId);
+  renderEntryWizardSlide(modalId, 0);
+}
+
+export function openScriptWizardModal(): void {
+  resetScriptWizardState();
+  void openEntryWizardModal('script-wizard-modal');
+}
+export function closeScriptWizardModal(): void {
+  closeModal('script-wizard-modal');
+}
+
+export function openVisualWizardModal(): void {
+  void openEntryWizardModal('visual-wizard-modal');
+}
+export function closeVisualWizardModal(): void {
+  closeModal('visual-wizard-modal');
+}
+
+export function openConceptWizardModal(): void {
+  void openEntryWizardModal('concept-wizard-modal');
+}
+export function closeConceptWizardModal(): void {
+  closeModal('concept-wizard-modal');
+}
+
+export function openAssetWizardModal(): void {
+  void openEntryWizardModal('asset-wizard-modal');
+}
+export function closeAssetWizardModal(): void {
+  closeModal('asset-wizard-modal');
+}
+
+export function openStoryboardWizardModal(): void {
+  (window as any).CineGen?.beatBoard?.reset();
+  void openEntryWizardModal('storyboard-wizard-modal');
+}
+export function closeStoryboardWizardModal(): void {
+  closeModal('storyboard-wizard-modal');
 }
 
 export function closeProjectsModal(): void {
@@ -158,8 +2492,7 @@ export function launchAiAssistAction(kind: string, actionId: string): void {
     }
     if (actionId === 'suggest-pickups') {
       closeAiAssistModal();
-      const view = document.getElementById('current-view-label');
-      const viewText = view ? view.textContent : '';
+      const viewText = appShellStore.currentViewLabel || '';
       if (
         viewText?.includes('Scene') &&
         typeof currentSceneId !== 'undefined' &&
@@ -280,8 +2613,13 @@ function renderProjectSettingsResolutionSelect(
   if (first) sel.value = first;
 }
 
+function readProjectSettingsSelectValue(id: string, fallback = ''): string {
+  const el = document.getElementById(id) as HTMLSelectElement | null;
+  return el?.value ?? fallback;
+}
+
 function populateProjectSettingsForm(): void {
-  const active = projectRegistry.find((p) => p.id === appShellStore.activeProjectId);
+  const active = getActiveProjectRegistryEntry();
   const settings =
     typeof window.getActiveProjectSettings === 'function' ? window.getActiveProjectSettings() : {};
   const hintEl = document.getElementById('project-settings-save-hint');
@@ -322,9 +2660,12 @@ export function openProjectSettingsModal(): void {
 }
 
 export function saveProjectSettingsModal(): void {
-  const project = projectRegistry.find((p) => p.id === appShellStore.activeProjectId);
+  const project = getActiveProjectRegistryEntry();
   const nameEl = document.getElementById('project-settings-name') as HTMLInputElement | null;
-  if (!project || !nameEl) return;
+  if (!project || !nameEl) {
+    console.warn('CineGen: cannot save project settings — no active project.');
+    return;
+  }
 
   const rawName = String(nameEl.value || '').trim();
   if (!rawName) {
@@ -333,29 +2674,34 @@ export function saveProjectSettingsModal(): void {
   }
 
   window.ensureProjectSettingsRecord?.(project);
-  const aspectRaw = (document.getElementById('project-settings-aspect') as HTMLSelectElement).value;
+  const aspectRaw = readProjectSettingsSelectValue('project-settings-aspect', '16:9');
   project.settings = project.settings || {};
   project.settings.aspectRatio =
     typeof window.normalizeProjectAspectRatio === 'function'
       ? window.normalizeProjectAspectRatio(aspectRaw)
       : aspectRaw;
-  const resRaw = (document.getElementById('project-settings-resolution') as HTMLSelectElement).value;
+  const resRaw = readProjectSettingsSelectValue('project-settings-resolution');
   project.settings.defaultResolution =
     typeof window.normalizeProjectResolutionForAspect === 'function'
       ? window.normalizeProjectResolutionForAspect(project.settings.aspectRatio as string, resRaw)
       : resRaw;
-  project.settings.frameRate = (
-    document.getElementById('project-settings-fps') as HTMLSelectElement
-  ).value;
-  project.settings.timecodeMode = (
-    document.getElementById('project-settings-tc-mode') as HTMLSelectElement
-  ).value;
-  project.settings.colorSpace = (
-    document.getElementById('project-settings-colorspace') as HTMLSelectElement
-  ).value;
+  project.settings.frameRate = readProjectSettingsSelectValue(
+    'project-settings-fps',
+    String(project.settings.frameRate ?? '24')
+  );
+  project.settings.timecodeMode = readProjectSettingsSelectValue(
+    'project-settings-tc-mode',
+    String(project.settings.timecodeMode ?? 'ndf')
+  );
+  project.settings.colorSpace = readProjectSettingsSelectValue(
+    'project-settings-colorspace',
+    String(project.settings.colorSpace ?? 'Rec.709')
+  );
 
   project.name = rawName;
   syncActiveProjectName(rawName);
+  persistActiveProjectSettings(activeProjectId);
+  window.updateProjectTreeHeader?.();
   window.renderProjectsMenu?.();
 
   const hintEl = document.getElementById('project-settings-save-hint');
@@ -389,6 +2735,8 @@ export function openProjectsModal(): void {
 function openProjectFromProjectsHub(projectId: string): void {
   const proj = projectRegistry.find((p) => p.id === projectId);
   if (!proj || projectId === appShellStore.activeProjectId) return;
+  prepareActiveProjectTreeUiForSwitch();
+  resetProjectTreeUiRestoreFlag();
   if (proj.file) loadProjectFromCineFile(proj.file);
   const local = !proj.file ? openProjectFromService(projectId) : null;
   appShellStore.setActiveProjectId(projectId);
@@ -400,6 +2748,8 @@ function openProjectFromProjectsHub(projectId: string): void {
   refresh.renderTimeline?.();
   refresh.hydrateScriptEditorFromProject?.();
   window.renderProjectsMenu?.();
+  primePersistedProjectTreeUi(projectId);
+  queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
   closeProjectsModal();
 }
 
@@ -417,8 +2767,7 @@ export function syncActiveProjectName(name: string): void {
   const active = projectRegistry.find((p) => p.id === appShellStore.activeProjectId);
   if (active) active.name = trimmed;
   window.updateProjectTreeHeader?.();
-  const statusEl = document.getElementById('project-name');
-  if (statusEl) statusEl.textContent = `Project: ${trimmed}`;
+  window.dispatchEvent(new CustomEvent('cinegen:project-name-changed', { detail: { name: trimmed } }));
 }
 
 export function importScript(): void {
@@ -535,13 +2884,6 @@ export function stubNewBlankProject(): void {
   closeProjectsModal();
 }
 
-export function stubImportProjectBaseline(): void {
-  alertCG('Import screenplay / production bible (coming soon).');
-}
-
-export function stubProjectGenerationAgent(): void {
-  alertCG('Project Generation Agent — guided walkthrough (coming soon).');
-}
 
 export function registerToolbarModals(): void {
   registerModal({ id: 'guide-modal', bodyClass: 'guide-modal-open' });
@@ -552,6 +2894,11 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'debug-modal', hostOverflowY: 'auto' });
   registerModal({ id: 'section-settings-modal' });
   registerModal({ id: 'ai-provider-info-modal' });
+  registerModal({ id: 'script-wizard-modal' });
+  registerModal({ id: 'visual-wizard-modal' });
+  registerModal({ id: 'concept-wizard-modal' });
+  registerModal({ id: 'asset-wizard-modal' });
+  registerModal({ id: 'storyboard-wizard-modal' });
 }
 
 export function openDebugModal(): void {
@@ -616,9 +2963,17 @@ export function installToolbarModalGlobals(): void {
   window.exportScreenplay = exportScreenplay;
   window.syncActiveProjectName = syncActiveProjectName;
   window.stubNewBlankProject = stubNewBlankProject;
-  window.stubImportProjectBaseline = stubImportProjectBaseline;
-  window.stubProjectGenerationAgent = stubProjectGenerationAgent;
   window.importScript = importScript;
+  window.openScriptWizardModal = openScriptWizardModal;
+  window.closeScriptWizardModal = closeScriptWizardModal;
+  window.openVisualWizardModal = openVisualWizardModal;
+  window.closeVisualWizardModal = closeVisualWizardModal;
+  window.openConceptWizardModal = openConceptWizardModal;
+  window.closeConceptWizardModal = closeConceptWizardModal;
+  window.openAssetWizardModal = openAssetWizardModal;
+  window.closeAssetWizardModal = closeAssetWizardModal;
+  window.openStoryboardWizardModal = openStoryboardWizardModal;
+  window.closeStoryboardWizardModal = closeStoryboardWizardModal;
 }
 
 export function wireToolbarModalDismissals(): void {
@@ -676,23 +3031,42 @@ export function wireToolbarModalDismissals(): void {
   document.querySelectorAll('[data-cg-close="project-settings-modal"]').forEach((el) => {
     el.addEventListener('click', () => closeProjectSettingsModal());
   });
-  document.querySelector('[data-project-settings-action="back"]')?.addEventListener('click', () => {
-    closeProjectSettingsModal();
-    openSettingsModal();
-  });
-  document.querySelector('[data-project-settings-action="save"]')?.addEventListener('click', () =>
-    saveProjectSettingsModal()
-  );
+  const projectSettingsModal = document.getElementById('project-settings-modal');
+  if (projectSettingsModal && projectSettingsModal.dataset.cgProjectSettingsWired !== '1') {
+    projectSettingsModal.dataset.cgProjectSettingsWired = '1';
+    projectSettingsModal.addEventListener('click', (e) => {
+      const actionEl = (e.target as HTMLElement).closest('[data-project-settings-action]');
+      if (!actionEl) return;
+      const action = (actionEl as HTMLElement).dataset.projectSettingsAction;
+      if (action === 'save') {
+        e.preventDefault();
+        saveProjectSettingsModal();
+        return;
+      }
+      if (action === 'back') {
+        closeProjectSettingsModal();
+        openSettingsModal();
+      }
+    });
+  }
 
   const PROJECT_ACTIONS: Record<string, () => void> = {
     'blank-project': stubNewBlankProject,
-    'import-baseline': stubImportProjectBaseline,
-    'generation-agent': stubProjectGenerationAgent,
+    'script-wizard': openScriptWizardModal,
+    'visual-wizard': openVisualWizardModal,
+    'concept-wizard': openConceptWizardModal,
+    'asset-wizard': openAssetWizardModal,
+    'storyboard-wizard': openStoryboardWizardModal,
   };
   document.querySelectorAll('[data-project-action]').forEach((el) => {
     const action = (el as HTMLElement).dataset.projectAction;
     if (!action || !PROJECT_ACTIONS[action]) return;
     el.addEventListener('click', PROJECT_ACTIONS[action]);
   });
+
+  for (const modalId of Object.keys(WIZARD_SLIDES)) {
+    document.getElementById(`${modalId}-prev`)?.addEventListener('click', () => entryWizardStep(modalId, -1));
+    document.getElementById(`${modalId}-next`)?.addEventListener('click', () => entryWizardStep(modalId, 1));
+  }
 }
 

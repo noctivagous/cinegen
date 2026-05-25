@@ -5,3 +5,5 @@ import './cinegen-project-sidebar';
 import './cinegen-status-bar';
 import './cinegen-toolbar';
 import './cinegen-overview-preview';
+import './cinegen-previs-timeline-dock';
+import '@/components/panels/cinegen-timeline';

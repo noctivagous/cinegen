@@ -1,53 +1,16 @@
 /**
- * Persistence abstraction — enables migration from localStorage to a server
- * backend without touching every call site.
+ * Server-backed persistence abstraction.
  *
- * VITE_PROJECT_PERSISTENCE_MODE (local | server) is read at runtime.
+ * Storage reads/writes in the app should go through this module so state is
+ * shared across browser instances that connect to the same server URL.
  * ServerPersistence uses an in-memory cache with async background flush so
- * that the synchronous Persistence interface is preserved.
- *
- * ── CRITICAL NOTE ──
- * In any collaborative or multi-user deployment, do NOT use localStorage for
- * API keys, provider settings, or any user/team configuration. localStorage
- * is single-origin, single-machine only — it does not sync across users or
- * devices. Use ServerPersistence (VITE_PROJECT_PERSISTENCE_MODE=server) or
- * the dedicated /api/settings/* endpoints instead.
- *
- * The LocalStoragePersistence class below exists for single-user/development
- * convenience only. Do NOT add new localStorage write paths for sensitive data.
- * ──────────────────
+ * the synchronous Persistence interface remains stable for existing call sites.
  */
 
 export interface Persistence {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
-}
-
-class LocalStoragePersistence implements Persistence {
-  getItem(key: string): string | null {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  }
-
-  setItem(key: string, value: string): void {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      /* noop — quota exceeded or private mode */
-    }
-  }
-
-  removeItem(key: string): void {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* noop */
-    }
-  }
 }
 
 class ServerPersistence implements Persistence {
@@ -125,20 +88,11 @@ class ServerPersistence implements Persistence {
   }
 }
 
-function createPersistence(): Persistence {
-  const mode = (import.meta.env.VITE_PROJECT_PERSISTENCE_MODE as string) || 'local';
-  if (mode === 'server') {
-    return new ServerPersistence();
-  }
-  return new LocalStoragePersistence();
-}
-
 /** Singleton persistence instance. */
-export const storageService: Persistence = createPersistence();
+const serverPersistence = new ServerPersistence();
+export const storageService: Persistence = serverPersistence;
 
-/** Preload server-side keys into the cache when running in server mode. */
+/** Preload server-side keys into the cache so sync reads work on boot. */
 export async function preloadServerPersistence(keys: string[]): Promise<void> {
-  if (storageService instanceof ServerPersistence) {
-    await storageService.preload(keys);
-  }
+  await serverPersistence.preload(keys);
 }

@@ -6,6 +6,7 @@ import { assetDetailData, breakdownData, currentSceneData } from '@/data/project
 import type { TreeNode } from '@/tree/tree-types';
 import { assetStatusClass, assetStatusLabel } from '@/workspace/overview-helpers';
 import { workspaceState } from '@/workspace/workspace-state';
+import { buildShotListRows, formatShotDisplayLabel } from '@/workspace/shot-frame-bridge';
 import { escHtml } from '@/utils/html';
 
 type AssetItem = {
@@ -56,54 +57,7 @@ export class CinegenOverviewMasterDetail extends CgLightElement {
   }
 
   private _shotListTemplate() {
-    const rows: Array<{
-      scene: string;
-      type: string;
-      label: string;
-      duration: string;
-      status: string;
-    }> = [];
-
-    Object.values(currentSceneData).forEach((scene) => {
-      const sceneLabel = (scene.title || '').split(' - ')[0] || '?';
-      if (scene.master) {
-        rows.push({
-          scene: sceneLabel,
-          type: 'Master Shot',
-          label: scene.master.label,
-          duration: scene.master.duration,
-          status: scene.master.status || '—',
-        });
-      }
-      (scene.coverage || []).forEach((shot: { type: string; label: string; duration: string; bestTake?: boolean }) => {
-        rows.push({
-          scene: sceneLabel,
-          type: shot.type,
-          label: shot.label,
-          duration: shot.duration,
-          status: shot.bestTake ? 'best take' : 'take',
-        });
-      });
-      (scene.broll || []).forEach((b: { label: string; duration: string }) => {
-        rows.push({
-          scene: sceneLabel,
-          type: 'B-Roll',
-          label: b.label,
-          duration: b.duration,
-          status: '—',
-        });
-      });
-      (scene.pickups || []).forEach((p: { label: string; duration: string }) => {
-        rows.push({
-          scene: sceneLabel,
-          type: 'Pickup',
-          label: p.label,
-          duration: p.duration,
-          status: '—',
-        });
-      });
-    });
-
+    const rows = buildShotListRows();
     if (!rows.length) {
       return html`<p class="asset-detail-empty">No shots yet. Add scene coverage to populate this list.</p>`;
     }
@@ -118,6 +72,16 @@ export class CinegenOverviewMasterDetail extends CgLightElement {
       return `asset-status-dot asset-status-${cls}`;
     };
 
+    const shotNumCell = (row: (typeof rows)[number]) => {
+      if (row.kind !== 'coverage' || row.shotNumber == null) return '—';
+      return escHtml(formatShotDisplayLabel(row.sceneNumber, row.shotNumber));
+    };
+
+    const framesCell = (row: (typeof rows)[number]) => {
+      if (row.kind !== 'coverage') return '—';
+      return String(row.frameCount ?? 0);
+    };
+
     return html`
       <div class="ov-master-table-wrap">
         <div class="continuity-table-wrap">
@@ -125,8 +89,10 @@ export class CinegenOverviewMasterDetail extends CgLightElement {
             <thead>
               <tr>
                 <th>Scene</th>
-                <th>Type</th>
                 <th>Shot</th>
+                <th>Type</th>
+                <th>Label</th>
+                <th>Frames</th>
                 <th>Duration</th>
                 <th>Status</th>
               </tr>
@@ -135,9 +101,11 @@ export class CinegenOverviewMasterDetail extends CgLightElement {
               ${rows.map(
                 (r) => html`
                   <tr>
-                    <td class="continuity-scene-col">${escHtml(r.scene)}</td>
+                    <td class="continuity-scene-col">${escHtml(r.sceneLabel)}</td>
+                    <td>${shotNumCell(r)}</td>
                     <td>${escHtml(r.type)}</td>
                     <td>${escHtml(r.label)}</td>
+                    <td>${framesCell(r)}</td>
                     <td>${escHtml(r.duration)}</td>
                     <td>
                       <span class=${dotClass(r.status)} title=${escHtml(r.status)}></span>

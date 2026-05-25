@@ -1,0 +1,256 @@
+
+All of the wizards built here for the purpose of starting
+a project should be reused for open projects 
+and accessible in the header bar under the "AI Assist"
+dropdown button.  When they are used for open projects,
+they should let the user build up the project from different
+angles.
+
+
+All of the wizards built for the purpose of starting
+a project will be reused for open projects 
+and accessible in the header bar under the "AI Assist"
+dropdown button.  When they are used for open projects,
+they will let the user build up the project from different
+angles.  There will be wizards that are tied to
+production, such as setting up shots.  The key issue
+is that it takes a lot to fill in all of the specific
+information in the project data based on the situation 
+and the AI agents will help with this.
+1
+
+----
+
+The key balance lies in creating
+ a solid pre-production core (the steady ground) that then enables fluid generation 
+ and iteration (the dynamic flow). This prevents the common pitfall of users expecting 
+ magic from raw scripts while still keeping the process approachable.
+
+Adapt to
+
+### Recommended Primary Entry Point
+**Most users will start with the Script.** This feels natural and mirrors traditional filmmaking:
+
+1. **Paste or write the script** in a dedicated editor.
+2. **Quick character & setting intake**: The app prompts for basic info right after import
+— character names, brief descriptions (age, build, general vibe), and primary locations 
+(e.g., “suburban backyard house – exterior and interior”). This creates initial placeholders 
+in the **Casting Department** and **Production Design** sections.
+3. **Annotation layer**: While editing, users can highlight script sections and tag them 
+with notes, emotions, or loose associations (e.g., “emotional confrontation in backyard”). 
+These annotations stay independent at first — they don’t force asset creation yet.
+
+From here, the app gently guides toward minimal reference building before any visual output.
+
+### Alternative Entry Points
+Users won’t always begin with a full script. Support these natural on-ramps for flexibility:
+
+- **Visual-first entry**: User uploads existing photos, mood boards, or partial character 
+images → app auto-creates a new project and suggests script/outline placeholders based on them.
+- **Concept / Mood first**: Start in Production Design with background plates or style 
+references → app generates suggested scenes or character prompts that fit the aesthetic.
+- **Asset library import**: Load a saved “scene kit” (from previous projects) as the 
+foundation, then attach or write a script around it.
+- **Storyboard sketch mode**: Rough thumbnail sketching or text-based beats → later link 
+to script and references.
+
+The app should detect the starting point and intelligently fill in the missing departments with suggestions.
+
+### Minimal vs. Extensive Reference Workflow
+For users arriving with only a script, avoid jumping straight to storyboards. Instead:
+
+**Step 1: Minimal Configuration Phase** (Guided Assistant)  
+The app runs a lightweight setup assistant that asks for essentials:
+- Casting: One basic description per character (or upload a single photo for instant starter sheet).
+- Locations: 1–2 core settings (e.g., backyard house). Suggest generating or uploading one primary exterior plate and one interior plate.
+- Overall style: Choose from presets (realistic photography, cinematic, warm afternoon light) or upload a lighting/style reference.
+
+This minimal set becomes the **foundation layer**. It ensures early storyboards respect the intended look instead of generic AI hallucinations.
+
+**Step 2: Assisted Reference Building**  
+Dedicate tools in each department to help users create proper assets without leaving the app:
+
+- **Casting Department** → Character Sheet Composer: Upload 1–3 photos → auto-generates a clean multi-view sheet (front, profiles, full-body) using the techniques we discussed. Support “Storyboard Level” (simplified, quicker) vs. “Final Level” (higher detail, more angles, outfit variants).
+- **Production Design** → Background Plate Generator/Editor: Text prompt + optional image → creates empty plates for key locations. Include doorway/threshold variants for smooth interior-exterior transitions.
+- **Props & Wardrobe**: Simple upload or generate isolated references, then auto-place them into plates for testing.
+- **Art Department (Style/Lighting)**: One unifying reference image that influences everything else.
+- ...
+
+These tools feed directly into **scene kits** — reusable bundles containing the plates, character sheets, and props for specific sequences.
+
+**Step 3: Storyboard Generation**  
+Only after the minimal references exist does the app allow storyboard creation. Users can:
+- Highlight script sections and link them to specific scene kits or placeholders.
+- Generate storyboards that pull from the established references (so characters and settings stay consistent even at rough stage).
+- Iterate: Adjust references → regenerate affected boards.
+
+### Adapting Filmmaking Departments for AI
+- **Casting**: Holds character bibles + sheets at different LODs. Supports “ensemble mode” for multi-character scenes within reference limits.
+- **Production Design**: Central hub for all plates and scene kits. Strong emphasis on interior/exterior coherence.
+- **Wardrobe**: Treated as extensions of character sheets (outfit variants) rather than separate physical builds.
+- **Sound & others**: Later layers — focus first on visuals, then suggest sound design prompts or music sync points during chaining.
+
+**Chaining & Output**: Once storyboards are approved, move to video generation with the established references, using last-frame chaining across short clips for longer sequences.
+
+This structure creates elegant balance: the deliberate, grounding work in references and departments provides stability, while the AI’s generative power brings dynamic life to the story. Users feel in control like a director, yet the app removes physical constraints. You might add progressive disclosure — minimal path for quick starts, deeper tools for users wanting more cinematic rigor.
+
+This approach should feel natural and professional. 
+
+Would you like to dive deeper into the script editor UI, scene kit data model, or how levels of detail translate across departments?
+
+
+----
+
+**Start from Script Wizard** (Primary, most structured path)  
+This wizard emphasizes deliberate foundation-building first — 
+the steady preparation that later allows creative flow in generation.
+
+**Sequence:**
+1. **Script Import & Review** — Paste/upload script or write directly in editor.
+2. **Core Elements Extraction** — Auto-detect characters, locations, key scenes.
+3. **Casting Setup** — Basic character info.
+4. **Production Design Setup** — Location definition.
+5. **Style Foundation** — Overall aesthetic.
+6. **Minimal References** — Assisted creation of starter assets.
+7. **Scene Kit Preview & Confirmation** — Link annotated script sections to kits.
+8. **Generate Initial Storyboards** — Using minimal references.
+
+**Interactive Controls:**
+- Highlight + annotate script text (tags for emotion, action, transition).
+- Quick character cards: name, age/build/vibe, single photo upload or text description.
+- Location tags with interior/exterior toggle.
+- Style presets (realistic, cinematic, warm afternoon) + custom palette picker.
+- Strength sliders for AI assistance level in asset generation.
+- LOD selector (Storyboard Level vs Final Level).
+
+**Assets Created/Collected:**
+- Basic character placeholders → starter multi-view sheets (auto-generated from 1 photo or description).
+- Primary background plates (exterior backyard, interior rooms).
+- Simple prop list.
+- Unified style/lighting reference.
+- Scene kits with minimal references for key sequences.
+
+---
+
+**Visual-First Wizard** (Image-heavy entry)  
+This begins with concrete visuals — the fixed anchors that ground the project’s identity early.
+
+**Sequence:**
+1. **Upload Visual Anchors** — Photos, mood images, or existing character shots.
+2. **Auto-Identify Elements** — Detect characters, settings, props.
+3. **Casting Refinement** — Build full character sheets from uploads.
+4. **Production Design Mapping** — Create or derive background plates.
+5. **Script/Outline Generation** — Optional reverse-engineering from visuals.
+6. **Style Lock** — Refine color palette and lighting.
+7. **Scene Kit Assembly** — Group assets into usable kits.
+8. **Storyboard or Video Preview**.
+
+**Interactive Controls:**
+- Multi-image uploader with drag-and-drop for character angles.
+- Auto-arrange into character sheet composer (front/profile/full-body layout).
+- Background extraction tool (remove people from photos to make clean plates).
+- Color palette extractor from uploaded images + manual adjustment.
+- Reference strength preview (see how strongly AI will lock uploaded visuals).
+
+**Assets Created/Collected:**
+- Multi-view character sheets (from user photos).
+- Background plates derived from uploads (exterior + interior).
+- Prop references extracted from images.
+- Style reference (dominant colors, lighting mood).
+- Initial scene kits tied to uploaded visuals.
+
+---
+
+**Concept / Mood First Wizard** (Atmospheric entry)  
+This starts with feeling and tone — the guiding energy that shapes all later concrete elements.
+
+**Sequence:**
+1. **Mood Description** — Text or voice input for overall vibe.
+2. **Atmosphere & Sound** — Define emotional and auditory tone.
+3. **Color & Style Palette** — Visual mood setting.
+4. **Core Location Sketch** — High-level production design.
+5. **Character Archetypes** — Casting at conceptual level.
+6. **Asset Generation Guidance** — Create foundational references.
+7. **Script Outline Suggestion** — Or link to existing script.
+8. **Scene Kit Initialization**.
+
+**Interactive Controls:**
+- Mood board builder (text prompts + image suggestions).
+- Color palette slides with harmony rules.
+- Atmosphere sliders (warm/cool, tense/peaceful, day/night).
+- Sound/atmosphere tags (wind in trees, distant traffic, subtle music cues).
+- Reference generation prompts with preview thumbnails.
+- Balance adjuster (how grounded vs. stylized the look should be).
+
+**Assets Created/Collected:**
+- Style/lighting reference images.
+- Color palette definition.
+- Conceptual background plates (generated from mood).
+- Archetype character sheets (refined later with more detail).
+- Audio mood references (prompts for later sound design).
+- Early scene kits focused on atmosphere.
+
+---
+
+**Asset Library Import Wizard** (Reusing existing work)  
+Emphasizes continuity from previous projects — building upon established foundations.
+
+**Sequence:**
+1. **Library Selection** — Browse or search saved assets/kits.
+2. **Project Mapping** — Assign imported assets to new script or outline.
+3. **Gap Analysis** — Identify missing departments (wardrobe, additional plates).
+4. **Casting & Production Alignment** — Match characters/locations.
+5. **Style Consistency Check**.
+6. **New Scene Kit Creation** — Combine imported + new elements.
+7. **Script Attachment or Generation**.
+
+**Interactive Controls:**
+- Asset browser with filters (characters, backgrounds, scene kits).
+- Drag-and-drop to assign to script sections or departments.
+- Version/LLOD selector (use storyboard-level or final-level sheets).
+- Consistency scanner (highlight potential drift risks).
+- Bulk reference updater.
+
+**Assets Used:**
+- Existing character sheets, background plates, props.
+- Saved scene kits.
+- Style references from library.
+
+---
+
+**Storyboard Sketch Mode Wizard** (Rough creative entry)  
+Focuses on flow and structure first — loose ideas that later gain solid visual grounding.
+
+**Sequence:**
+1. **Beat/Thumbnail Input** — Rough text or simple sketches for scenes.
+2. **Script Outline Creation** — Link beats to narrative.
+3. **Character & Location Placeholders** — Minimal casting and design.
+4. **Reference Recommendation** — Suggest what assets to build next.
+5. **Style & Mood Layer** — Light atmosphere application.
+6. **Asset Generation Prompts** — Assisted building of needed plates/sheets.
+7. **Refine Storyboards** — Upgrade with new references.
+8. **Full Project Assembly**.
+
+**Interactive Controls:**
+- Timeline-style beat editor with drag-and-drop reordering.
+- Simple drawing tools or text-to-sketch for thumbnails.
+- Highlight beats → associate with future assets.
+- Priority queue for reference creation (e.g., “backyard plate needed here”).
+- Progressive disclosure (minimal → detailed LOD).
+
+**Assets Created/Collected:**
+- Placeholder scene kits.
+- Generated background plates triggered by sketches.
+- Basic character sheets.
+- Evolving storyboard frames tied to emerging references.
+
+---
+
+**Common Across All Wizards:**
+- Final step always includes a **Project Dashboard** preview showing populated departments (Casting, Production Design, Wardrobe, etc.).
+- Option to save partial progress as a reusable template.
+- Progressive reference building tools available at any stage.
+- Subtle guidance toward balance: enough structure for consistency, enough openness for creative discovery.
+
+This wizard system respects the filmmaking mental model while adapting intelligently to AI constraints — creating a stable foundation of references that allows dynamic story generation to emerge naturally. The interplay between early grounding decisions and later fluid output mirrors a well-directed production.
+

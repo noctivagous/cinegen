@@ -6,9 +6,13 @@ import { appShellStoreContext } from '@/context/app-shell-context';
 import {
   initLayoutSplitDividers,
   setInspectorWidthPx,
+  setPrevisTimelineDockVisible,
+  syncPrevisDrawerHeightFromPreferences,
+  syncPrevisPaneSplitFromPreferences,
   setPreprodSplitPercent,
   setSidebarWidthPx,
   syncLayoutSplitDividers,
+  togglePrevisTimelineDock,
 } from '@/services/layout-service';
 import {
   CG_TREE_NODE_SELECT,
@@ -63,8 +67,6 @@ export class CinegenApp extends CgLightElement {
       .detail;
     if (!viewName) return;
     appShellStore.setCurrentView(viewName, label);
-    const labelEl = document.getElementById('current-view-label');
-    if (labelEl) labelEl.textContent = label;
     void sectionKey;
   };
 
@@ -104,6 +106,13 @@ export class CinegenApp extends CgLightElement {
     if (typeof prefs.preprodSplitPercent === 'number') {
       setPreprodSplitPercent(prefs.preprodSplitPercent, false);
     }
+    if (typeof prefs.previsTimelineDockVisible === 'boolean') {
+      setPrevisTimelineDockVisible(prefs.previsTimelineDockVisible, false);
+    }
+    if (typeof prefs.previsPaneSplitPercent === 'number') {
+      syncPrevisPaneSplitFromPreferences();
+    }
+    syncPrevisDrawerHeightFromPreferences();
 
     if (typeof window.syncProjectSidebarToggleButton === 'function') {
       window.syncProjectSidebarToggleButton(
@@ -135,6 +144,13 @@ export function syncProjectSidebarToggleButton(visible: boolean): void {
   btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
 }
 
+export function syncPrevisTimelineToggleButton(expanded: boolean): void {
+  const btn = document.getElementById('previs-timeline-toggle-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', expanded);
+  btn.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+}
+
 export function toggleProjectSidebar(): void {
   const panel = document.getElementById('project-hierarchy-sidebar');
   if (!panel) return;
@@ -143,4 +159,8 @@ export function toggleProjectSidebar(): void {
   syncProjectSidebarToggleButton(visible);
   syncLayoutSplitDividers();
   patchAppShellPreferences({ projectSidebarVisible: visible });
+}
+
+export function togglePrevisTimelineDockGlobal(): void {
+  togglePrevisTimelineDock();
 }

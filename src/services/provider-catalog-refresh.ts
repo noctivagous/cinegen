@@ -27,6 +27,10 @@ function normalizeVendor(v: ApiKeysVendor): ApiKeysVendorNormalized | null {
 }
 
 function vendorHasKeyForScope(vendor: ApiKeysVendor, scopeKey: string): boolean {
+  const w = window as Window & { vendorIsConfigured?: (v: ApiKeysVendor) => boolean };
+  if (typeof w.vendorIsConfigured === 'function') {
+    return w.vendorIsConfigured(vendor);
+  }
   if (typeof window.vendorHasKeyForScope === 'function') {
     return window.vendorHasKeyForScope(vendor, scopeKey);
   }

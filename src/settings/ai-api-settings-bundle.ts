@@ -10,9 +10,8 @@
  * AI routing settings contain vendor/provider selections that reveal which
  * external services the app is configured to use. In a collaborative deployment
  * these MUST be persisted server-side via the dedicated /api/settings/routing
- * endpoint, NOT written to localStorage directly. The storageService calls here
- * are abstracted to support both local and server modes; do NOT add direct
- * localStorage reads/writes.
+ * endpoint. The storageService calls here are server-backed; do NOT add direct
+ * browser local persistence APIs (localStorage/sessionStorage/IndexedDB).
  * ───────────────────
  */
 
@@ -27,6 +26,7 @@ import {
   getCachedVoicesForVendorAudioModel,
 } from '@/services/provider-model-catalog';
 import { closeAllToolbarSplitMenus } from '@/services/toolbar-split-service';
+import { initServerKeyStore } from '@/settings/api-keys-settings-bundle';
 
 declare global {
   function apiKeysListCredentialCandidatesForModality(providerId: string, key: string): Array<{ id: string; name?: string }>;
@@ -437,7 +437,7 @@ function loadAiApiSettings() {
   const localRaw = storageService.getItem(AI_API_STORAGE_KEY);
 
   // Merge: server data wins at the field level within each modality,
-  // localStorage fills any missing modalities
+  // storageService cache fills any missing modalities
   let merged;
   if (serverRaw && localRaw) {
     const local = JSON.parse(localRaw);
@@ -599,9 +599,11 @@ function populateAiApiSettingsForm() {
       : AI_API_PROVIDERS.map((p) => ({ id: p.id, label: p.label }));
     if (provSel) fillSelect(provSel, providers, s.modalities[key].provider, false);
   });
+
+  populateAiApiCredentialSelects();
+
   if (typeof ensureRoutingModelDefaults === 'function') ensureRoutingModelDefaults(false);
   AI_API_MODALITIES.forEach(({ key }) => refreshModalityModelOptions(key, s));
-  if (typeof saveAiApiSettings === 'function') saveAiApiSettings(s);
 
   const ts = _el('ai-api-timeout-seconds');
   const mr = _el('ai-api-max-retries');
@@ -618,12 +620,10 @@ function populateAiApiSettingsForm() {
     if (url) url.value = s.modalities[key].baseUrl || '';
   });
 
-  populateAiApiCredentialSelects();
   refreshAudioVoiceOptions(s);
   if (typeof window.refreshAiApiModalityGating === 'function') window.refreshAiApiModalityGating();
 
-  const hint = _el('ai-providers-save-hint');
-  if (hint) hint.textContent = 'Applies to this browser. Keys stored in Providers above.';
+  syncServerKeysUiHint();
 }
 
 function readAiApiSettingsFromForm() {
@@ -736,14 +736,19 @@ function switchAiProvidersModality(modalityKey: any) {
 function syncServerKeysUiHint() {
   const hint = _el('ai-providers-storage-hint');
   if (hint) {
-    hint.textContent = 'Keys are managed through backend environment files in backends/.env.';
+    hint.textContent =
+      'Primary keys live in backends/.env. Providers with env keys appear automatically; optional browser keys override for testing.';
+  }
+  const saveHint = _el('ai-providers-save-hint');
+  if (saveHint && !saveHint.textContent?.startsWith('Saved')) {
+    saveHint.textContent = 'Routing applies to storyboards, debug, and all AI services.';
   }
   applyServerKeysBadge();
 }
 
 /* ── Open / Close / Save ─────────────────────────────────────────────────── */
 
-function openAiProvidersModal(sectionOrModality?: any) {
+async function openAiProvidersModal(sectionOrModality?: any) {
   initAiProvidersModalOnce();
   closeAllToolbarSplitMenus();
   if (typeof closeGuideModal === 'function') closeGuideModal();
@@ -752,12 +757,14 @@ function openAiProvidersModal(sectionOrModality?: any) {
   if (typeof closeAiAssistModal === 'function') closeAiAssistModal();
   if (typeof closeProjectSettingsModal === 'function') closeProjectSettingsModal();
 
-  /* Populate providers list (api-keys side) */
-  if (typeof window.populateApiKeysForm === 'function') window.populateApiKeysForm();
+  await initServerKeyStore();
 
-  /* Populate routing + behavior */
+  if (typeof window.populateApiKeysForm === 'function') window.populateApiKeysForm();
   populateAiApiSettingsForm();
-  if (typeof window.refreshAiApiModalityGating === 'function') window.refreshAiApiModalityGating();
+
+  void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
+    refreshAllProviderCatalogsOnLoad().then(() => populateAiApiSettingsForm())
+  );
 
   if (typeof getDraft === 'function') {
     const draft = getDraft();
@@ -769,7 +776,6 @@ function openAiProvidersModal(sectionOrModality?: any) {
     }
   }
 
-  /* Apply server keys UI */
   syncServerKeysUiHint();
 
   const modal = _el('ai-providers-modal');
@@ -796,23 +802,25 @@ function closeAiProvidersModal() {
   modal.setAttribute('aria-hidden', 'true');
 }
 
-function saveAiProvidersModal() {
-  /* Save keys first (api-keys side) */
+async function saveAiProvidersModal() {
   if (typeof window.saveApiKeysModalInternal === 'function') window.saveApiKeysModalInternal();
 
-  /* Save routing + behavior (ai-api side) */
   const next = readAiApiSettingsFromForm();
   saveAiApiSettings(next);
 
+  await initServerKeyStore();
   applyServerKeysBadge();
 
   const hint = _el('ai-providers-save-hint');
   if (hint) hint.textContent = 'Saved.';
 
   if (typeof window.sanitizeAiApiVendorIdsInStoredSettings === 'function') window.sanitizeAiApiVendorIdsInStoredSettings();
-  if (typeof window.populateAiApiCredentialSelects === 'function') window.populateAiApiCredentialSelects();
-  if (typeof window.refreshAiApiModalityGating === 'function') window.refreshAiApiModalityGating();
+  populateAiApiSettingsForm();
   if (typeof updateModelStatusIndicators === 'function') updateModelStatusIndicators();
+
+  void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
+    refreshAllProviderCatalogsOnLoad()
+  );
 }
 
 /* ── Backward-compat aliases (other files still call these) ──────────────── */

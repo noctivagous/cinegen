@@ -1,0 +1,59 @@
+{
+  "characterRefs": {
+    "char-kai": {
+      "name": "Kai Reference Set",
+      "images": [
+        "cinematography/reference-images/refs/kai-face-front.png",
+        "cinematography/reference-images/refs/kai-profile.png",
+        "cinematography/reference-images/refs/kai-full-body.png"
+      ]
+    },
+    "char-mira": {
+      "name": "Mira Reference Set",
+      "images": [
+        "cinematography/reference-images/refs/mira-face-front.png",
+        "cinematography/reference-images/refs/mira-profile.png",
+        "cinematography/reference-images/refs/mira-full-body.png"
+      ]
+    }
+  },
+  "locationRefs": {
+    "loc-apartment-01": {
+      "name": "Arcology Spire Refs",
+      "images": [
+        "cinematography/reference-images/refs/spire-wide-ref.png",
+        "cinematography/reference-images/refs/spire-rain-ref.png"
+      ]
+    },
+    "loc-city-streets-01": {
+      "name": "Sky-Bridge Refs",
+      "images": [
+        "cinematography/reference-images/refs/skybridge-neon-ref.png",
+        "cinematography/reference-images/refs/skybridge-pursuit-ref.png"
+      ]
+    },
+    "loc-warehouse-01": {
+      "name": "Control Nexus Refs",
+      "images": [
+        "cinematography/reference-images/refs/nexus-screens-ref.png",
+        "cinematography/reference-images/refs/nexus-crown-ref.png"
+      ]
+    },
+    "loc-precinct-rooftop-01": {
+      "name": "Receiving Spire Refs",
+      "images": [
+        "cinematography/reference-images/refs/spire-docking-ref.png"
+      ]
+    }
+  },
+  "moodboardRefs": {
+    "overall-look": {
+      "name": "ASCENSION_STREAM Look & Feel",
+      "images": [
+        "cinematography/reference-images/refs/look-moodboard-dark-sci-fi.png",
+        "cinematography/reference-images/refs/look-neon-palette.png",
+        "cinematography/reference-images/refs/look-golden-data-aesthetic.png"
+      ]
+    }
+  }
+}

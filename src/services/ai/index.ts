@@ -7,3 +7,5 @@ export * from '@/services/ai/chat-service';
 export * from '@/services/ai/image-generation-service';
 export * from '@/services/ai/video-generation-service';
 export * from '@/services/ai/audio-generation-service';
+export * from '@/services/ai/resolve-modality-vendor';
+export * from '@/services/ai/agents-service';

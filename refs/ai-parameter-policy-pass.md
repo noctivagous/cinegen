@@ -64,6 +64,14 @@ Vendor target resolution shared with proxy header logic:
   - `seconds` forced to `5`.
   - `resolution` forced to `720P`.
 
+### xAI - Image (`/v1/images/generations`)
+
+Per [xAI Images API](https://docs.x.ai/developers/rest-api-reference/inference/images): supports `prompt`, `model`, `n`, `aspect_ratio`, `resolution` (`1k` | `2k`), `response_format` (`url` | `b64_json`). Does **not** support OpenAI-style `size`, `quality`, or `style`, or diffusion params (`num_inference_steps`, `cfg_scale`, etc.).
+
+- Convert `size` (or `width`/`height`) → `aspect_ratio` (`1:1`, `16:9`, `9:16`, `4:3`, `3:4`, `2:3`, `3:2`, `2:1`, `1:2`, …).
+- Map `quality: hd` → `resolution: 2k` when resolution omitted.
+- Drop unsupported fields: `size`, `quality`, `style`, `negative_prompt`, `seed`, `num_inference_steps`, `cfg_scale`, `guidance_scale`, `width`, `height`.
+
 ### xAI - Video (`/v1/videos/generations`)
 
 - Clamp `duration` to `1..15`.

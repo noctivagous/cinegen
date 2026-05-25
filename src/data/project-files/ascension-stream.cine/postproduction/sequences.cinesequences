@@ -1,0 +1,58 @@
+[
+  {
+    "id": "seq-rough-cut-v1",
+    "name": "Rough Cut v1",
+    "type": "rough",
+    "created": "2026-05-22",
+    "status": "in-progress",
+    "clips": [
+      {
+        "clipId": "clip-scene01-master",
+        "sceneId": "scene01",
+        "source": "production/scenes/scene01/generated/master-v1.mp4",
+        "inPoint": 0,
+        "outPoint": 75,
+        "duration": 75,
+        "track": "video-1"
+      },
+      {
+        "clipId": "clip-scene02-master",
+        "sceneId": "scene02",
+        "source": "production/scenes/scene02/generated/master-v1.mp4",
+        "inPoint": 0,
+        "outPoint": 90,
+        "duration": 90,
+        "track": "video-1"
+      },
+      {
+        "clipId": "clip-scene03-master",
+        "sceneId": "scene03",
+        "source": "production/scenes/scene03/generated/master-v1.mp4",
+        "inPoint": 0,
+        "outPoint": 45,
+        "duration": 45,
+        "track": "video-1"
+      },
+      {
+        "clipId": "clip-scene04-master",
+        "sceneId": "scene04",
+        "source": "production/scenes/scene04/generated/master-v1.mp4",
+        "inPoint": 0,
+        "outPoint": 90,
+        "duration": 90,
+        "track": "video-1"
+      }
+    ],
+    "totalDuration": 300,
+    "notes": "All masters in scene order. No transitions yet. Rough timing only."
+  },
+  {
+    "id": "seq-fine-cut-v1",
+    "name": "Fine Cut v1",
+    "type": "fine",
+    "created": "2026-06-01",
+    "status": "planned",
+    "clips": [],
+    "notes": "Incorporate coverage shots, add transitions, foley sync, temp mix reference."
+  }
+]

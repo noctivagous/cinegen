@@ -16,11 +16,10 @@
  * (same keys as Settings → API Keys & Service Providers / Models & Modalities).
  *
  * ── NOTE ──
- * Wizard progress (current step, vendor selections) is cached via the abstracted
- * storageService — in local mode this goes to localStorage for dev convenience.
- * In collaborative deployments, use server mode (VITE_PROJECT_PERSISTENCE_MODE=server)
- * so progress syncs across sessions. API keys themselves are persisted server-side
- * via saveApiKeys() → POST /api/settings/keys, NOT in localStorage.
+ * Wizard progress (current step, vendor selections) is cached via server-backed
+ * storageService so progress syncs across browser instances using the same server.
+ * API keys themselves are persisted server-side via saveApiKeys() →
+ * POST /api/settings/keys. Do NOT add browser-local persistence APIs here.
  * ─────────
  *
  * Call openSetupAssistant()  to launch it at any time.
@@ -2175,7 +2174,7 @@ const _saResolveModelLabel = saResolveModelLabel;
 const _saModelCaps      = saModelCaps;
 const _saStatusHtml     = saStatusHtml;
 
-/* ── Save setup data to existing localStorage ────────────────────────────── */
+/* ── Save setup data to server-backed persistence ────────────────────────── */
 
 function _saveAllSetupData() {
   if (typeof applyServerKeysBadge === 'function') applyServerKeysBadge();

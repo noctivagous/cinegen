@@ -36,6 +36,20 @@ export const storyboardFrameEditorTemplate = html`
             <span class="sfe-field-label">Notes</span>
             <textarea class="sfe-input sfe-input-notes bevel-sunken" rows="4" placeholder="Frame notes"></textarea>
           </label>
+          <div class="sfe-prompt-section">
+            <div class="sfe-prompt-header">
+              <span class="sfe-field-label">AI Generation Prompt</span>
+              <span class="sfe-prompt-badge sfe-prompt-badge--auto">Auto</span>
+              <span class="sfe-prompt-badge sfe-prompt-badge--override hidden">Override</span>
+            </div>
+            <div class="sfe-prompt-display bevel-sunken">
+              <pre class="sfe-prompt-text"></pre>
+            </div>
+            <label class="sfe-field sfe-field-override">
+              <span class="sfe-field-label">User Prompt Override <small>(leave blank to use auto)</small></span>
+              <textarea class="sfe-input sfe-input-override bevel-sunken" rows="3" placeholder="Type a custom prompt here to override the auto-generated one..."></textarea>
+            </label>
+          </div>
         </div>
       </div>
     </div>

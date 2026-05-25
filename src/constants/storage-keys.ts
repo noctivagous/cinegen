@@ -1,17 +1,13 @@
 /**
- * ── DO NOT STORE API KEYS OR AUTH TOKENS IN LOCALSTORAGE ──
+ * ── SERVER PERSISTENCE STORAGE KEYS ──
  *
  * These keys are used by the Persistence abstraction layer (services/persistence.ts)
- * which can back reads/writes to either localStorage (local mode) or the server
- * (server mode). In a collaborative or multi-user deployment:
+ * which writes/reads through the server-backed settings store.
+ * Sensitive values should still use dedicated API endpoints:
  *
  *   - API keys    → MUST go through saveApiKeys() → POST /api/settings/keys
  *   - Prefs       → MUST go through server-backed persistence or /api/settings/*
  *   - AI routing  → MUST go through saveAiApiSettings() → POST /api/settings/routing
- *
- * localStorage is single-origin and does not sync across users. Adding new keys
- * here for sensitive data is a design smell. Route new settings through the
- * dedicated server API endpoints instead.
  * ──────────────────────────────────────────────────────────────────────────
  */
 
@@ -22,3 +18,9 @@ export const API_KEYS_STORAGE_KEY = 'cinegen.apiKeys';
 export const PROVIDER_MODEL_CATALOG_STORAGE_KEY = 'cinegen.providerModelCatalog';
 export const PREFERENCES_STORAGE_KEY = 'cinegen.preferences';
 export const LOCAL_PROJECTS_STORAGE_KEY = 'cinegen.local-projects.v1';
+/** Per-project sidebar tree `expanded` state for bundled `.cine` packages. */
+export const PROJECT_TREE_UI_STORAGE_KEY = 'cinegen.project-tree-ui.v1';
+/** Per-project settings overrides (name + picture/timebase) for bundled `.cine` packages. */
+export const PROJECT_SETTINGS_STORAGE_KEY = 'cinegen.project-settings.v1';
+/** Script editor previs timeline margin collapsed (1 = collapsed). */
+export const SCRIPT_PREVIS_MARGIN_COLLAPSED_KEY = 'cinegen.scriptPrevisMarginCollapsed';

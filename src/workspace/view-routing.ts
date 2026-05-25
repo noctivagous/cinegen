@@ -1,5 +1,9 @@
 import { emitWorkspaceViewChange } from '@/events/shell-events';
-import { ensurePanelForView, isPanelChunkLoaded } from '@/components/panels/panel-loader';
+import {
+  ensurePanelForView,
+  isPanelChunkLoaded,
+  VIEW_HOST_TAG,
+} from '@/components/panels/panel-loader';
 import { appShellStore } from '@/stores/app-shell-store';
 import { renderStoryboard } from '@/storyboard/storyboard-bundle';
 
@@ -24,9 +28,6 @@ export function applyWorkspaceViewDom(
   if (view) view.classList.remove('hidden');
   else document.getElementById('view-default')?.classList.remove('hidden');
 
-  const labelEl = document.getElementById('current-view-label');
-  if (labelEl) labelEl.textContent = label || viewName;
-
   updateWorkspaceSectionTheme(sectionKey);
   appShellStore.setCurrentView(viewName, label || viewName);
   emitWorkspaceViewChange({
@@ -39,17 +40,23 @@ export function applyWorkspaceViewDom(
   }
 }
 
+/** Wait for the view's custom element module and first Lit render. */
+export async function awaitViewHostReady(viewName: string): Promise<void> {
+  const tag = VIEW_HOST_TAG[viewName];
+  if (tag) await customElements.whenDefined(tag);
+  const host = document.getElementById(`view-${viewName}`) as
+    | (HTMLElement & { updateComplete?: Promise<unknown> })
+    | null;
+  if (host?.updateComplete) await host.updateComplete;
+}
+
 /** Switches workspace view; loads panel chunk first when needed. */
-export function switchView(
+export async function switchView(
   viewName: string,
   label: string,
   sectionKey: string | null = null
-): void {
-  if (isPanelChunkLoaded(viewName)) {
-    applyWorkspaceViewDom(viewName, label, sectionKey);
-    return;
-  }
-  void ensurePanelForView(viewName).then(() => {
-    applyWorkspaceViewDom(viewName, label, sectionKey);
-  });
+): Promise<void> {
+  await ensurePanelForView(viewName);
+  await awaitViewHostReady(viewName);
+  applyWorkspaceViewDom(viewName, label, sectionKey);
 }

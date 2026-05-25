@@ -13,6 +13,11 @@ const MODAL_CHUNKS: Record<string, () => Promise<unknown>> = {
   'ai-providers-modal': () => import('@/components/modals/chunk-ai-providers'),
   'ai-provider-info-modal': () => import('@/components/modals/chunk-ai-provider-info'),
   'section-settings-modal': () => import('@/components/modals/chunk-section-settings'),
+  'script-wizard-modal': () => import('@/components/modals/chunk-entry-wizard'),
+  'visual-wizard-modal': () => import('@/components/modals/chunk-entry-wizard'),
+  'concept-wizard-modal': () => import('@/components/modals/chunk-entry-wizard'),
+  'asset-wizard-modal': () => import('@/components/modals/chunk-entry-wizard'),
+  'storyboard-wizard-modal': () => import('@/components/modals/chunk-entry-wizard'),
 };
 
 const loaded = new Set<string>();

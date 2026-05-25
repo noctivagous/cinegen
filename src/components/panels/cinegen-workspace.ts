@@ -53,8 +53,6 @@ export class CinegenWorkspace extends CgLightElement {
   setViewLabel(label: string): void {
     const store = this._shellStore ?? appShellStore;
     store.setCurrentView(store.currentView, label);
-    const el = document.getElementById('current-view-label');
-    if (el) el.textContent = label;
   }
 
   showView(viewName: string, label: string, sectionKey?: string | null): void {

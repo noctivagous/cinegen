@@ -1,0 +1,101 @@
+[
+  {
+    "id": "review-scene01-master-01",
+    "sceneId": "scene01",
+    "clipId": "clip-scene01-master",
+    "type": "master-shot",
+    "status": "pending",
+    "assignedAgent": "consistency-auditor",
+    "created": "2026-05-22T08:00:00Z",
+    "auditFindings": [
+      {
+        "check": "character-consistency",
+        "status": "pass",
+        "notes": "Kai and Mira appearance consistent with character bible"
+      },
+      {
+        "check": "lighting-mismatch",
+        "status": "warn",
+        "notes": "Rain illumination angle shifts between wide and insert. Flagged for review."
+      },
+      {
+        "check": "location-accuracy",
+        "status": "pass",
+        "notes": "Location matches Arcology Spire reference set"
+      }
+    ],
+    "overallVerdict": "conditional-pass",
+    "reviewerNotes": "Rain lighting issue needs correction before final. Otherwise solid.",
+    "cost": 0.45
+  },
+  {
+    "id": "review-scene03-master-01",
+    "sceneId": "scene03",
+    "clipId": "clip-scene03-master",
+    "type": "master-shot",
+    "status": "approved",
+    "assignedAgent": "consistency-auditor",
+    "created": "2026-05-21T16:00:00Z",
+    "auditFindings": [
+      {
+        "check": "character-consistency",
+        "status": "pass",
+        "notes": "Mira consistent. Kai (on screen) consistent."
+      },
+      {
+        "check": "lighting-mismatch",
+        "status": "pass",
+        "notes": "Screen-face lighting consistent throughout"
+      },
+      {
+        "check": "wardrobe-accuracy",
+        "status": "pass",
+        "notes": "Mira's Command Look (wardrobe-elena-jacket-01) correct"
+      }
+    ],
+    "overallVerdict": "approved",
+    "reviewerNotes": "Approved for rough cut assembly.",
+    "cost": 0.38
+  },
+  {
+    "id": "review-wardrobe-kai-toggle-01",
+    "sceneId": "scene02",
+    "type": "wardrobe-continuity",
+    "status": "pending",
+    "assignedAgent": "character-agent",
+    "created": "2026-05-22T09:00:00Z",
+    "auditFindings": [
+      {
+        "check": "wardrobe-transition",
+        "status": "fail",
+        "notes": "Kai's jacket transitions from dry to wet state mid-scene without narrative cue. Needs intentional transition shot or continuity fix."
+      }
+    ],
+    "overallVerdict": "rejected",
+    "reviewerNotes": "Add a transition beat — rain intensity increase or shelter-to-exposure cut. Regen with wet variant from start or add coverage.",
+    "cost": null
+  },
+  {
+    "id": "review-sfx-hud-snap-01",
+    "sceneId": "scene02",
+    "type": "audio-sfx",
+    "status": "pending",
+    "assignedAgent": "audio-agent",
+    "created": "2026-05-22T10:30:00Z",
+    "auditFindings": [
+      {
+        "check": "sync-to-picture",
+        "status": "pass",
+        "notes": "Snap aligns with HUD transition frame"
+      },
+      {
+        "check": "style-match",
+        "status": "pass",
+        "notes": "Matches established HUD sound palette"
+      }
+    ],
+    "overallVerdict": "approved",
+    "reviewerNotes": "Clean. Ready for temp mix.",
+    "cost": 0.02
+  }
+]
