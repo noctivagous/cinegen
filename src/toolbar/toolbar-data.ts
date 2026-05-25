@@ -118,6 +118,14 @@ export interface AiAssistTile {
   desc: string;
 }
 
+export interface WizardEntryTile {
+  id: string;
+  icon: string;
+  title: string;
+  desc: string;
+  group: 'main' | 'utilities';
+}
+
 export const AI_ASSIST_ASSISTANT_TILES: AiAssistTile[] = [
   {
     id: 'app-setup-assistant',
@@ -175,5 +183,43 @@ export const AI_ASSIST_TASK_TILES: AiAssistTile[] = [
     icon: 'fa-solid fa-file-lines',
     title: 'Production brief',
     desc: 'One-page AI summary for department heads and vendors.',
+  },
+];
+
+export const WIZARD_ENTRY_TILES: WizardEntryTile[] = [
+  {
+    id: 'script-wizard',
+    icon: 'fa-solid fa-scroll',
+    title: 'Start from Script',
+    desc: 'Paste or write a script, extract characters and locations, build references and storyboards.',
+    group: 'main',
+  },
+  {
+    id: 'visual-wizard',
+    icon: 'fa-solid fa-image',
+    title: 'Visual-First Entry',
+    desc: 'Upload photos and mood boards, auto-create a project with suggested script placeholders.',
+    group: 'main',
+  },
+  {
+    id: 'concept-wizard',
+    icon: 'fa-solid fa-palette',
+    title: 'Concept / Mood First',
+    desc: 'Start with vibe and tone, generate scenes and character prompts that fit the aesthetic.',
+    group: 'main',
+  },
+  {
+    id: 'asset-wizard',
+    icon: 'fa-solid fa-cubes',
+    title: 'Asset Library Import',
+    desc: 'Load a saved scene kit from previous projects as the foundation.',
+    group: 'utilities',
+  },
+  {
+    id: 'storyboard-wizard',
+    icon: 'fa-solid fa-pen-ruler',
+    title: 'Storyboard Sketch Mode',
+    desc: 'Rough thumbnail sketching or text-based beats to frame your story.',
+    group: 'utilities',
   },
 ];

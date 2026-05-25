@@ -12,15 +12,11 @@ import {
   resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
 import { appShellStore } from '@/stores/app-shell';
-import { AI_ASSIST_ASSISTANT_TILES, AI_ASSIST_TASK_TILES } from '@/toolbar/toolbar-data';
+import { AI_ASSIST_ASSISTANT_TILES, AI_ASSIST_TASK_TILES, WIZARD_ENTRY_TILES } from '@/toolbar/toolbar-data';
 import {
   launchAiAssistAction,
+  launchWizardAction,
   openAiProviderInfoModal,
-  openAssetWizardModal,
-  openConceptWizardModal,
-  openScriptWizardModal,
-  openStoryboardWizardModal,
-  openVisualWizardModal,
   openDebugGenerationForDebug,
   openGuide,
   openSettings,
@@ -233,22 +229,44 @@ function initSaveExportMenu(): void {
   });
 }
 
-const WIZARD_ACTIONS: Record<string, () => void> = {
-  'script-wizard': openScriptWizardModal,
-  'visual-wizard': openVisualWizardModal,
-  'concept-wizard': openConceptWizardModal,
-  'asset-wizard': openAssetWizardModal,
-  'storyboard-wizard': openStoryboardWizardModal,
-};
+export function buildWizardsToolbarMenu(): void {
+  const menu = document.getElementById('wizards-menu');
+  if (!menu) return;
+  menu.replaceChildren();
+
+  let lastGroup = '';
+  WIZARD_ENTRY_TILES.forEach((tile) => {
+    if (lastGroup && tile.group !== lastGroup) {
+      const sep = document.createElement('div');
+      sep.className = 'toolbar-split-menu-sep';
+      sep.setAttribute('role', 'separator');
+      sep.setAttribute('aria-hidden', 'true');
+      menu.appendChild(sep);
+    }
+    lastGroup = tile.group;
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'toolbar-split-menu-item';
+    item.setAttribute('role', 'menuitem');
+    item.dataset.wizardAction = tile.id;
+    const icon = document.createElement('i');
+    icon.className = tile.icon;
+    icon.setAttribute('aria-hidden', 'true');
+    item.append(icon, document.createTextNode(` ${tile.title}…`));
+    menu.appendChild(item);
+  });
+}
+
+const WIZARD_ACTIONS: Record<string, () => void> = {};
 
 function initWizardsMenu(): void {
   const menu = document.getElementById('wizards-menu');
-  menu?.querySelectorAll('[data-wizard-action]').forEach((item) => {
-    item.addEventListener('click', () => {
-      const action = (item as HTMLElement).dataset.wizardAction || '';
-      closeToolbarSplitMenu('wizards-split');
-      WIZARD_ACTIONS[action]?.();
-    });
+  menu?.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest('[data-wizard-action]');
+    if (!item) return;
+    const action = (item as HTMLElement).dataset.wizardAction || '';
+    closeToolbarSplitMenu('wizards-split');
+    launchWizardAction(action);
   });
 }
 
@@ -268,6 +286,7 @@ export function wireToolbarMenus(): void {
   onToolbarSplitMenuOpen((splitId) => {
     if (splitId === 'projects-split') renderProjectsMenu();
     if (splitId === 'ai-assist-split') buildAiAssistToolbarMenu();
+    if (splitId === 'wizards-split') buildWizardsToolbarMenu();
   });
 
   initGuideMenu();
@@ -283,6 +302,8 @@ export function wireToolbarMenus(): void {
 export function installToolbarMenuGlobals(): void {
   window.renderProjectsMenu = renderProjectsMenu;
   window.buildAiAssistToolbarMenu = buildAiAssistToolbarMenu;
+  window.buildWizardsToolbarMenu = buildWizardsToolbarMenu;
   window.closeSaveExportMenu = () => closeToolbarSplitMenu('save-export-split');
   window.launchAiAssistAction = launchAiAssistAction;
+  window.launchWizardAction = launchWizardAction;
 }

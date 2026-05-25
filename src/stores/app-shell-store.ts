@@ -21,6 +21,9 @@ let _saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Typed shell store: preferences, active project, workspace view. */
 export class AppShellStore {
+  private static readonly DEFAULT_VIEW = 'default';
+  private static readonly DEFAULT_VIEW_LABEL = 'Script + Storyboard';
+
   /** Latest shell snapshot (immutable copy). */
   get state(): AppShellState {
     return getAppShellState();
@@ -38,12 +41,14 @@ export class AppShellStore {
 
   get currentView(): string {
     if (isAppShellInitialized()) return this.state.currentView;
-    return 'default';
+    return AppShellStore.DEFAULT_VIEW;
   }
 
   get currentViewLabel(): string {
     if (isAppShellInitialized()) return this.state.currentViewLabel;
-    return 'Script & Storyboard';
+    const preferences = this.preferences;
+    const projectId = activeProjectId || preferences.activeProjectId;
+    return this._initialViewLabelFromPreferences(preferences, projectId);
   }
 
   subscribe(listener: () => void): () => void {
@@ -143,12 +148,23 @@ export class AppShellStore {
 
   private buildInitialState(): AppShellState {
     const preferences = { ...(window.CineGen?.preferences ?? loadPreferences()) };
+    const projectId = activeProjectId || preferences.activeProjectId;
     return {
       preferences,
-      activeProjectId: activeProjectId || preferences.activeProjectId,
-      currentView: 'default',
-      currentViewLabel: 'Script & Storyboard',
+      activeProjectId: projectId,
+      currentView: AppShellStore.DEFAULT_VIEW,
+      currentViewLabel: this._initialViewLabelFromPreferences(preferences, projectId),
     };
+  }
+
+  private _initialViewLabelFromPreferences(
+    preferences: CineGenPreferences,
+    projectId: string
+  ): string {
+    return (
+      preferences.projectTreeSelectedByProjectId?.[projectId] ??
+      AppShellStore.DEFAULT_VIEW_LABEL
+    );
   }
 }
 

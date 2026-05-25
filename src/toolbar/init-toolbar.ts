@@ -3,6 +3,7 @@ import { initModalManager } from '@/services/modal-manager';
 import {
   buildAiAssistModalGrids,
   buildSettingsModalGrid,
+  buildWizardsModalGrid,
   installToolbarModalGlobals,
   registerToolbarModals,
   wireProjectsModalList,
@@ -25,6 +26,7 @@ export function initToolbar(): void {
 
   buildSettingsModalGrid();
   buildAiAssistModalGrids();
+  buildWizardsModalGrid();
   wireProjectsModalList();
   renderProjectsMenu();
 

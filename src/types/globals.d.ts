@@ -290,7 +290,9 @@ declare global {
     closeSaveExportMenu?: () => void;
     renderProjectsMenu?: () => void;
     buildAiAssistToolbarMenu?: () => void;
+    buildWizardsToolbarMenu?: () => void;
     launchAiAssistAction?: (kind: string, actionId: string) => void;
+    launchWizardAction?: (wizardId: string) => void;
     runImportMenuAction?: (action: string) => void;
     runScriptImportExportMenuAction?: (action: string) => void;
     initScriptFountainInsertSplit?: () => void;
@@ -365,6 +367,8 @@ declare global {
     closeAssetWizardModal?: () => void;
     openStoryboardWizardModal?: () => void;
     closeStoryboardWizardModal?: () => void;
+    openWizardsModal?: () => void;
+    closeWizardsModal?: () => void;
     parseScriptToAssets?: () => void;
     renderSceneDetail?: () => void;
     generateBoards?: () => void;

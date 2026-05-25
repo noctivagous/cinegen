@@ -10,7 +10,7 @@ export class CinegenPreprodWorkspace extends CgLightElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.id = 'view-preprod-workspace';
-    this.classList.add('flex', 'flex-col', 'h-full', 'min-h-0');
+    this.classList.add('hidden', 'flex', 'flex-col', 'h-full', 'min-h-0');
   }
 
   render() {

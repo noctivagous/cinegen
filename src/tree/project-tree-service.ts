@@ -11,6 +11,7 @@ import {
   preprodModeForTreeNode,
   type PreprodLayoutMode,
 } from '@/workspace/preprod-layout';
+import { appShellStore } from '@/stores/app-shell-store';
 import { SUPPORTED_TREE_VIEWS } from '@/tree/tree-view-contract';
 import type { TreeNode, TreeProjectRoot } from '@/tree/tree-types';
 import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
@@ -98,10 +99,16 @@ function resolveActivatableTreeNodeName(preferredName: string): string {
   return preferredName;
 }
 
+function initialTreeSelectionName(projectId = activeProjectId): string {
+  const fromShell = appShellStore.currentViewLabel?.trim();
+  if (fromShell && findProjectNodeByName(fromShell)) return fromShell;
+  return resolveActivatableTreeNodeName(getPersistedProjectTreeSelection(projectId));
+}
+
 export function getPersistedPreprodMode(projectId = activeProjectId): PreprodLayoutMode {
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
-  const preferred = resolveActivatableTreeNodeName(getPersistedProjectTreeSelection(projectId));
+  const preferred = initialTreeSelectionName(projectId);
   return preprodModeForTreeNode(findProjectNodeByName(preferred));
 }
 
@@ -109,7 +116,7 @@ export function getPersistedPreprodMode(projectId = activeProjectId): PreprodLay
 export function primePersistedProjectTreeUi(projectId = activeProjectId): void {
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
-  const name = resolveActivatableTreeNodeName(getPersistedProjectTreeSelection(projectId));
+  const name = initialTreeSelectionName(projectId);
   _selectedName = name;
   const node = findProjectNodeByName(name);
   if (node?.view === 'preprod-workspace') {

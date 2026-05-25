@@ -5,6 +5,7 @@ import {
   openSetupAssistantForDebug,
   openStoryboardWizardModal,
   openVisualWizardModal,
+  openWizardsModal,
   importScript,
   openAiAssistModal,
   openGuide,
@@ -20,7 +21,7 @@ const MAIN_ACTIONS: Record<string, () => void> = {
   'save-export-split': saveProject,
   'import-split': importScript,
   'ai-assist-split': openAiAssistModal,
-  'wizards-split': openScriptWizardModal,
+  'wizards-split': openWizardsModal,
   'debug-split': openSetupAssistantForDebug,
 };
 

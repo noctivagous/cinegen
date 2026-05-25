@@ -23,6 +23,7 @@ import {
   AI_ASSIST_TASK_TILES,
   GUIDE_SECTIONS,
   SETTINGS_MODAL_TILES,
+  WIZARD_ENTRY_TILES,
 } from '@/toolbar/toolbar-data';
 import {
   createBlankProject,
@@ -2478,6 +2479,31 @@ export function openAiAssistModal(): void {
   openModal('ai-assist-modal');
 }
 
+export function openWizardsModal(): void {
+  closeAllToolbarSplitMenus();
+  closeAllModalsExcept('wizards-modal');
+  window.closeAiProvidersModal?.();
+  openModal('wizards-modal');
+}
+
+export function closeWizardsModal(): void {
+  closeModal('wizards-modal');
+}
+
+const WIZARD_ACTIONS: Record<string, () => void> = {
+  'script-wizard': openScriptWizardModal,
+  'visual-wizard': openVisualWizardModal,
+  'concept-wizard': openConceptWizardModal,
+  'asset-wizard': openAssetWizardModal,
+  'storyboard-wizard': openStoryboardWizardModal,
+};
+
+export function launchWizardAction(wizardId: string): void {
+  closeWizardsModal();
+  const action = WIZARD_ACTIONS[wizardId];
+  if (action) action();
+}
+
 export function launchAiAssistAction(kind: string, actionId: string): void {
   if (actionId === 'app-setup-assistant') {
     closeAiAssistModal();
@@ -2561,6 +2587,14 @@ export function buildAiAssistModalGrids(): void {
     document.querySelector<CgModalTileGrid>('#ai-assist-tasks-grid'),
     AI_ASSIST_TASK_TILES,
     (_id, kind) => launchAiAssistAction(kind, _id)
+  );
+}
+
+export function buildWizardsModalGrid(): void {
+  wireModalTileGrid(
+    document.querySelector<CgModalTileGrid>('#wizards-modal-grid'),
+    WIZARD_ENTRY_TILES,
+    (id) => launchWizardAction(id)
   );
 }
 
@@ -2890,6 +2924,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'projects-modal' });
   registerModal({ id: 'settings-modal' });
   registerModal({ id: 'ai-assist-modal' });
+  registerModal({ id: 'wizards-modal' });
   registerModal({ id: 'project-settings-modal' });
   registerModal({ id: 'debug-modal', hostOverflowY: 'auto' });
   registerModal({ id: 'section-settings-modal' });
@@ -2949,6 +2984,8 @@ export function installToolbarModalGlobals(): void {
   window.closeSettingsModal = closeSettingsModal;
   window.openAiAssistModal = openAiAssistModal;
   window.closeAiAssistModal = closeAiAssistModal;
+  window.openWizardsModal = openWizardsModal;
+  window.closeWizardsModal = closeWizardsModal;
   window.openProjectSettingsModal = openProjectSettingsModal;
   window.closeProjectSettingsModal = closeProjectSettingsModal;
   window.openDebugModal = openDebugModal;
@@ -3016,6 +3053,13 @@ export function wireToolbarModalDismissals(): void {
   });
   document.querySelector('#ai-assist-modal .settings-modal-backdrop')?.addEventListener('click', () =>
     closeAiAssistModal()
+  );
+
+  document.querySelectorAll('[data-cg-close="wizards-modal"]').forEach((el) => {
+    el.addEventListener('click', () => closeWizardsModal());
+  });
+  document.querySelector('#wizards-modal .settings-modal-backdrop')?.addEventListener('click', () =>
+    closeWizardsModal()
   );
 
   document.querySelectorAll('[data-cg-close="project-settings-modal"]').forEach((el) => {

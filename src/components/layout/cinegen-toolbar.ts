@@ -224,24 +224,7 @@ export class CinegenToolbar extends CgLightElement {
           main-title="Wizards — guided project setup"
         >
           <span slot="main"><i class="fa-solid fa-wand-magic-sparkles"></i> Wizards</span>
-          <div slot="menu">
-            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="script-wizard">
-              <i class="fa-solid fa-scroll"></i> Start from Script…
-            </button>
-            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="visual-wizard">
-              <i class="fa-solid fa-image"></i> Visual-First…
-            </button>
-            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="concept-wizard">
-              <i class="fa-solid fa-palette"></i> Concept/Mood First…
-            </button>
-            <div class="toolbar-split-menu-sep" role="separator" aria-hidden="true"></div>
-            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="asset-wizard">
-              <i class="fa-solid fa-cubes"></i> Asset Library Import…
-            </button>
-            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-wizard-action="storyboard-wizard">
-              <i class="fa-solid fa-pen-ruler"></i> Storyboard Sketch Mode…
-            </button>
-          </div>
+          <div slot="menu"></div>
         </cg-toolbar-split>
         <cg-toolbar-split
           id="ai-assist-split"

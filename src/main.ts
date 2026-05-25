@@ -12,7 +12,7 @@ import { initApp } from '@/app/app-init';
 import { markBootReady } from '@/app/boot-coordinator';
 import { initLegacyModules } from '@/legacy/init-legacy-modules';
 import { getPackageLoadErrors } from '@/data/cine-project-loader';
-import { preloadPanelChunksIdle } from '@/components/panels/panel-loader';
+import { preloadPanelChunksIdle, ensurePanelForView } from '@/components/panels/panel-loader';
 import { alertCG } from '@/utils/alert-cg';
 import { initKeybindings } from '@/keybindings/init-keybindings';
 // import { initConsoleCommands } from '@/console/init-console';
@@ -21,6 +21,7 @@ import { initDebugModule } from '@/debug/init-debug';
 import { preloadServerPersistence } from '@/services/persistence';
 import { initStateSync } from '@/services/state-sync';
 import { subscribeModalSync, loadModalState } from '@/services/modal-manager';
+import { applyBootWorkspaceVisibility } from '@/workspace/boot-workspace-visibility';
 import {
   PREFERENCES_STORAGE_KEY,
   SETUP_COMPLETE_STORAGE_KEY,
@@ -88,6 +89,8 @@ async function bootstrap(): Promise<void> {
   if (serverState && Object.keys(serverState).length) {
     appShellStore.patchServerState(serverState);
   }
+  await ensurePanelForView(appShellStore.currentView);
+  applyBootWorkspaceVisibility(appShellStore.currentView);
   try {
     const modalRes = await fetch('/api/state/modal');
     if (modalRes.ok) {

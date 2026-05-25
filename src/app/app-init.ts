@@ -1,6 +1,8 @@
 import { projectRegistry, projectData } from '@/data/project-data';
 import {
+  activateProjectTreeNode,
   activatePersistedProjectTreeSelection,
+  findProjectNodeByName,
   primePersistedProjectTreeUi,
   resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
@@ -140,15 +142,20 @@ const App = {
       setPreprodSplitPercent(prefs.preprodSplitPercent, false);
     }
 
-    queueMicrotask(() => {
-      if (typeof window.activateProjectTreeNode === 'function') {
-        activatePersistedProjectTreeSelection();
-      } else {
-        document
-          .querySelector('.tree-item[data-view="preprod-workspace"][data-preprod-mode="both"]')
-          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      }
-    });
+    // Restore the visible workspace/tree selection from app-shell first.
+    const appStateLabel = appShellStore.currentViewLabel?.trim();
+    let restoredFromAppState = false;
+    if (appStateLabel && findProjectNodeByName(appStateLabel)) {
+      restoredFromAppState = activateProjectTreeNode(appStateLabel);
+    }
+    if (!restoredFromAppState) {
+      restoredFromAppState = activatePersistedProjectTreeSelection();
+    }
+    if (!restoredFromAppState) {
+      document
+        .querySelector('.tree-item[data-view="preprod-workspace"][data-preprod-mode="both"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
 
     console.log(
       '%cCineFlow Studio Pro initialized — structure and flow in perfect balance',
