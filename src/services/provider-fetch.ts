@@ -1,8 +1,13 @@
 /** Typed wrapper for live provider model-list / ping fetches. */
 
 import { saFetchModels } from '@/setup-assistant/connection-test';
+import {
+  apiScopeForModality,
+  type RoutingModalityKey,
+} from '@/services/routing-modalities';
 
-export type RoutingModalityKey = 'llm' | 'image' | 'video' | 'audio';
+export { apiScopeForModality, ROUTING_MODALITIES } from '@/services/routing-modalities';
+export type { RoutingModalityKey } from '@/services/routing-modalities';
 
 export type ProviderModelEntry = {
   id: string;
@@ -27,10 +32,6 @@ function mapProviderModelRow(m: Record<string, unknown>): ProviderModelEntry | n
     label: typeof m.label === 'string' ? m.label : undefined,
     type: typeof m.type === 'string' ? m.type : undefined,
   };
-}
-
-export function apiScopeForModality(modalityKey: RoutingModalityKey): string {
-  return modalityKey === 'llm' ? 'language' : modalityKey;
 }
 
 export async function fetchProviderModels(

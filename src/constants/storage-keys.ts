@@ -26,3 +26,11 @@ export const MOOD_BOARDS_STORAGE_KEY = 'cinegen.mood-boards.v1';
 export const PROJECT_SETTINGS_STORAGE_KEY = 'cinegen.project-settings.v1';
 /** Script editor previs timeline margin collapsed (1 = collapsed). */
 export const SCRIPT_PREVIS_MARGIN_COLLAPSED_KEY = 'cinegen.scriptPrevisMarginCollapsed';
+/** Storyboard reference bank persistence. */
+export const STORYBOARD_REFERENCE_STORAGE_KEY = 'cinegen.storyboard.references';
+/** Storyboard generation mode preference (`review` | `auto`). */
+export const STORYBOARD_GENERATION_MODE_STORAGE_KEY = 'cinegen.storyboard.generationMode';
+/** Section visibility toggles for hierarchy section settings modal. */
+export const SECTION_VISIBILITY_STORAGE_KEY = 'cinegen-section-visibility';
+/** Developer console command history. */
+export const CONSOLE_HISTORY_STORAGE_KEY = 'cg:console:history';

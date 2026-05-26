@@ -3,6 +3,7 @@
  */
 
 import { buildShotListRows, formatShotDisplayLabel } from '@/workspace/shot-frame-bridge';
+import { escHtml } from '@/utils/html';
 
 interface ContinuityData {
   columns?: string[];
@@ -70,12 +71,3 @@ export function renderShotListTable(): string {
     </div>`;
 }
 
-function escHtml(str: unknown): string {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return (str as string)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

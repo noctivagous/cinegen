@@ -47,6 +47,11 @@ import { emitAiInteractionLog } from '@/services/ai/interaction-log';
 import { ImageGenerationService } from '@/services/ai/image-generation-service';
 import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
 import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
+import { CG_TREE_NODE_SELECT } from '@/events/shell-events';
+import {
+  STORYBOARD_GENERATION_MODE_STORAGE_KEY,
+  STORYBOARD_REFERENCE_STORAGE_KEY,
+} from '@/constants/storage-keys';
 
 function refreshShotFrameTree(): void {
   requestProjectTreeRefresh();
@@ -148,7 +153,7 @@ interface StoryboardReferenceSlot {
 }
 
 const REFERENCE_CATEGORIES: ReferenceCategory[] = ['characters', 'locations', 'interiors', 'exteriors'];
-const STORYBOARD_REFERENCE_KEY = 'cinegen.storyboard.references';
+const STORYBOARD_REFERENCE_KEY = STORYBOARD_REFERENCE_STORAGE_KEY;
 
 export function showStoryboardContextMenu(frame: StoryboardFrame, clientX: number, clientY: number): void {
   const menu = document.getElementById('storyboard-context-menu') as any;
@@ -206,7 +211,7 @@ export function setStoryboardPartVisibility(part: string, visible: boolean): voi
 
 let autogenBoardsEnabled = false;
 let storyboardGenerationMode: 'review' | 'auto' = 'review';
-const STORYBOARD_GEN_MODE_KEY = 'cinegen.storyboard.generationMode';
+const STORYBOARD_GEN_MODE_KEY = STORYBOARD_GENERATION_MODE_STORAGE_KEY;
 
 export function initAutogenCheckbox(): void {
   const cb = document.getElementById('autogen-boards-cb') as HTMLInputElement | null;
@@ -1489,7 +1494,7 @@ export function installStoryboardBundleGlobals(): void {
   hydrateReferenceStateFromStorage();
   normalizedReferenceBank();
   syncReferenceGateControls();
-  document.addEventListener('cg-tree-node-select', () => syncReferenceGateControls());
+  document.addEventListener(CG_TREE_NODE_SELECT, () => syncReferenceGateControls());
   document.getElementById('script-editor')?.addEventListener('input', () => syncReferenceGateControls());
   setTimeout(() => initStoryboardGenerationModeControls(), 0);
   setTimeout(() => {

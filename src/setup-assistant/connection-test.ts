@@ -1,4 +1,5 @@
 import { escHtml } from '@/utils/html';
+import { resolveOpenAiCompatibleTarget } from '@/services/ai/openai-compatible-target';
 
 /**
  * Provider connection tests and model-list fetch routines.
@@ -17,16 +18,6 @@ const PROXY_BASE = '';
  * Attempt to list models for a provider.
  * Returns { ok, rateLimit, message, models: [{id, label}] }
  */
-function resolveProxyTarget(providerId: string, baseUrl: string): string {
-  const base = (baseUrl || '').toLowerCase();
-  if (base.includes('api.x.ai') || base.includes('x.ai')) return 'xai';
-  if (base.includes('api.together.ai') || base.includes('together.xyz')) return 'together';
-  if (base.includes('api.groq.com') || base.includes('groq.com')) return 'groq';
-  if (base.includes('mistral.ai')) return 'mistral';
-  if (base.includes('deepseek.com')) return 'deepseek';
-  if (base.includes('api.openai.com')) return 'openai';
-  return providerId;
-}
 
 export async function saFetchModels(providerId: any, key: any, baseUrl: any, mod: any, signal: any) {
   const timeout = 12000;
@@ -38,7 +29,7 @@ export async function saFetchModels(providerId: any, key: any, baseUrl: any, mod
     let result;
     switch (providerId) {
       case 'openai-compatible': {
-        const target = resolveProxyTarget(providerId, baseUrl);
+        const target = resolveOpenAiCompatibleTarget({ baseUrl }) ?? 'openai';
         result = await proxiedFetchModels(key, baseUrl || 'https://api.openai.com/v1', target, combinedSignal, mod);
         break;
       }

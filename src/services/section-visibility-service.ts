@@ -10,8 +10,9 @@ import type { TreeNode } from '@/tree/tree-types';
 import { projectData } from '@/data/project-data';
 import { storageService } from '@/services/persistence';
 import { sectionKeyForTopLevelName } from '@/tree/hierarchy-section-theme';
+import { SECTION_VISIBILITY_STORAGE_KEY } from '@/constants/storage-keys';
 
-const STORAGE_KEY = 'cinegen-section-visibility';
+const STORAGE_KEY = SECTION_VISIBILITY_STORAGE_KEY;
 
 export type SectionVisibilityMap = Record<string, Record<string, boolean>>;
 

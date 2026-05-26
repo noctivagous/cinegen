@@ -31,6 +31,7 @@ import { configureSaWizardApi, refreshSaStepHost } from '@/setup-assistant/sa-wi
 import { REQUIRED_ROUTING_MODALITIES, ROUTING_MODALITIES } from '@/setup-assistant/sa-wizard-constants';
 import { SETUP_COMPLETE_STORAGE_KEY, SETUP_PROGRESS_STORAGE_KEY } from '@/constants/storage-keys';
 import { generateId } from '@/utils/ids';
+import { escHtml } from '@/utils/html';
 import { closeModal, closeAllModalsExcept, openModalAsync, registerModal } from '@/services/modal-manager';
 import { ensureModalReady } from '@/components/modals/modal-loader';
 import { storageService } from '@/services/persistence';
@@ -248,6 +249,82 @@ function markSetupComplete() {
 function resetSetupComplete() {
   try { storageService.removeItem(SETUP_COMPLETE_STORAGE_KEY); }
   catch (e) { /* noop */ }
+}
+
+function _saVendorConfigured(vendor) {
+  if (!vendor || typeof vendor !== 'object') return false;
+  if (typeof vendorIsConfigured === 'function') return vendorIsConfigured(vendor);
+  if (vendor.hasServerKey) return true;
+  const key = String(vendor.apiKey || '').trim();
+  return Boolean(key) && !/^•+$/.test(key);
+}
+
+function _saRoutingLooksComplete(routing) {
+  const modalities = routing?.modalities || {};
+  return REQUIRED_ROUTING_MODALITIES.every((mod) => {
+    const cfg = modalities[mod] || {};
+    return Boolean(
+      String(cfg.provider || '').trim() &&
+      String(cfg.vendorId || '').trim() &&
+      String(cfg.model || '').trim()
+    );
+  });
+}
+
+function _saRoutingVendorIds(routing) {
+  const ids = new Set();
+  const modalities = routing?.modalities || {};
+  REQUIRED_ROUTING_MODALITIES.forEach((mod) => {
+    const vendorId = String(modalities?.[mod]?.vendorId || '').trim();
+    if (vendorId) ids.add(vendorId);
+  });
+  return ids;
+}
+
+function _saKeysCoverRoutingVendors(keysState, vendorIds) {
+  if (!keysState || !vendorIds || !vendorIds.size) return false;
+  const configured = new Set(
+    (keysState.vendors || [])
+      .filter((v) => _saVendorConfigured(v))
+      .map((v) => String(v.id || '').trim())
+      .filter(Boolean)
+  );
+  return [...vendorIds].every((id) => configured.has(id));
+}
+
+async function _saInferSetupCompleteFromServerState() {
+  try {
+    let routing = null;
+    let keys = null;
+
+    try {
+      const [routingRes, keysRes] = await Promise.all([
+        fetch('/api/settings/routing'),
+        fetch('/api/settings/keys'),
+      ]);
+      if (routingRes.ok) routing = await routingRes.json();
+      if (keysRes.ok) keys = await keysRes.json();
+    } catch {
+      /* fall back to globals/cache below */
+    }
+
+    if (!routing && typeof loadAiApiSettings === 'function') {
+      try { routing = loadAiApiSettings(); } catch { /* noop */ }
+    }
+    if (!keys && typeof loadApiKeys === 'function') {
+      try { keys = loadApiKeys(); } catch { /* noop */ }
+    }
+
+    if (!_saRoutingLooksComplete(routing)) return false;
+    const requiredVendorIds = _saRoutingVendorIds(routing);
+    if (!requiredVendorIds.size) return false;
+    if (!_saKeysCoverRoutingVendors(keys, requiredVendorIds)) return false;
+
+    markSetupComplete();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /* ── Wizard progress (resume after refresh) ──────────────────────────────── */
@@ -2260,10 +2337,12 @@ async function aipTestSelectedProvider() {
 
 /* ── First-launch detection ─────────────────────────────────────────────── */
 
-function checkFirstLaunchSetup() {
+async function checkFirstLaunchSetup() {
   if (_saFirstLaunchCheckScheduled) return;
   if (isSetupComplete()) return;
   _saFirstLaunchCheckScheduled = true;
+
+  if (await _saInferSetupCompleteFromServerState()) return;
 
   let attempts = 0;
   const maxAttempts = 5;
@@ -2348,18 +2427,6 @@ function _initSetupAssistantChromeOnce() {
       saRailGoToStep(tab.getAttribute('data-step-idx'));
     });
   }
-}
-
-/* ── HTML helpers ────────────────────────────────────────────────────────── */
-
-function escHtml(str) {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 /* ── Style injection ─────────────────────────────────────────────────────── */

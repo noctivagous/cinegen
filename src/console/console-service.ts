@@ -9,8 +9,9 @@
 import { executeConsoleCommand, getAllConsoleCommands } from '@/console/command-registry';
 import { ensureConsoleTerminal } from '@/console/console-terminal';
 import { storageService } from '@/services/persistence';
+import { CONSOLE_HISTORY_STORAGE_KEY } from '@/constants/storage-keys';
 
-const CONSOLE_HISTORY_KEY = 'cg:console:history';
+const CONSOLE_HISTORY_KEY = CONSOLE_HISTORY_STORAGE_KEY;
 const MAX_HISTORY = 200;
 
 /** Minimal terminal surface (xterm disabled). */

@@ -65,6 +65,7 @@
 
 import { PROVIDER_MODEL_CATALOG_STORAGE_KEY } from '@/constants/storage-keys';
 import { storageService } from '@/services/persistence';
+import { ROUTING_MODALITIES } from '@/services/routing-modalities';
 
 declare global {
   function getModelsForProviderModality(providerId: string, modalityKey: string): Array<{ id: string; label: string }>;
@@ -77,20 +78,11 @@ declare global {
   var AI_API_PROVIDERS: Array<{ id: string; label: string }>;
 }
 
-const ROUTING_MODALITIES = ['llm', 'image', 'video', 'audio'];
-
 const MODALITY_CHIP_LABELS: Record<string, string> = {
   llm:   'Text',
   image: 'Image',
   video: 'Video',
   audio: 'Sound'
-};
-
-const SCOPE_TO_MODALITY = {
-  language: 'llm',
-  image:    'image',
-  video:    'video',
-  audio:    'audio'
 };
 
 function isVideoModelId(id: any): boolean {

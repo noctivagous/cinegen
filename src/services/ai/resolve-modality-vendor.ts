@@ -1,6 +1,7 @@
 import { storageService } from '@/services/persistence';
 import { loadProviderModelCatalog } from '@/services/provider-model-catalog';
 import type { AiVendorRoute } from '@/services/ai/types';
+import { AI_API_SETTINGS_STORAGE_KEY } from '@/constants/storage-keys';
 
 export type ModalityVendorKey = 'llm' | 'image' | 'video' | 'audio';
 
@@ -14,7 +15,7 @@ export function resolveModalityVendorRoute(modality: ModalityVendorKey): Modalit
   try {
     const fromWindow =
       typeof window.loadAiApiSettings === 'function' ? window.loadAiApiSettings() : null;
-    const raw = storageService.getItem('cinegen.aiApiSettings');
+    const raw = storageService.getItem(AI_API_SETTINGS_STORAGE_KEY);
     const settings = fromWindow ?? (raw ? JSON.parse(raw) : null);
     const cfg = settings?.modalities?.[modality] as
       | { provider?: string; vendorId?: string; model?: string; baseUrl?: string }

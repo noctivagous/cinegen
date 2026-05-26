@@ -1,6 +1,10 @@
 import { generateId } from '@/utils/ids';
 import { getDefaultProviderList, getSaProviderSlots, SEED_VENDOR_DEFINITIONS } from '@/data/provider-catalog';
 import {
+  apiScopeForModality as mapApiScopeForModality,
+  ROUTING_MODALITIES,
+} from '@/services/routing-modalities';
+import {
   sortVendorsForMasterList,
   vendorCatalogHasLiveModels,
   getVendorModalityChips,
@@ -177,7 +181,6 @@ function _reassignModalitiesForRemovedVendors(next: any) {
   if (!remainingVendors.length) return;
 
   let changed = false;
-  const ROUTING_MODALITIES = ['llm', 'image', 'video', 'audio'];
 
   removedIds.forEach((removedId) => {
     ROUTING_MODALITIES.forEach((mod) => {
@@ -239,7 +242,7 @@ async function clearApiKeys() {
 /* ── Key utilities ───────────────────────────────────────────────────────── */
 
 function apiScopeForModality(modalityKey: any) {
-  return modalityKey === 'llm' ? 'language' : modalityKey;
+  return mapApiScopeForModality(modalityKey as any);
 }
 
 /** True when a vendor can call APIs (browser key, masked server key, or backends/.env slot). */

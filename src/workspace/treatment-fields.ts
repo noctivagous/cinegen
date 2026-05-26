@@ -2,6 +2,8 @@
  * Treatment form field definitions and pure HTML renderer.
  */
 
+import { escHtml } from '@/utils/html';
+
 export interface TreatmentField {
   key: string;
   label: string;
@@ -74,12 +76,3 @@ export function renderTreatmentFieldHtml(field: TreatmentField, projectTreatment
     </label>`;
 }
 
-function escHtml(str: unknown): string {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return (str as string)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

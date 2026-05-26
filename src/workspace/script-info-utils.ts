@@ -181,13 +181,3 @@ declare function renderEntityChipsHtml(
 declare function renderBreakdownTable(): void;
 declare function scheduleFountainRender(): void;
 declare function renderGlobalAssets(idx: number): void;
-
-function escHtml(str: unknown): string {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return (str as string)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

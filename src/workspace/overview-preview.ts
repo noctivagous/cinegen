@@ -3,6 +3,7 @@
  */
 
 import { workspaceState } from '@/workspace/workspace-state';
+import { escHtml } from '@/utils/html';
 
 /** Toggle the accordion open/closed for a column or row list item wrapper. */
 export function toggleOvColItem(wrapper: HTMLElement | null): void {
@@ -87,12 +88,3 @@ export function setOvHoverPreview(checked: boolean) {
   if (!workspaceState.ovShowHoverPreview) _dismissOvPreview();
 }
 
-function escHtml(str: unknown): string {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return (str as string)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

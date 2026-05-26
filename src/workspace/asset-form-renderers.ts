@@ -3,6 +3,7 @@
  */
 
 import { workspaceState } from '@/workspace/workspace-state';
+import { escHtml } from '@/utils/html';
 
 interface BreakdownRow {
   props?: string;
@@ -191,12 +192,3 @@ export function _renderAssetFormEmpty(data: AssetData): string {
     </div>`;
 }
 
-function escHtml(str: unknown): string {
-  if (typeof str !== 'string') str = String(str ?? '');
-  return (str as string)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

@@ -1,4 +1,5 @@
 import type { AiVendorRoute } from '@/services/ai/types';
+import { resolveOpenAiCompatibleTarget } from '@/services/ai/openai-compatible-target';
 
 const TARGET_MAP: Record<string, string> = {
   'openai-compatible': 'openai',
@@ -15,30 +16,12 @@ export function providerTarget(providerId: string): string {
   return TARGET_MAP[providerId] || 'custom';
 }
 
-function targetFromVendorDetails(vendor: AiVendorRoute): string | null {
-  if (vendor.providerId !== 'openai-compatible') return null;
-  const slotId = (vendor.slotId || '').toLowerCase();
-  const name = (vendor.name || '').toLowerCase();
-  const baseUrl = (vendor.baseUrl || '').toLowerCase();
-
-  if (slotId === 'xai') return 'xai';
-  if (slotId === 'groq') return 'groq';
-  if (slotId === 'together') return 'together';
-  if (slotId === 'mistral') return 'mistral';
-  if (slotId === 'deepseek') return 'deepseek';
-  if (slotId === 'openai') return 'openai';
-
-  if (name.includes('xai') || name.includes('x.ai') || baseUrl.includes('x.ai')) return 'xai';
-  if (name.includes('groq') || baseUrl.includes('api.groq.com')) return 'groq';
-  if (name.includes('together') || baseUrl.includes('api.together.xyz')) return 'together';
-  if (name.includes('mistral') || baseUrl.includes('api.mistral.ai')) return 'mistral';
-  if (name.includes('deepseek') || baseUrl.includes('api.deepseek.com')) return 'deepseek';
-
-  return null;
-}
-
 export function resolveVendorTarget(vendor: AiVendorRoute): string {
-  return targetFromVendorDetails(vendor) ?? providerTarget(vendor.providerId);
+  const openAiCompatibleTarget =
+    vendor.providerId === 'openai-compatible'
+      ? resolveOpenAiCompatibleTarget(vendor)
+      : null;
+  return openAiCompatibleTarget ?? providerTarget(vendor.providerId);
 }
 
 export function buildProxyHeaders(vendor: AiVendorRoute): Record<string, string> {

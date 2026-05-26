@@ -1,14 +1,15 @@
 import {
-  apiScopeForModality,
   fetchProviderModels,
-  type RoutingModalityKey,
 } from '@/services/provider-fetch';
+import {
+  apiScopeForModality,
+  ROUTING_MODALITIES,
+  type RoutingModalityKey,
+} from '@/services/routing-modalities';
 import {
   applyVendorCatalogFetchResult,
   ensureRoutingModelDefaults,
 } from '@/services/provider-model-catalog';
-
-export const ROUTING_MODALITIES: RoutingModalityKey[] = ['llm', 'image', 'video', 'audio'];
 
 export type ApiKeysVendor = {
   id: string;
