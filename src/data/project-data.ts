@@ -227,6 +227,90 @@ export let breakdownData: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let assetDetailData: any = {};
 
+export type MoodBoardItemType = 'video' | 'image' | 'sound' | 'text';
+
+export interface MoodBoardItem {
+  id: string;
+  type: MoodBoardItemType;
+  label: string;
+  source: string;
+  active: boolean;
+  notes: string;
+  order: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  metadata: Record<string, any>;
+}
+
+export interface MoodBoard {
+  id: string;
+  name: string;
+  items: MoodBoardItem[];
+  viewMode: 'grid' | 'kanban';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export let moodBoards: MoodBoard[] = [];
+export let activeMoodBoardId: string | null = null;
+
+export function addMoodBoard(name: string): MoodBoard {
+  const board: MoodBoard = {
+    id: `mb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    items: [],
+    viewMode: 'grid',
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  moodBoards.push(board);
+  return board;
+}
+
+export function removeMoodBoard(id: string): void {
+  moodBoards = moodBoards.filter((b) => b.id !== id);
+  if (activeMoodBoardId === id) activeMoodBoardId = null;
+}
+
+export function getMoodBoard(id: string): MoodBoard | undefined {
+  return moodBoards.find((b) => b.id === id);
+}
+
+export function setActiveMoodBoard(id: string | null): void {
+  activeMoodBoardId = id;
+}
+
+export function addMoodBoardItem(boardId: string, item: Omit<MoodBoardItem, 'id'>): MoodBoardItem | null {
+  const board = getMoodBoard(boardId);
+  if (!board) return null;
+  const full: MoodBoardItem = { ...item, id: `mbi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
+  board.items.push(full);
+  board.updatedAt = Date.now();
+  return full;
+}
+
+export function removeMoodBoardItem(boardId: string, itemId: string): void {
+  const board = getMoodBoard(boardId);
+  if (!board) return;
+  board.items = board.items.filter((i) => i.id !== itemId);
+  board.updatedAt = Date.now();
+}
+
+export function updateMoodBoardItem(boardId: string, itemId: string, partial: Partial<MoodBoardItem>): void {
+  const board = getMoodBoard(boardId);
+  if (!board) return;
+  const idx = board.items.findIndex((i) => i.id === itemId);
+  if (idx === -1) return;
+  board.items[idx] = { ...board.items[idx], ...partial };
+  board.updatedAt = Date.now();
+}
+
+export function toggleMoodBoardItemActive(boardId: string, itemId: string): void {
+  const board = getMoodBoard(boardId);
+  if (!board) return;
+  const item = board.items.find((i) => i.id === itemId);
+  if (item) item.active = !item.active;
+}
+
 function resolveInitialCineFile(): string | null {
   const available = listCineProjectFiles();
   if (available.includes(DEFAULT_CINE_FILE)) return DEFAULT_CINE_FILE;
@@ -461,6 +545,8 @@ export function installProjectDataGlobals(): void {
     assetDetailData = v as typeof assetDetailData;
   });
   bindWindowData('storyboardVisibility', () => storyboardVisibility);
+  bindWindowData('moodBoards', () => moodBoards, (v) => { moodBoards = v as typeof moodBoards; });
+  bindWindowData('activeMoodBoardId', () => activeMoodBoardId, (v) => { activeMoodBoardId = v as string | null; });
 
   const w = window as unknown as Record<string, unknown>;
   w.getProjectFountainText = getProjectFountainText;

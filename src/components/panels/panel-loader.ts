@@ -16,6 +16,8 @@ const VIEW_CHUNK: Record<string, string> = {
   'asset-detail': 'assets',
   overview: 'assets',
   'chip-global': 'global',
+  moodboards: 'moodboards',
+  'moodboard-detail': 'moodboards',
 };
 
 /** Custom element tag for each workspace view host (index.html light DOM). */
@@ -31,6 +33,8 @@ export const VIEW_HOST_TAG: Record<string, string> = {
   'chip-global': 'cinegen-chip-global-view',
   overview: 'cinegen-overview-view',
   'asset-detail': 'cinegen-asset-detail-view',
+  moodboards: 'cinegen-moodboards-view',
+  'moodboard-detail': 'cinegen-moodboard-item-detail',
   default: 'cinegen-workspace-empty',
 };
 
@@ -39,6 +43,7 @@ const chunkLoaders: Record<string, () => Promise<unknown>> = {
   production: () => import('@/components/panels/chunk-production'),
   assets: () => import('@/components/panels/chunk-assets'),
   global: () => import('@/components/panels/chunk-global'),
+  moodboards: () => import('@/components/panels/chunk-moodboards'),
 };
 
 const loadedChunks = new Set<string>(['preprod']);

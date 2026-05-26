@@ -9,6 +9,7 @@ const ASSET_TAB_OPTIONS = [
   { value: '2', label: 'Props' },
   { value: '3', label: 'Vehicles' },
   { value: '4', label: 'Lighting & Effects' },
+  { value: '5', label: 'Mood Board' },
 ];
 
 @customElement('cinegen-assets-view')

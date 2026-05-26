@@ -114,6 +114,7 @@ export function getPersistedPreprodMode(projectId = activeProjectId): PreprodLay
 
 /** Sync tree highlight + preprod layout before first paint (no workspace routing). */
 export function primePersistedProjectTreeUi(projectId = activeProjectId): void {
+  ensureMoodBoardTreeNodes();
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
   const name = initialTreeSelectionName(projectId);
@@ -144,9 +145,51 @@ export function setSelectedTreeName(name: string | null): void {
 }
 
 export function getProjectTreeChildren(): TreeNode[] {
+  ensureMoodBoardTreeNodes();
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
   return getProjectData().children ?? [];
+}
+
+function ensureMoodBoardTreeNodes(): void {
+  const projectData = getProjectData();
+  const top = projectData.children ?? [];
+  let mbFolder = top.find((n) => n.name === 'Mood Boards');
+  if (!mbFolder) {
+    mbFolder = {
+      name: 'Mood Boards',
+      type: 'folder',
+      icon: 'fa-images',
+      view: 'moodboards',
+      children: [],
+    };
+    top.push(mbFolder);
+  }
+  mbFolder.children ??= [];
+  const { moodBoards } = (window as unknown as Record<string, unknown>);
+  const boards = Array.isArray(moodBoards) ? moodBoards : [];
+  const boardIds = new Set(boards.map((b: any) => b.id));
+  mbFolder.children = mbFolder.children.filter((c: any) => c.type === 'moodboard' && boardIds.has(c.boardId));
+  for (const board of boards) {
+    const existing = mbFolder.children.find((c: any) => c.boardId === board.id);
+    if (!existing) {
+      mbFolder.children.push({
+        name: board.name,
+        type: 'moodboard',
+        icon: 'fa-image',
+        view: 'moodboard-detail',
+        boardId: board.id,
+        children: board.items?.map((item: any) => ({
+          name: item.label,
+          type: 'moodboard-item',
+          icon: item.type === 'video' ? 'fa-video' : item.type === 'sound' ? 'fa-music' : item.type === 'text' ? 'fa-font' : 'fa-image',
+          view: 'moodboard-detail',
+          boardId: board.id,
+          itemId: item.id,
+        })) ?? [],
+      });
+    }
+  }
 }
 
 function ensureStoryboardReferenceNodes(): void {
@@ -406,6 +449,9 @@ function resolveTreeNodeViewName(node: TreeNode): string {
 }
 
 export function activateProjectTreeNode(name: string): boolean {
+  ensureMoodBoardTreeNodes();
+  ensureStoryboardReferenceNodes();
+  ensureSceneShotListNodes();
   expandTreePathToName(name);
   const node = findProjectNodeByName(name);
   if (!node) return false;
@@ -438,6 +484,7 @@ function nodeContains(parent: TreeNode, target: TreeNode): boolean {
 }
 
 export function refreshProjectTree(): void {
+  ensureMoodBoardTreeNodes();
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
   const activeId = activeProjectId || '';

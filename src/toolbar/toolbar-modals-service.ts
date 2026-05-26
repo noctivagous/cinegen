@@ -32,7 +32,7 @@ import {
   persistActiveProjectSettings,
   prepareActiveProjectTreeUiForSwitch,
 } from '@/services/project-service';
-import { activeProjectId, getActiveProjectRegistryEntry } from '@/data/project-data';
+import { activeProjectId, getActiveProjectRegistryEntry, moodBoards } from '@/data/project-data';
 import {
   activatePersistedProjectTreeSelection,
   primePersistedProjectTreeUi,
@@ -2480,10 +2480,26 @@ export function openAiAssistModal(): void {
 }
 
 export function openWizardsModal(): void {
+  openEntryWizardModal('wizards-modal');
+}
+
+export function openMoodBoardsModal(): void {
   closeAllToolbarSplitMenus();
-  closeAllModalsExcept('wizards-modal');
-  window.closeAiProvidersModal?.();
-  openModal('wizards-modal');
+  window.activateProjectTreeNode?.('Mood Boards');
+}
+
+export function openMoodBoardItemDetail(boardId: string, itemId: string): void {
+  const board = moodBoards.find((b) => b.id === boardId);
+  if (!board) return;
+  const item = board.items.find((i) => i.id === itemId);
+  if (!item) return;
+  openModal('moodboard-item-detail');
+  queueMicrotask(() => {
+    const el = document.getElementById('view-moodboard-detail');
+    if (el && 'loadItem' in el && typeof (el as { loadItem: (boardId: string, itemId: string) => void }).loadItem === 'function') {
+      (el as { loadItem: (boardId: string, itemId: string) => void }).loadItem(boardId, itemId);
+    }
+  });
 }
 
 export function closeWizardsModal(): void {
@@ -2934,6 +2950,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'concept-wizard-modal' });
   registerModal({ id: 'asset-wizard-modal' });
   registerModal({ id: 'storyboard-wizard-modal' });
+  registerModal({ id: 'moodboard-item-detail', elementId: 'view-moodboard-detail' });
 }
 
 export function openDebugModal(): void {

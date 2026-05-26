@@ -237,6 +237,41 @@ export class CinegenToolbar extends CgLightElement {
         >
           <span slot="main"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist</span>
         </cg-toolbar-split>
+        <cg-toolbar-split
+          id="moodboards-split"
+          menu-id="moodboards-menu"
+          menu-wide
+          main-title="Mood Boards — visual research collections"
+        >
+          <span slot="main"><i class="fa-solid fa-images"></i> Mood Boards</span>
+          <div slot="menu">
+            <button
+              type="button"
+              class="toolbar-split-menu-item"
+              role="menuitem"
+              data-moodboard-action="open"
+            >
+              Open Mood Boards…
+            </button>
+            <div class="toolbar-split-menu-sep" role="separator" aria-hidden="true"></div>
+            <button
+              type="button"
+              class="toolbar-split-menu-item"
+              role="menuitem"
+              data-moodboard-action="new-board"
+            >
+              <i class="fa-solid fa-plus"></i> New Board…
+            </button>
+            <button
+              type="button"
+              class="toolbar-split-menu-item"
+              role="menuitem"
+              data-moodboard-action="quick-generate"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Quick Generate…
+            </button>
+          </div>
+        </cg-toolbar-split>
 
         <div class="flex-1"></div>
         <cg-toolbar-split

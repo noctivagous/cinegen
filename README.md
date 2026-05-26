@@ -10,9 +10,9 @@ AUDIENCE AND PURPOSE
 This filmmaking web app is intended to be a user-friendly, BYOK (Bring
 Your Own Keys) that a person can run on
 his own computer or server. Before launching the app
-for the first time, the user will have signed up with
+for the first time, the user will sign up with
 one or more AI service providers to enter API keys in
-the app during setup.  An onboarding assistant modal
+the app during setup.  An onboarding assistant modal window
 appears when the app is first launched.
 
 ---
@@ -20,11 +20,11 @@ appears when the app is first launched.
 
 ## Tree View of Project Hierarchy - Script + Storyboard (sample project)
 
-![Script + Storyboard, tree hierarchy](img/dev-docs/readme-tree-scriptStoryboardView.png)
+![Script + Storyboard, tree hierarchy](img/dev-docs/readme-tree-scriptStoryboardView.webp)
 
 ## Grid+ view of Project Hierarchy - Script + Storyboard — (sample project)
 
-![Script + Storyboard, Grid+ hierarchy](img/dev-docs/readme-gridPlus-scriptStoryboardView.png)
+![Script + Storyboard, Grid+ hierarchy](img/dev-docs/readme-gridPlus-scriptStoryboardView.webp)
 
 
 
@@ -51,8 +51,19 @@ occur in software.
 
 2. Organization
 
-I was considering a production department layout, where you have the Sound Department, Production Design, Location Scout, Cinematographer, etc., and each sub section has its own information layout, such as Wardrobe under Production Design, and Prop Department.  This way it bridges closely to the mental model of filmmaking where there are people in charge of differnt subsections and these subsections in the GUI will be tailored, not just templates for editing data.  The Wardrobe section should have a different layout than the Props layout in whatever way suits it.  Doing this will 
-make functions and processes easy to find in the app.
+I was considering a production departments layout, 
+where you have the Sound Department, Production Design, 
+Location Scout, Cinematographer, etc., and each sub section 
+has its own information layout, such as Wardrobe under 
+Production Design, and Prop Department.  
+This way it bridges closely to the mental model of 
+filmmaking where there are people in charge of different 
+subsections and these subsections in the GUI will be 
+tailored, not just repetitions of the same templates 
+for editing data.  The Wardrobe section should have a 
+different layout than the Props layout in whatever way suits 
+it.  Doing this will make functions and processes easy 
+to find in the app.
 
 
 2. Audience
@@ -78,6 +89,13 @@ might happen in open source software.
 
 
 3. UI Flow
+
+Different entry points:
+	- Script
+	- Storyboard
+	- Mood board
+	- Outline
+	- Blank
 
 The user will be able to start with a script, generate
 a storyboard, work with assistants to make all items,

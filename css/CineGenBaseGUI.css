@@ -40,6 +40,8 @@
   --tree-section-scenes-item: #78c098;
   --tree-section-global: #b0b0b0;
   --tree-section-global-item: #909090;
+  --tree-section-moodboards: #90d4c8;
+  --tree-section-moodboards-item: #68b4a8;
   /* Hierarchy depth: each nested level mixes more black into the section item tone (see --tree-tone-l*) */
   --tree-depth-mix-l2: 76%;
   --tree-depth-mix-l3: 52%;
@@ -1993,6 +1995,14 @@ cg-modal-shell cinegen-ai-provider-info {
   --tree-tone-l3: color-mix(in srgb, var(--tree-section-global-item) var(--tree-depth-mix-l3), #000);
   --tree-tone-l4: color-mix(in srgb, var(--tree-section-global-item) var(--tree-depth-mix-l4), #000);
 }
+#project-hierarchy-sidebar .tree-section-moodboards,
+#project-hierarchy-sidebar .hierarchy-grid-item--section-moodboards {
+  --tree-tone-l0: var(--tree-section-moodboards);
+  --tree-tone-l1: var(--tree-section-moodboards-item);
+  --tree-tone-l2: color-mix(in srgb, var(--tree-section-moodboards-item) var(--tree-depth-mix-l2), #000);
+  --tree-tone-l3: color-mix(in srgb, var(--tree-section-moodboards-item) var(--tree-depth-mix-l3), #000);
+  --tree-tone-l4: color-mix(in srgb, var(--tree-section-moodboards-item) var(--tree-depth-mix-l4), #000);
+}
 
 /* Apply depth tone to labels and icons (data-tree-depth set in renderTree) */
 #project-hierarchy-sidebar .tree-item[class*="tree-section-"][data-tree-depth="0"] {
@@ -2644,6 +2654,9 @@ cg-panel-header.panel-header > .panel-header-actions {
 #main-workspace-container.workspace-section-global {
   --workspace-header-tint: var(--tree-section-global-item);
 }
+#main-workspace-container.workspace-section-moodboards {
+  --workspace-header-tint: var(--tree-section-moodboards-item);
+}
 
 #main-workspace-container.workspace-section-preprod .workspace-panel-title {
   color: var(--tree-section-preprod-item);
@@ -2672,6 +2685,9 @@ cg-panel-header.panel-header > .panel-header-actions {
 }
 #main-workspace-container.workspace-section-global .workspace-panel-title {
   color: var(--tree-section-global-item);
+}
+#main-workspace-container.workspace-section-moodboards .workspace-panel-title {
+  color: var(--tree-section-moodboards-item);
 }
 
 #main-workspace-container[class*="workspace-section-"] #main-workspace .panel-header {
@@ -6431,6 +6447,7 @@ textarea.treatment-input.treatment-input--notes {
 .overview-card--section-ai-director { border-left-color: color-mix(in srgb, var(--tree-section-ai-director-item) 35%, var(--border-dark)); }
 .overview-card--section-scenes   { border-left-color: color-mix(in srgb, var(--tree-section-scenes-item)   35%, var(--border-dark)); }
 .overview-card--section-global   { border-left-color: color-mix(in srgb, var(--tree-section-global-item)   35%, var(--border-dark)); }
+.overview-card--section-moodboards { border-left-color: color-mix(in srgb, var(--tree-section-moodboards-item) 35%, var(--border-dark)); }
 
 .overview-card--section-preprod  .overview-card-icon { color: var(--tree-section-preprod-item);  }
 .overview-card--section-cinematography .overview-card-icon { color: var(--tree-section-cinematography-item); }
@@ -6442,6 +6459,7 @@ textarea.treatment-input.treatment-input--notes {
 .overview-card--section-ai-director .overview-card-icon { color: var(--tree-section-ai-director-item); }
 .overview-card--section-scenes   .overview-card-icon { color: var(--tree-section-scenes-item);   }
 .overview-card--section-global   .overview-card-icon { color: var(--tree-section-global-item);   }
+.overview-card--section-moodboards .overview-card-icon { color: var(--tree-section-moodboards-item); }
 
 /* ============================================================
    ASSET DETAIL PANEL

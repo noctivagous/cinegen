@@ -36,6 +36,11 @@ export interface CineGenPreferences {
   storyboardThumbnailScale: number;
   /** Project hierarchy sidebar: tree, top-level grid, or grid with nested child buttons. */
   projectHierarchyViewMode: 'tree' | 'grid' | 'grid-plus';
+  /** Mood board quick generation provider keys */
+  moodBoardImageProvider: string;
+  moodBoardVideoProvider: string;
+  moodBoardAudioProvider: string;
+  moodBoardLLMProvider: string;
   /** Last selected project hierarchy node name, keyed by project id. */
   projectTreeSelectedByProjectId?: Record<string, string>;
 }
@@ -58,6 +63,10 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   storyboardViewMode: 'shots',
   storyboardThumbnailScale: 1,
   projectHierarchyViewMode: 'tree',
+  moodBoardImageProvider: '',
+  moodBoardVideoProvider: '',
+  moodBoardAudioProvider: '',
+  moodBoardLLMProvider: '',
 };
 
 export function loadPreferences(): CineGenPreferences {

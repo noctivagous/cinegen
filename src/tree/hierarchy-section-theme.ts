@@ -66,6 +66,12 @@ export const HIERARCHY_SECTIONS: HierarchySectionTheme[] = [
     treeNames: ['Scenes'],
   },
   {
+    key: 'moodboards',
+    header: '#90d4c8',
+    item: '#68b4a8',
+    treeNames: ['Mood Boards'],
+  },
+  {
     key: 'global',
     header: '#b0b0b0',
     item: '#909090',

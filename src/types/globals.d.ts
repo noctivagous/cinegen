@@ -305,6 +305,8 @@ declare global {
     openSettingsModal?: () => void;
     closeSettingsModal?: () => void;
     openAiAssistModal?: () => void;
+    openMoodBoardsModal?: () => void;
+    openMoodBoardItemDetail?: (boardId: string, itemId: string) => void;
     closeAiAssistModal?: () => void;
     openDebugModal?: () => void;
     closeDebugModal?: () => void;
@@ -478,6 +480,10 @@ declare global {
     'cinegen-camera-lighting-view': import('@/components/panels/cinegen-camera-lighting-view').CinegenCameraLightingView;
     'cinegen-casting-view': import('@/components/panels/cinegen-casting-view').CinegenCastingView;
     'cinegen-chip-global-view': import('@/components/panels/cinegen-chip-global-view').CinegenChipGlobalView;
+    'cinegen-moodboards-view': import('@/components/panels/cinegen-moodboards-view').CinegenMoodboardsView;
+    'cinegen-moodboards-panel': import('@/components/panels/cinegen-moodboards-panel').CinegenMoodboardsPanel;
+    'cinegen-moodboards-kanban': import('@/components/panels/cinegen-moodboards-kanban').CinegenMoodboardsKanban;
+    'cinegen-moodboard-item-detail': import('@/components/panels/cinegen-moodboard-item-detail').CinegenMoodboardItemDetail;
     'cinegen-overview-view': import('@/components/panels/cinegen-overview-view').CinegenOverviewView;
     'cinegen-asset-detail-view': import('@/components/panels/cinegen-asset-detail-view').CinegenAssetDetailView;
     'cinegen-workspace-empty': import('@/components/panels/cinegen-workspace-empty').CinegenWorkspaceEmpty;

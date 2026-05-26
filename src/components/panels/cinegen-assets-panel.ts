@@ -2,10 +2,10 @@ import { repeat } from 'lit/directives/repeat.js';
 import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
-import { assetLibrary } from '@/data/project-data';
+import { assetLibrary, moodBoards, activeMoodBoardId } from '@/data/project-data';
 import { escHtml } from '@/utils/html';
 
-const ASSET_TAB_KEYS = ['characters', 'locations', 'props', 'vehicles', 'effects'] as const;
+const ASSET_TAB_KEYS = ['characters', 'locations', 'props', 'vehicles', 'effects', 'moodboard'] as const;
 type AssetTabKey = (typeof ASSET_TAB_KEYS)[number];
 
 type AssetItem = {
@@ -54,6 +54,15 @@ export class CinegenAssetsPanel extends CgLightElement {
 
   private _itemsForTab(): AssetItem[] {
     const key = ASSET_TAB_KEYS[this._tabIndex] as AssetTabKey;
+    if (key === 'moodboard') {
+      const activeBoard = activeMoodBoardId ? moodBoards.find((b) => b.id === activeMoodBoardId) : null;
+      if (!activeBoard) return [];
+      return activeBoard.items.filter((i) => i.active).map((i) => ({
+        name: i.label,
+        desc: i.notes || i.type,
+        icon: i.type === 'video' ? 'fa-video' : i.type === 'sound' ? 'fa-music' : i.type === 'text' ? 'fa-font' : 'fa-image',
+      }));
+    }
     const items = assetLibrary[key];
     return Array.isArray(items) ? (items as AssetItem[]) : [];
   }

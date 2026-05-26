@@ -1,6 +1,7 @@
 import {
   openAssetWizardModal,
   openConceptWizardModal,
+  openMoodBoardsModal,
   openScriptWizardModal,
   openSetupAssistantForDebug,
   openStoryboardWizardModal,
@@ -21,6 +22,7 @@ const MAIN_ACTIONS: Record<string, () => void> = {
   'save-export-split': saveProject,
   'import-split': importScript,
   'ai-assist-split': openAiAssistModal,
+  'moodboards-split': openMoodBoardsModal,
   'wizards-split': openWizardsModal,
   'debug-split': openSetupAssistantForDebug,
 };

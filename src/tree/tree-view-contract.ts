@@ -12,6 +12,8 @@ export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] 
   'camera-lighting': {},
   casting: {},
   'chip-global': {},
+  moodboards: {},
+  'moodboard-detail': { requiredFields: ['boardId'] },
   'asset-detail': { requiredFields: ['detailKey'] },
 };
 

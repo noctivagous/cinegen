@@ -19,6 +19,7 @@ import {
   openAiProviderInfoModal,
   openDebugGenerationForDebug,
   openGuide,
+  openMoodBoardsModal,
   openSettings,
   openSetupAssistantForDebug,
   resetSetupAssistantProgressForDebug,
@@ -270,6 +271,33 @@ function initWizardsMenu(): void {
   });
 }
 
+function initMoodBoardsMenu(): void {
+  const menu = document.getElementById('moodboards-menu');
+  menu?.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest('[data-moodboard-action]');
+    if (!item) return;
+    const action = (item as HTMLElement).dataset.moodboardAction || '';
+    closeToolbarSplitMenu('moodboards-split');
+    if (action === 'open') {
+      openMoodBoardsModal();
+      return;
+    }
+    if (action === 'new-board') {
+      openMoodBoardsModal();
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('moodboard-new-board'));
+      }, 100);
+      return;
+    }
+    if (action === 'quick-generate') {
+      openMoodBoardsModal();
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('moodboard-quick-generate'));
+      }, 100);
+    }
+  });
+}
+
 function initScriptImportExportMenu(): void {
   const menu = document.getElementById('script-import-export-menu');
   menu?.querySelectorAll('[data-script-io-action]').forEach((item) => {
@@ -296,6 +324,7 @@ export function wireToolbarMenus(): void {
   initDebugMenu();
   initSaveExportMenu();
   initWizardsMenu();
+  initMoodBoardsMenu();
   initScriptImportExportMenu();
 }
 
