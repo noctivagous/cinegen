@@ -126,11 +126,28 @@ Progress note (2026-05-26):
 - Extracted setup-assistant state/model utilities into `source/src/setup-assistant/setup-assistant-state.ts` (default wizard state, vendor-slot normalization, vendor lookup/key checks, modality coverage/required-model checks) and rewired bundle wrappers to this module.
 - Extracted setup-assistant routing test orchestration into `source/src/setup-assistant/setup-assistant-routing-tests.ts` (single-modality and vendor-wide connection tests, status updates, model-list persistence hooks), wired via `_saRoutingTestDeps()` in bundle.
 - Extracted setup-assistant UI rendering shell into `source/src/setup-assistant/setup-assistant-render.ts` (`renderSetupStep`, rail/body/footer rendering) while preserving existing step templates and event behavior in bundle.
+- Reduced setup-assistant bundle indirection by removing pass-through helper wrappers in `source/src/setup-assistant/setup-assistant-bundle.ts` and calling extracted module APIs directly (state, persistence, and connection-test helpers).
 - Phase B decomposition goals are complete; remaining cleanup is optional follow-up modularization.
 
 ### Phase C — Legacy bridge retirement
 
 - [ ] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
+  - [ ] Create a migration inventory for high-traffic globals in provider/settings/status paths (`rg "window\." source/src/{services,settings,toolbar,components}` + owner/module notes).
+  - [ ] Define explicit import targets for each inventoried global path (service API, store facade, or typed helper), including temporary compatibility adapters where needed.
+  - [ ] Provider flows: migrate call-sites that read/write provider routing, model catalogs, and connection-test state to direct imports (remove `window.CineGen.*` access in these paths).
+  - [ ] Settings flows: migrate settings modal + API key screens to consume module imports/services directly instead of global bridges.
+  - [ ] Status flows: migrate status-bar/model-status interactions to imported service/store APIs; remove direct `window.*` reads/writes in status update paths.
+  - [ ] Add regression guards: ESLint rule or repo lint check to block new `window.CineGen` writes in `source/src/**` (allowlist only temporary bridge files).
+  - [ ] Remove compatibility shims once all call-sites in the three target flows are migrated and verified in `npm run build`.
+  - [ ] Update migration notes in this tracker and record remaining global paths for next wave (workspace/storyboard follow-up).
+
+Progress note (2026-05-26):
+- Began Phase C with a settings-flow migration pass:
+  - rewired `source/src/settings/wire-ai-providers-modal.ts` to imported module APIs (removed direct `window.*` handlers for modal actions and API key controls)
+  - rewired `source/src/settings/init-ai-settings.ts` to direct imports for modal init and status indicator refresh
+  - rewired `source/src/settings/ai-api-settings-bundle.ts` internal dependencies to imported toolbar/settings helpers instead of `window.*` checks, while keeping compatibility globals installed for legacy callers
+  - exported typed helpers from `source/src/settings/api-keys-settings-bundle.ts` so settings modules can import directly
+- Current settings inventory snapshot: `window.*` usages reduced to `source/src/settings/api-keys-settings-bundle.ts` (7 remaining bridge calls).
 - [x] Remove unused barrels only after integration confirmation.
 - [ ] Introduce stricter lint checks to prevent new global write paths and raw string event names.
 

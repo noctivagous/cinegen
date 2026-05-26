@@ -285,7 +285,7 @@ function apiKeysListVendorsForProvider(providerId: any) {
     .map((v: any) => ({ id: v.id, name: v.name }));
 }
 
-function apiKeysListCredentialCandidates(providerId: any, modalityKey: any) {
+export function apiKeysListCredentialCandidates(providerId: any, modalityKey: any) {
   return loadApiKeys().vendors
     .filter((v: any) => v.providerId === providerId && vendorHasApiKey(v))
     .map((v: any) => ({ id: v.id, name: v.name }));
@@ -323,7 +323,7 @@ function maskKeyHint(value: any, hasServerKey?: boolean) {
 
 let _apiKeysDraft: any = null;
 
-function getDraft() {
+export function getDraft() {
   if (!_apiKeysDraft) {
     const disk = loadApiKeys();
     _apiKeysDraft = JSON.parse(JSON.stringify(disk));
@@ -449,7 +449,7 @@ function applyDetailFromDraft() {
   if (reveal) reveal.textContent = 'Show';
 }
 
-function populateApiKeysForm() {
+export function populateApiKeysForm() {
   _apiKeysDraft = null;
   getDraft();
   renderVendorList();
@@ -458,7 +458,7 @@ function populateApiKeysForm() {
 
 /* ── Reveal / Clear ──────────────────────────────────────────────────────── */
 
-function toggleApiKeyReveal() {
+export function toggleApiKeyReveal() {
   const input = _el('api-keys-detail-input');
   if (!input) return;
   const next = input.type === 'password' ? 'text' : 'password';
@@ -469,7 +469,7 @@ function toggleApiKeyReveal() {
 
 /* ── Save (internal — called by saveAiProvidersModal) ───────────────────── */
 
-function saveApiKeysModalInternal() {
+export function saveApiKeysModalInternal() {
   syncDetailInputsToDraft();
   const d = getDraft();
   saveApiKeys(d);
@@ -493,7 +493,7 @@ function saveApiKeysModalInternal() {
   }
 }
 
-function clearApiKey() {
+export function clearApiKey() {
   syncDetailInputsToDraft();
   const d = getDraft();
   const v = d.vendors.find((x: any) => x.id === d.selectedVendorId);
@@ -512,9 +512,9 @@ function clearApiKey() {
 
 /* ── Vendor CRUD ─────────────────────────────────────────────────────────── */
 
-function aiProvidersAddVendor() { apiKeysAddVendor(); }
+export function aiProvidersAddVendor() { apiKeysAddVendor(); }
 
-function aiProvidersRemoveSelected() {
+export function aiProvidersRemoveSelected() {
   const d = getDraft();
   if (d.selectedVendorId) apiKeysRemoveVendor(d.selectedVendorId);
 }
@@ -556,7 +556,7 @@ function apiKeysRemoveVendor(id: any) {
 
 /* ── Modality gating ─────────────────────────────────────────────────────── */
 
-function refreshAiApiModalityGating() {
+export function refreshAiApiModalityGating() {
   const defs = [
     { modality: 'llm',   fieldsetId: 'ai-api-fieldset-llm',   gateId: 'ai-api-gate-llm' },
     { modality: 'image', fieldsetId: 'ai-api-fieldset-image', gateId: 'ai-api-gate-image' },
@@ -591,7 +591,7 @@ function closeApiKeysSettingsModal() {
 
 function saveApiKeysModal() { saveApiKeysModalInternal(); }
 
-function _apiKeysDraftReset() { _apiKeysDraft = null; }
+export function _apiKeysDraftReset() { _apiKeysDraft = null; }
 
 export function installApiKeysSettingsBundleGlobals(): void {
   const w = window as unknown as Record<string, unknown>;

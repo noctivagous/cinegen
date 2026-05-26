@@ -26,20 +26,23 @@ import {
   getCachedVoicesForVendorAudioModel,
 } from '@/services/provider-model-catalog';
 import { closeAllToolbarSplitMenus } from '@/services/toolbar-split-service';
-import { initServerKeyStore } from '@/settings/api-keys-settings-bundle';
+import {
+  _apiKeysDraftReset,
+  apiKeysListCredentialCandidates,
+  getDraft,
+  initServerKeyStore,
+  populateApiKeysForm,
+  refreshAiApiModalityGating,
+  saveApiKeysModalInternal,
+} from '@/settings/api-keys-settings-bundle';
+import { closeAiAssistModal, closeGuideModal } from '@/toolbar/toolbar-modals-service';
+import {
+  closeProjectSettingsModal,
+  closeProjectsModal,
+  closeSettingsModal,
+} from '@/toolbar/toolbar-project-modals-service';
 
 declare global {
-  function apiKeysListCredentialCandidatesForModality(providerId: string, key: string): Array<{ id: string; name?: string }>;
-  function closeGuideModal(): void;
-  function closeProjectsModal(): void;
-  function closeSettingsModal(): void;
-  function closeAiAssistModal(): void;
-  function closeProjectSettingsModal(): void;
-  function populateApiKeysForm(): void;
-  function refreshAiApiModalityGating(): void;
-  function getDraft(): { vendors?: any[]; selectedVendorId?: string } | undefined;
-  function _apiKeysDraftReset(): void;
-  function saveApiKeysModalInternal(): void;
   function populateAiApiCredentialSelects(): void;
   function updateModelStatusIndicators(): void;
   function getModelsForProviderModality(providerId: string, modalityKey: string): Array<{ id: string; label: string }>;
@@ -396,10 +399,9 @@ function mergeAiApiSettings(raw: any) {
 }
 
 function sanitizeAiApiVendorIdsInModalities(m: any) {
-  if (typeof window.apiKeysListCredentialCandidatesForModality !== 'function') return;
   ['llm', 'image', 'video', 'audio'].forEach((k) => {
     const prov = m.modalities[k].provider;
-    const opts = window.apiKeysListCredentialCandidatesForModality(prov, k) || [];
+    const opts: Array<{ id: string; name?: string }> = apiKeysListCredentialCandidates(prov, k) || [];
     let vid = typeof m.modalities[k].vendorId === 'string' ? m.modalities[k].vendorId : '';
     if (!opts.some((o) => o.id === vid)) vid = opts.length === 1 ? opts[0].id : '';
     m.modalities[k].vendorId = vid;
@@ -511,15 +513,14 @@ async function clearAiApiRouting() {
 
 /* ── Form population ─────────────────────────────────────────────────────── */
 
-function populateAiApiCredentialSelects() {
+export function populateAiApiCredentialSelects() {
   const s = loadAiApiSettings();
   AI_API_MODALITIES.forEach(({ key }) => {
     const sel     = _el(`ai-api-credential-${key}`);
     const provSel = _el(`ai-api-provider-${key}`);
     if (!sel || !provSel) return;
     const providerId = provSel.value;
-    const vendors = typeof window.apiKeysListCredentialCandidatesForModality === 'function'
-      ? window.apiKeysListCredentialCandidatesForModality(providerId, key) : [];
+    const vendors = apiKeysListCredentialCandidates(providerId, key);
     sel.replaceChildren();
     const empty = document.createElement('option');
     empty.value = '';
@@ -621,7 +622,7 @@ function populateAiApiSettingsForm() {
   });
 
   refreshAudioVoiceOptions(s);
-  if (typeof window.refreshAiApiModalityGating === 'function') window.refreshAiApiModalityGating();
+  refreshAiApiModalityGating();
 
   syncServerKeysUiHint();
 }
@@ -650,7 +651,7 @@ function readAiApiSettingsFromForm() {
 
 /* ── Modal init ──────────────────────────────────────────────────────────── */
 
-function initAiProvidersModalOnce() {
+export function initAiProvidersModalOnce() {
   const modal = _el('ai-providers-modal');
   if (!modal || modal.dataset.cgAiProvidersInit === '1') return;
   modal.dataset.cgAiProvidersInit = '1';
@@ -663,8 +664,7 @@ function initAiProvidersModalOnce() {
       const settings = loadAiApiSettings();
       const credSel  = _el(`ai-api-credential-${key}`);
       if (credSel) {
-        const vendors = typeof apiKeysListCredentialCandidatesForModality === 'function'
-          ? apiKeysListCredentialCandidatesForModality(prov.value, key) : [];
+        const vendors = apiKeysListCredentialCandidates(prov.value, key);
         if (vendors.length === 1) credSel.value = vendors[0].id;
       }
       settings.modalities[key].provider = prov.value;
@@ -748,32 +748,30 @@ function syncServerKeysUiHint() {
 
 /* ── Open / Close / Save ─────────────────────────────────────────────────── */
 
-async function openAiProvidersModal(sectionOrModality?: any) {
+export async function openAiProvidersModal(sectionOrModality?: any) {
   initAiProvidersModalOnce();
   closeAllToolbarSplitMenus();
-  if (typeof closeGuideModal === 'function') closeGuideModal();
-  if (typeof closeProjectsModal === 'function') closeProjectsModal();
-  if (typeof closeSettingsModal === 'function') closeSettingsModal();
-  if (typeof closeAiAssistModal === 'function') closeAiAssistModal();
-  if (typeof closeProjectSettingsModal === 'function') closeProjectSettingsModal();
+  closeGuideModal();
+  closeProjectsModal();
+  closeSettingsModal();
+  closeAiAssistModal();
+  closeProjectSettingsModal();
 
   await initServerKeyStore();
 
-  if (typeof window.populateApiKeysForm === 'function') window.populateApiKeysForm();
+  populateApiKeysForm();
   populateAiApiSettingsForm();
 
   void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
     refreshAllProviderCatalogsOnLoad().then(() => populateAiApiSettingsForm())
   );
 
-  if (typeof getDraft === 'function') {
-    const draft = getDraft();
-    const vendor = draft?.vendors?.find((v) => v.id === draft.selectedVendorId);
-    if (vendor) {
-      import('@/components/settings/cinegen-provider-catalog-sync')
-        .then(({ refreshSelectedVendorCatalog }) => refreshSelectedVendorCatalog(vendor))
-        .then(() => populateAiApiSettingsForm());
-    }
+  const draft = getDraft();
+  const vendor = draft?.vendors?.find((v: any) => v.id === draft.selectedVendorId);
+  if (vendor) {
+    import('@/components/settings/cinegen-provider-catalog-sync')
+      .then(({ refreshSelectedVendorCatalog }) => refreshSelectedVendorCatalog(vendor))
+      .then(() => populateAiApiSettingsForm());
   }
 
   syncServerKeysUiHint();
@@ -794,16 +792,16 @@ async function openAiProvidersModal(sectionOrModality?: any) {
   _el('api-keys-detail-name')?.focus?.();
 }
 
-function closeAiProvidersModal() {
-  if (typeof window._apiKeysDraftReset === 'function') window._apiKeysDraftReset();
+export function closeAiProvidersModal() {
+  _apiKeysDraftReset();
   const modal = _el('ai-providers-modal');
   if (!modal || modal.hidden) return;
   modal.hidden = true;
   modal.setAttribute('aria-hidden', 'true');
 }
 
-async function saveAiProvidersModal() {
-  if (typeof window.saveApiKeysModalInternal === 'function') window.saveApiKeysModalInternal();
+export async function saveAiProvidersModal() {
+  saveApiKeysModalInternal();
 
   const next = readAiApiSettingsFromForm();
   saveAiApiSettings(next);
@@ -814,7 +812,7 @@ async function saveAiProvidersModal() {
   const hint = _el('ai-providers-save-hint');
   if (hint) hint.textContent = 'Saved.';
 
-  if (typeof window.sanitizeAiApiVendorIdsInStoredSettings === 'function') window.sanitizeAiApiVendorIdsInStoredSettings();
+  sanitizeAiApiVendorIdsInStoredSettings();
   populateAiApiSettingsForm();
   if (typeof updateModelStatusIndicators === 'function') updateModelStatusIndicators();
 
@@ -825,9 +823,14 @@ async function saveAiProvidersModal() {
 
 /* ── Backward-compat aliases (other files still call these) ──────────────── */
 
-function openAiApiSettingsModal()  { openAiProvidersModal(); }
+export function sanitizeAiApiVendorIdsInStoredSettings() {
+  const cur = loadAiApiSettings();
+  saveAiApiSettings(cur);
+}
+
+function openAiApiSettingsModal()  { void openAiProvidersModal(); }
 function closeAiApiSettingsModal() { closeAiProvidersModal(); }
-function saveAiApiSettingsModal()  { saveAiProvidersModal(); }
+function saveAiApiSettingsModal()  { void saveAiProvidersModal(); }
 
 
 export function registerAiProvidersModal(): void {
@@ -872,10 +875,7 @@ export function installAiApiSettingsBundleGlobals(): void {
     const entry = getModelEntry(providerId, modalityKey, modelId);
     return entry ? entry.caps : null;
   };
-  w.sanitizeAiApiVendorIdsInStoredSettings = function sanitizeAiApiVendorIdsInStoredSettings() {
-    const cur = loadAiApiSettings();
-    saveAiApiSettings(cur);
-  };
+  w.sanitizeAiApiVendorIdsInStoredSettings = sanitizeAiApiVendorIdsInStoredSettings;
 
   applyServerKeysBadge();
 }

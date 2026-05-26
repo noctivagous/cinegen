@@ -1,4 +1,16 @@
 /** Wire AI providers modal static controls (replaces onclick in index.html). */
+import {
+  closeAiProvidersModal,
+  openAiProvidersModal,
+  saveAiProvidersModal,
+} from '@/settings/ai-api-settings-bundle';
+import {
+  aiProvidersAddVendor,
+  aiProvidersRemoveSelected,
+  clearApiKey,
+  toggleApiKeyReveal,
+} from '@/settings/api-keys-settings-bundle';
+import { openSettingsModal } from '@/toolbar/toolbar-project-modals-service';
 
 export function wireAiProvidersModal(): void {
   const modal = document.getElementById('ai-providers-modal');
@@ -6,47 +18,49 @@ export function wireAiProvidersModal(): void {
   modal.dataset.cgAipWired = '1';
 
   modal.querySelector('.project-settings-modal-backdrop')?.addEventListener('click', () => {
-    window.closeAiProvidersModal?.();
+    closeAiProvidersModal();
   });
 
   modal.querySelector('.project-settings-modal-close')?.addEventListener('click', () => {
-    window.closeAiProvidersModal?.();
+    closeAiProvidersModal();
   });
 
   document.querySelectorAll('[data-cg-close="ai-providers-modal"]').forEach((el) => {
-    el.addEventListener('click', () => window.closeAiProvidersModal?.());
+    el.addEventListener('click', () => closeAiProvidersModal());
   });
 
   document.querySelector('[data-aip-action="save"]')?.addEventListener('click', () => {
-    window.saveAiProvidersModal?.();
+    void saveAiProvidersModal();
   });
 
   document.querySelector('[data-aip-action="cancel"]')?.addEventListener('click', () => {
-    window.closeAiProvidersModal?.();
+    closeAiProvidersModal();
   });
 
   document.querySelector('[data-aip-action="back-settings"]')?.addEventListener('click', () => {
-    window.closeAiProvidersModal?.();
-    window.openSettingsModal?.();
+    closeAiProvidersModal();
+    openSettingsModal();
   });
 
   document.querySelector('[data-aip-action="add-vendor"]')?.addEventListener('click', () => {
-    window.aiProvidersAddVendor?.();
+    aiProvidersAddVendor();
   });
 
   document.querySelector('[data-aip-action="remove-vendor"]')?.addEventListener('click', () => {
-    window.aiProvidersRemoveSelected?.();
+    aiProvidersRemoveSelected();
   });
 
   document.querySelector('[data-aip-action="toggle-key-reveal"]')?.addEventListener('click', () => {
-    window.toggleApiKeyReveal?.();
+    toggleApiKeyReveal();
   });
 
   document.querySelector('[data-aip-action="clear-key"]')?.addEventListener('click', () => {
-    window.clearApiKey?.();
+    clearApiKey();
   });
 
   const statusBadge = document.getElementById('server-keys-badge');
-  statusBadge?.addEventListener('click', () => window.openAiProvidersModal?.());
+  statusBadge?.addEventListener('click', () => {
+    void openAiProvidersModal();
+  });
 
 }

@@ -41,7 +41,6 @@ import {
   getSaProviderSlots,
 } from '@/data/provider-catalog';
 import {
-  saCombineSignals,
   saFetchModels,
   saGetCatalogModels,
   saMergeModels,
@@ -52,7 +51,6 @@ import {
 import { injectSetupStyles } from '@/setup-assistant/setup-styles';
 import {
   applySavedProgress,
-  clearSetupProgress,
   inferSetupCompleteFromServerState,
   isSetupComplete as saIsSetupComplete,
   loadSetupProgress,
@@ -69,7 +67,6 @@ import {
   saModalityIsRequired,
   saNormalizeVendorsToSlots,
   saRequiredModelsAssigned,
-  saSlotMatchesVendor,
   saSyncModalityProviderFromVendor,
   saVendorById,
   saVendorHasKey,
@@ -149,20 +146,12 @@ let _saFirstLaunchCheckScheduled = false;
 let _saActiveProviderSlots = new Set();
 let _saProviderStepListenerBound = false;
 
-function _saDefaultState() {
-  return saDefaultState();
-}
-
 function _saNewWizardVendorId() {
   return generateId('sa_wiz', { randomLength: 5 });
 }
 
 function _saVendorById(vendorId) {
   return saVendorById(_saState, vendorId);
-}
-
-function _saVendorHasKey(v) {
-  return saVendorHasKey(v);
 }
 
 function _saVendorsWithKeys() {
@@ -173,16 +162,8 @@ function _saSyncModalityProviderFromVendor(mod) {
   saSyncModalityProviderFromVendor(_saState, mod);
 }
 
-function _saSlotMatchesVendor(slot, vendor) {
-  return saSlotMatchesVendor(slot, vendor);
-}
-
 function _saFindVendorForSlot(slot) {
   return saFindVendorForSlot(_saState, slot);
-}
-
-function _saIsCatalogVendor(vendor) {
-  return getSaProviderSlots().some((slot) => saSlotMatchesVendor(slot, vendor));
 }
 
 function _saManualVendors() {
@@ -244,22 +225,10 @@ function _saSaveProgress() {
     state: _saState,
     routingModalities: ROUTING_MODALITIES,
     vendorById: _saVendorById,
-    resolveModelLabel: _saResolveModelLabel,
+    resolveModelLabel: saResolveModelLabel,
     loadAiApiSettings: typeof loadAiApiSettings === 'function' ? loadAiApiSettings : undefined,
     saveAiApiSettings: typeof saveAiApiSettings === 'function' ? saveAiApiSettings : undefined,
   });
-}
-
-function _saLoadProgress() {
-  return loadSetupProgress(storageService, SETUP_PROGRESS_STORAGE_KEY, SETUP_STEPS.length);
-}
-
-function _saClearProgress() {
-  clearSetupProgress(storageService, SETUP_PROGRESS_STORAGE_KEY);
-}
-
-function _saApplySavedProgress(progress) {
-  applySavedProgress(progress, _saState, ROUTING_MODALITIES);
 }
 
 /* ── Open / Close ─────────────────────────────────────────────────────────── */
@@ -271,11 +240,11 @@ async function openSetupAssistant(startStep) {
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   _initSetupAssistantChromeOnce();
-  _saState = _saDefaultState();
+  _saState = saDefaultState();
 
   /* Restore SA progress (has real API keys) first, then merge in server-synced vendors */
-  const progress = _saLoadProgress();
-  if (progress) _saApplySavedProgress(progress);
+  const progress = loadSetupProgress(storageService, SETUP_PROGRESS_STORAGE_KEY, SETUP_STEPS.length);
+  if (progress) applySavedProgress(progress, _saState, ROUTING_MODALITIES);
 
   /* Add any server-synced vendors not yet in state (keys left empty — masked server keys are useless) */
   _saPrePopulateFromExistingData();
@@ -739,7 +708,7 @@ function _saWizardProviderOptions(selectedId) {
 }
 
 function _saProviderRowStatus(v) {
-  const hasKey = _saVendorHasKey(v);
+  const hasKey = saVendorHasKey(v);
   if (v?.status === 'testing') {
     return '<span class="sa-prov-status sa-prov-status--testing"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Testing…</span>';
   }
@@ -954,7 +923,7 @@ function _tmplProviderSlotRow(slot) {
     ? `<button type="button" class="toolbar-btn toolbar-btn--shape-soft sa-prov-cancel-btn" data-sa-slot="${slotId}">Cancel</button>` 
     : '';
   // Show Clear button if vendor has an existing key
-  const hasExistingKey = v && _saVendorHasKey(v);
+  const hasExistingKey = v && saVendorHasKey(v);
   const clearBtn = hasExistingKey
     ? `<button type="button" class="toolbar-btn toolbar-btn--shape-soft sa-prov-clear-btn" data-sa-slot="${slotId}">Clear</button>`
     : '';
@@ -1010,7 +979,7 @@ function _tmplProviderCatalogSection(section) {
 
 function _tmplManualProviderRow(v) {
   const vid = escHtml(v.id);
-  const hasKey = _saVendorHasKey(v);
+  const hasKey = saVendorHasKey(v);
   const needsUrl = _saNeedsProviderApiUrl(v.providerId);
   const urlField = needsUrl
     ? _tmplProviderApiUrlInput(`sa-manual-url-${vid}`, v.baseUrl || '', v.name || 'Provider')
@@ -1094,8 +1063,8 @@ function _tmplCoverage() {
   };
 
   const modelOpts = (s, mod) => {
-    const catalogModels = _getCatalogModels(s.providerId, mod);
-    const allModels = _mergeModels(s.listedModels, catalogModels);
+    const catalogModels = saGetCatalogModels(s.providerId, mod);
+    const allModels = saMergeModels(s.listedModels, catalogModels);
     if (!allModels.length) return '<option value="">— No models. Add provider. —</option>';
     return allModels.map((m) =>
       `<option value="${escHtml(m.id)}"${m.id === s.modelId ? ' selected' : ''}>${escHtml(m.label)}</option>`
@@ -1119,7 +1088,7 @@ function _tmplCoverage() {
             <button type="button" class="toolbar-btn toolbar-btn--shape-soft btn-ai" id="sa-coverage-test-btn-${mod}">
               <i class="fa-solid fa-rotate" aria-hidden="true"></i> Refresh Model List
             </button>
-            <div id="sa-coverage-test-status-${mod}" class="sa-test-status${s.status ? ' sa-test-status--' + s.status : ''}">${_saStatusHtml(s)}</div>
+            <div id="sa-coverage-test-status-${mod}" class="sa-test-status${s.status ? ' sa-test-status--' + s.status : ''}">${saStatusHtml(s)}</div>
           </div>
           <div class="cg-nspopup-wrap">
             <select id="sa-coverage-model-${mod}" class="cg-nspopup sa-coverage-model-select">${modelOpts(s, mod)}</select>
@@ -1127,7 +1096,7 @@ function _tmplCoverage() {
           <div class="sa-coverage-baseurl-row${needsBaseUrl ? '' : ' hidden'}" id="sa-coverage-baseurl-row-${mod}">
             <input id="sa-coverage-baseurl-${mod}" class="cg-field" type="url" placeholder="Base URL (optional)" value="${escHtml(s.baseUrl || '')}">
           </div>
-          <p id="sa-coverage-model-caps-${mod}" class="sa-model-caps">${_saModelCaps(s.providerId, mod, s.modelId)}</p>
+          <p id="sa-coverage-model-caps-${mod}" class="sa-model-caps">${saModelCaps(s.providerId, mod, s.modelId)}</p>
         </div>
       </td>
     </tr>`;
@@ -1150,8 +1119,8 @@ function _tmplModels() {
     if (s.skip || !s.vendorId) return '';
     const meta = MODALITY_META[mod];
     const vendor = _saVendorById(s.vendorId);
-    const catalogModels = _getCatalogModels(s.providerId, mod);
-    const allModels = _mergeModels(s.listedModels, catalogModels);
+    const catalogModels = saGetCatalogModels(s.providerId, mod);
+    const allModels = saMergeModels(s.listedModels, catalogModels);
     const needsBaseUrl = ['openai-compatible', 'generic-rest'].includes(s.providerId);
     return `
       <div class="sa-models-block" data-mod="${mod}">
@@ -1161,7 +1130,7 @@ function _tmplModels() {
           <button type="button" class="toolbar-btn toolbar-btn--shape-soft btn-ai" id="sa-test-btn-${mod}">
             <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i> Test &amp; list models
           </button>
-          <div id="sa-test-status-${mod}" class="sa-test-status${s.status ? ' sa-test-status--' + s.status : ''}">${_saStatusHtml(s)}</div>
+          <div id="sa-test-status-${mod}" class="sa-test-status${s.status ? ' sa-test-status--' + s.status : ''}">${saStatusHtml(s)}</div>
         </div>
         <div class="cg-accordion-row${needsBaseUrl ? '' : ' hidden'}" id="sa-baseurl-row-${mod}">
           <label for="sa-baseurl-${mod}">Base URL <small>(optional)</small></label>
@@ -1177,7 +1146,7 @@ function _tmplModels() {
             </select>
           </div>
         </div>
-        <p id="sa-model-caps-${mod}" class="sa-model-caps">${_saModelCaps(s.providerId, mod, s.modelId)}</p>
+        <p id="sa-model-caps-${mod}" class="sa-model-caps">${saModelCaps(s.providerId, mod, s.modelId)}</p>
       </div>`;
   }).filter(Boolean).join('');
 
@@ -1193,8 +1162,8 @@ function _tmplModality(mod) {
   const meta      = MODALITY_META[mod];
   const s         = _saState[mod];
   const providers = PROVIDERS_BY_MODALITY[mod];
-  const catalogModels = _getCatalogModels(s.providerId, mod);
-  const allModels = _mergeModels(s.listedModels, catalogModels);
+  const catalogModels = saGetCatalogModels(s.providerId, mod);
+  const allModels = saMergeModels(s.listedModels, catalogModels);
   const needsBaseUrl = ['openai-compatible', 'generic-rest'].includes(s.providerId);
   const isOptional   = !SETUP_STEPS.find((st) => st.id === mod)?.required;
 
@@ -1263,7 +1232,7 @@ function _tmplModality(mod) {
                 <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i> Test Connection &amp; List Models
               </button>
               <div id="sa-test-status-${mod}" class="sa-test-status${s.status ? ' sa-test-status--' + s.status : ''}">
-                ${_saStatusHtml(s)}
+                ${saStatusHtml(s)}
               </div>
             </div>
 
@@ -1277,7 +1246,7 @@ function _tmplModality(mod) {
                 </select>
               </div>
             </div>
-            <p id="sa-model-caps-${mod}" class="sa-model-caps">${_saModelCaps(s.providerId, mod, s.modelId)}</p>
+            <p id="sa-model-caps-${mod}" class="sa-model-caps">${saModelCaps(s.providerId, mod, s.modelId)}</p>
 
           </div>
         </details>
@@ -1370,7 +1339,7 @@ function saWizardSaveProviderSlot(slotId) {
   const typed = (keyEl?.value || '').trim();
   let vendor = _saFindVendorForSlot(slot);
   if (!typed && typed.length < 4) {
-    if (!vendor || !_saVendorHasKey(vendor)) {
+    if (!vendor || !saVendorHasKey(vendor)) {
       openSetupAssistantAlert({ title: 'API key required', message: 'Paste a valid API key before saving.' });
       return;
     }
@@ -1429,7 +1398,7 @@ function saWizardToggleProviderSlot(slotId) {
   _saActiveProviderSlots.add(slotId);
   const slot = getSaProviderSlots().find((s) => s.slotId === slotId);
   const vendor = slot ? _saFindVendorForSlot(slot) : null;
-  if (vendor && _saVendorHasKey(vendor) && vendor.status !== 'testing') {
+  if (vendor && saVendorHasKey(vendor) && vendor.status !== 'testing') {
     vendor.status = 'testing';
     _renderSetupStep(_saCurrentStep);
     _saSaveProgress();
@@ -1448,7 +1417,7 @@ function saWizardToggleProviderSlot(slotId) {
 function _saAutoTestUntestedVendors() {
   const vendors = _saState?.vendors || [];
   const untested = vendors.filter((v) => {
-    const hasKey = _saVendorHasKey(v);
+    const hasKey = saVendorHasKey(v);
     const hasLocalKey = String(v.apiKey || '').trim().length > 4;
     const needsTest = !v.status || v.status === null || v.status === '';
     return hasKey && hasLocalKey && needsTest;
@@ -1502,7 +1471,7 @@ function saWizardSaveManualProvider(vendorId) {
   if (!vendor) return;
   const keyEl = document.getElementById(`sa-manual-key-${vendorId}`);
   const typed = (keyEl?.value || '').trim();
-  const hasExisting = _saVendorHasKey(vendor);
+  const hasExisting = saVendorHasKey(vendor);
 
   if (!typed || typed.length < 4) {
     if (!hasExisting) {
@@ -1669,7 +1638,7 @@ async function saWizardTestProvider(vendorId) {
   _renderSetupStep(_saCurrentStep);
   const mod = 'llm';
   try {
-    const result = await _saFetchModels(v.providerId, v.apiKey, v.baseUrl || '', mod, undefined);
+    const result = await saFetchModels(v.providerId, v.apiKey, v.baseUrl || '', mod, undefined);
     v.status = result.ok ? 'ok' : (result.rateLimit ? 'ratelimit' : 'err');
     v.statusMsg = result.message || '';
     if (typeof applyVendorCatalogFetchResult === 'function') {
@@ -1811,8 +1780,8 @@ function _saRefreshModelSelect(mod) {
   if (!mSel) return;
   const s           = _saState[mod];
   _saEnsureModelId(mod);
-  const catalogMods = _getCatalogModels(s.providerId, mod);
-  const allModels   = _mergeModels(s.listedModels, catalogMods);
+  const catalogMods = saGetCatalogModels(s.providerId, mod);
+  const allModels   = saMergeModels(s.listedModels, catalogMods);
   mSel.replaceChildren();
   allModels.forEach((m) => {
     const o = document.createElement('option');
@@ -1823,7 +1792,7 @@ function _saRefreshModelSelect(mod) {
   });
   if (s.modelId) mSel.value = s.modelId;
   const capsEl = document.getElementById(`sa-model-caps-${mod}`);
-  if (capsEl) capsEl.textContent = _saModelCaps(s.providerId, mod, s.modelId);
+  if (capsEl) capsEl.textContent = saModelCaps(s.providerId, mod, s.modelId);
 }
 
 function _saRefreshCoverageModelSelect(mod) {
@@ -1831,8 +1800,8 @@ function _saRefreshCoverageModelSelect(mod) {
   if (!mSel) return;
   const s           = _saState[mod];
   _saEnsureModelId(mod);
-  const catalogMods = _getCatalogModels(s.providerId, mod);
-  const allModels   = _mergeModels(s.listedModels, catalogMods);
+  const catalogMods = saGetCatalogModels(s.providerId, mod);
+  const allModels   = saMergeModels(s.listedModels, catalogMods);
   mSel.replaceChildren();
   if (!allModels.length) {
     const o = document.createElement('option');
@@ -1850,7 +1819,7 @@ function _saRefreshCoverageModelSelect(mod) {
   }
   if (s.modelId) mSel.value = s.modelId;
   const capsEl = document.getElementById(`sa-coverage-model-caps-${mod}`);
-  if (capsEl) capsEl.textContent = _saModelCaps(s.providerId, mod, s.modelId);
+  if (capsEl) capsEl.textContent = saModelCaps(s.providerId, mod, s.modelId);
 }
 
 /* ── Save step data (used after test connection succeeds) ──────────────── */
@@ -1865,7 +1834,7 @@ function _saSaveStepData(mod) {
       ...current.modalities[mod],
       provider:   s.providerId,
       model:      s.modelId || '',
-      modelLabel: _saResolveModelLabel(s, mod),
+      modelLabel: saResolveModelLabel(s, mod),
       baseUrl:    s.baseUrl || '',
       vendorId:   s.vendorId,
     };
@@ -1932,15 +1901,7 @@ function _saSetTestStatus(mod, statusType, message, rawHtml) {
   }
 }
 
-/* Provider API fetch and model helpers are now in @/setup-assistant/connection-test.ts */
-/* Thin backward-compat wrappers for internal callers: */
-const _saFetchModels    = saFetchModels;
-const _saCombineSignals = saCombineSignals;
-const _getCatalogModels = saGetCatalogModels;
-const _mergeModels      = saMergeModels;
-const _saResolveModelLabel = saResolveModelLabel;
-const _saModelCaps      = saModelCaps;
-const _saStatusHtml     = saStatusHtml;
+/* Provider API fetch and model helpers are in @/setup-assistant/connection-test.ts. */
 
 /* ── Save setup data to server-backed persistence ────────────────────────── */
 
@@ -1971,7 +1932,7 @@ function _saveAllSetupData() {
     routingUpdates[mod] = {
       provider:   vendor.providerId,
       model:      s.modelId || '',
-      modelLabel: _saResolveModelLabel(s, mod),
+      modelLabel: saResolveModelLabel(s, mod),
       baseUrl:    s.baseUrl || wv?.baseUrl || '',
       vendorId:   vendor.id,
     };
@@ -2141,9 +2102,9 @@ export function installSetupAssistantBundleGlobals(): void {
     providerLabel: (id: string) => _saProviderLabel(id),
     modalityRequired: (mod: string) => _saModalityIsRequired(mod),
     coverageSatisfied: () => _saCoverageSatisfied(),
-    statusMessageHtml: (s: any) => _saStatusHtml(s),
-    modelCapsText: (providerId: string, mod: string, modelId: string) => _saModelCaps(providerId, mod, modelId),
-    catalogModels: (providerId: string, mod: string) => _getCatalogModels(providerId, mod),
+    statusMessageHtml: (s: any) => saStatusHtml(s),
+    modelCapsText: (providerId: string, mod: string, modelId: string) => saModelCaps(providerId, mod, modelId),
+    catalogModels: (providerId: string, mod: string) => saGetCatalogModels(providerId, mod),
     cachedVendorModels: (vendorId: string, mod: string) => typeof getCachedModelsForVendorModality === 'function'
       ? getCachedModelsForVendorModality(vendorId, mod)
       : [],
@@ -2153,7 +2114,7 @@ export function installSetupAssistantBundleGlobals(): void {
     cachedModalityStatus: (vendorId: string, mod: string) => typeof getCachedModalityStatus === 'function'
       ? getCachedModalityStatus(vendorId, mod)
       : null,
-    mergeModels: (listed: any[], catalog: any[]) => _mergeModels(listed, catalog),
+    mergeModels: (listed: any[], catalog: any[]) => saMergeModels(listed, catalog),
     providersByModality: (mod: string) => PROVIDERS_BY_MODALITY[mod] || [],
     saveStepData: (mod: string) => _saSaveStepData(mod),
     renderProvidersMarkup: () => _tmplProviders(),
@@ -2191,7 +2152,7 @@ export function installSetupAssistantBundleGlobals(): void {
   w._saIsSlotActive = _saIsSlotActive;
   w._renderSetupStep = _renderSetupStep;
   /** @deprecated Prefer `fetchProviderModels` from `@/services/provider-fetch`. */
-  w.fetchProviderModelsForModality = _saFetchModels;
+  w.fetchProviderModelsForModality = saFetchModels;
 }
 
 /** Wire Next / alert / rail (once). */
