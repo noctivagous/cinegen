@@ -5,12 +5,11 @@ import { CgLightElement } from '@/components/lit-base';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import {
   initLayoutSplitDividers,
-  setInspectorWidthPx,
+  applyLayoutChromeFromPreferences,
   setPrevisTimelineDockVisible,
   syncPrevisDrawerHeightFromPreferences,
   syncPrevisPaneSplitFromPreferences,
   setPreprodSplitPercent,
-  setSidebarWidthPx,
   syncLayoutSplitDividers,
   togglePrevisTimelineDock,
 } from '@/services/layout-service';
@@ -87,22 +86,10 @@ export class CinegenApp extends CgLightElement {
 
   private _applyLayoutPreferences(): void {
     const prefs = appShellStore.preferences;
+    applyLayoutChromeFromPreferences(prefs);
 
     const inspectorPanel = document.getElementById('inspector-panel');
     const projectSidebar = document.getElementById('project-hierarchy-sidebar');
-
-    if (inspectorPanel && typeof prefs.inspectorVisible === 'boolean') {
-      inspectorPanel.style.display = prefs.inspectorVisible ? 'flex' : 'none';
-    }
-    if (projectSidebar && typeof prefs.projectSidebarVisible === 'boolean') {
-      projectSidebar.style.display = prefs.projectSidebarVisible ? 'flex' : 'none';
-    }
-    if (typeof prefs.projectSidebarWidthPx === 'number') {
-      setSidebarWidthPx(prefs.projectSidebarWidthPx, false);
-    }
-    if (typeof prefs.inspectorWidthPx === 'number' && inspectorPanel) {
-      setInspectorWidthPx(prefs.inspectorWidthPx, false);
-    }
     if (typeof prefs.preprodSplitPercent === 'number') {
       setPreprodSplitPercent(prefs.preprodSplitPercent, false);
     }

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/CineGenBaseGUI-tokens.css">
 <link rel="stylesheet" href="css/CineGenBaseGUI.css">
 <link rel="stylesheet" href="css/CineGenBaseGUI-button-surfaces.css">
 <link rel="stylesheet" href="css/CineGenBaseGUI-controls-extra.css">
@@ -18,8 +19,8 @@
   <cinegen-toolbar></cinegen-toolbar>
 
   <!-- Main Content Area (min-h-0 / min-w-0 so flex children shrink; inspector stays in viewport) -->
-  <div id="main-shell-row" class="flex flex-1 min-h-0 min-w-0 overflow-hidden">
-    <cinegen-project-sidebar></cinegen-project-sidebar>
+  <div id="main-shell-row" class="flex flex-1 min-h-0 min-w-0 overflow-hidden layout-chrome-pending">
+    <cinegen-project-sidebar id="project-hierarchy-sidebar"></cinegen-project-sidebar>
     <cg-split-divider id="project-sidebar-divider" resize-target="sidebar" label="Resize project sidebar"></cg-split-divider>
 
     <!-- Main Workspace -->
@@ -47,7 +48,7 @@
 
     <!-- New: Right Inspector Panel -->
     <cg-split-divider id="inspector-split-divider" resize-target="inspector" label="Resize inspector panel"></cg-split-divider>
-    <cinegen-inspector-shell></cinegen-inspector-shell>
+    <cinegen-inspector-shell id="inspector-panel"></cinegen-inspector-shell>
   </div>
 
   <cinegen-previs-timeline-dock></cinegen-previs-timeline-dock>

@@ -87,9 +87,10 @@ export class LayoutResizeController implements ReactiveController {
       const statusTop =
         document.querySelector('cinegen-status-bar')?.getBoundingClientRect().top ??
         window.innerHeight;
-      const head = document.querySelector<HTMLElement>('.previs-timeline-dock-head');
-      const headHeight = head?.getBoundingClientRect().height ?? 28;
-      const nextHeight = statusTop - e.clientY - headHeight;
+      const headBottom =
+        document.querySelector<HTMLElement>('.previs-timeline-dock-head')?.getBoundingClientRect()
+          .bottom ?? 0;
+      const nextHeight = statusTop - Math.max(e.clientY, headBottom);
       setPrevisDrawerHeightPx(
         clamp(nextHeight, LAYOUT_LIMITS.minPrevisDrawerPx, getPrevisDrawerMaxHeightPx()),
         true

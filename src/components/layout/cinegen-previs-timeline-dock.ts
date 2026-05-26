@@ -120,9 +120,10 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
     requestAnimationFrame(() => {
       if (this._fullscreen) {
         syncPrevisFullscreenPaneLayout();
-      } else {
-        syncPrevisDrawerHeightToAccordion();
+        return;
       }
+      syncPrevisDrawerHeightToAccordion();
+      requestAnimationFrame(() => syncPrevisDrawerHeightToAccordion());
     });
   }
 
@@ -197,18 +198,23 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
                   </span>
                 </summary>
                 <div class="cg-accordion-body previs-playback-body">
-                  <div ?hidden=${this._playbackTab !== 'storyboard'} class="previs-playback-panel">
-                    <cinegen-storyboard-animatic-player noScrubber></cinegen-storyboard-animatic-player>
-                  </div>
-                  <div
-                    ?hidden=${this._playbackTab !== 'rendered'}
-                    class="previs-playback-panel previs-rendered-placeholder"
-                  >
-                    <div class="previs-rendered-placeholder-inner">
-                      <i class="fa-solid fa-film"></i>
-                      <span>Rendered player will appear here when preview renders are available.</span>
-                    </div>
-                  </div>
+                  ${this._playbackTab === 'storyboard'
+                    ? html`
+                        <div class="previs-playback-panel">
+                          <cinegen-storyboard-animatic-player noScrubber></cinegen-storyboard-animatic-player>
+                        </div>
+                      `
+                    : html`
+                        <div class="previs-playback-panel previs-rendered-placeholder">
+                          <div class="previs-rendered-placeholder-inner">
+                            <i class="fa-solid fa-film"></i>
+                            <span
+                              >Rendered player will appear here when preview renders are
+                              available.</span
+                            >
+                          </div>
+                        </div>
+                      `}
                 </div>
               </details>
               <details

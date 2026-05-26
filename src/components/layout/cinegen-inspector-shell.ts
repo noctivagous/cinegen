@@ -1,6 +1,8 @@
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
+import { applyLayoutChromeFromPreferences } from '@/services/layout-service';
+import { LAYOUT_LIMITS } from '@/services/layout-metrics';
 
 /** Right inspector chrome (header + close control + `cinegen-inspector`). */
 @customElement('cinegen-inspector-shell')
@@ -9,9 +11,9 @@ export class CinegenInspectorShell extends CgLightElement {
     super.connectedCallback();
     this.id = 'inspector-panel';
     this.classList.add('bevel-flat', 'flex', 'flex-col', 'min-h-0');
+    this.style.minWidth = `${LAYOUT_LIMITS.minInspectorPx}px`;
     if (!this.style.width) {
-      this.style.width = '288px';
-      this.style.minWidth = '240px';
+      applyLayoutChromeFromPreferences();
     }
   }
 

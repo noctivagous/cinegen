@@ -6,14 +6,18 @@ import {
   getProjectTreeChildren,
   getTreeSectionKeyForNode,
   handleTreeNodeSelect,
+  subscribeProjectTree,
 } from '@/tree/project-tree-service';
+import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
 import { getHierarchySectionShortcutChip } from '@/keybindings/hierarchy-keybindings';
 import { sectionKeyForTopLevelName } from '@/tree/tree-constants';
 import type { TreeNode } from '@/tree/tree-types';
 import { filterVisibleNodes } from '@/services/section-visibility-service';
 import { appShellStore } from '@/stores/app-shell-store';
 import { patchAppShellPreferences } from '@/stores/app-shell';
+import { applyLayoutChromeFromPreferences } from '@/services/layout-service';
 import type { CineGenPreferences } from '@/services/preferences';
+import { LAYOUT_LIMITS } from '@/services/layout-metrics';
 
 const VIEW_OPTIONS = [
   { value: 'tree', label: 'Tree', icon: 'fa-solid fa-sitemap' },
@@ -45,23 +49,31 @@ export class CinegenProjectSidebar extends CgLightElement {
   @state() private _viewMode: CineGenPreferences['projectHierarchyViewMode'] = 'tree';
 
   private _shellUnsub: (() => void) | null = null;
+  private _shellBindUnsub: (() => void) | null = null;
+  private _treeUnsub: (() => void) | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
     this.id = 'project-hierarchy-sidebar';
     this.classList.add('bevel-flat', 'flex', 'flex-col', 'min-h-0');
+    this.style.minWidth = `${LAYOUT_LIMITS.minSidebarPx}px`;
     if (!this.style.width) {
-      this.style.width = '280px';
-      this.style.minWidth = '200px';
+      applyLayoutChromeFromPreferences();
     }
     whenBootReady('store', () => this._applyHierarchyViewMode());
     this._shellUnsub = appShellStore.subscribe(() => this._applyHierarchyViewMode());
+    this._shellBindUnsub = bindAppShellToHost(this);
+    this._treeUnsub = subscribeProjectTree(() => this.requestUpdate());
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this._shellUnsub?.();
     this._shellUnsub = null;
+    this._shellBindUnsub?.();
+    this._shellBindUnsub = null;
+    this._treeUnsub?.();
+    this._treeUnsub = null;
   }
 
   private _applyHierarchyViewMode(): void {

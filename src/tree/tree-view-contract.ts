@@ -39,4 +39,6 @@ export const LEGACY_NODE_VIEW_CONTRACT = [
   { nodeType: 'audio', view: 'asset-detail', required: { detailKey: '(detail key)' } },
   { nodeType: 'production', view: 'asset-detail', required: { detailKey: '(detail key)' } },
   { nodeType: 'folder', view: 'overview' },
+  { nodeType: 'moodboard', view: 'moodboards', required: { boardId: '(board id)' } },
+  { nodeType: 'moodboard-item', view: 'moodboards', required: { boardId: '(board id)', itemId: '(item id)' } },
 ];

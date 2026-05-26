@@ -1,7 +1,47 @@
 import { clamp, getPrevisDrawerMaxHeightPx, LAYOUT_LIMITS } from '@/services/layout-metrics';
-import { DEFAULT_PREFERENCES, savePreferences } from '@/services/preferences';
+import {
+  DEFAULT_PREFERENCES,
+  loadPreferences,
+  savePreferences,
+  type CineGenPreferences,
+} from '@/services/preferences';
 
 export { LAYOUT_LIMITS, LAYOUT_DIVIDER_WIDTH_PX, clamp, getPanelWidthPx, getWorkspaceRowRect } from '@/services/layout-metrics';
+
+/** Apply saved sidebar/inspector width + visibility before first paint when possible. */
+export function applyLayoutChromeFromPreferences(
+  prefs: CineGenPreferences = window.CineGen?.preferences ?? loadPreferences()
+): void {
+  const projectSidebar =
+    document.getElementById('project-hierarchy-sidebar') ??
+    document.querySelector('cinegen-project-sidebar');
+  const inspectorPanel =
+    document.getElementById('inspector-panel') ??
+    document.querySelector('cinegen-inspector-shell');
+
+  if (projectSidebar) {
+    if (typeof prefs.projectSidebarVisible === 'boolean') {
+      projectSidebar.style.display = prefs.projectSidebarVisible ? 'flex' : 'none';
+    }
+    if (typeof prefs.projectSidebarWidthPx === 'number') {
+      const clamped = Math.max(LAYOUT_LIMITS.minSidebarPx, Math.round(prefs.projectSidebarWidthPx));
+      projectSidebar.style.width = `${clamped}px`;
+      projectSidebar.style.flex = '0 0 auto';
+    }
+  }
+
+  if (inspectorPanel) {
+    if (typeof prefs.inspectorVisible === 'boolean') {
+      inspectorPanel.style.display = prefs.inspectorVisible ? 'flex' : 'none';
+    }
+    if (typeof prefs.inspectorWidthPx === 'number') {
+      const clamped = Math.max(LAYOUT_LIMITS.minInspectorPx, Math.round(prefs.inspectorWidthPx));
+      inspectorPanel.style.width = `${clamped}px`;
+      inspectorPanel.style.minWidth = `${LAYOUT_LIMITS.minInspectorPx}px`;
+      inspectorPanel.style.flex = '0 0 auto';
+    }
+  }
+}
 
 export function setSidebarWidthPx(nextWidthPx: number, shouldPersist = true): void {
   const sidebar = document.getElementById('project-hierarchy-sidebar');
@@ -79,9 +119,10 @@ export function togglePrevisTimelineDock(): void {
 export function setPrevisDrawerHeightPx(nextHeightPx: number, shouldPersist = true): void {
   const overlay = document.getElementById('previs-drawer-overlay');
   if (!overlay) return;
+  const contentMin = getPrevisDrawerContentMinHeightPx();
   const clamped = clamp(
     Math.round(nextHeightPx),
-    LAYOUT_LIMITS.minPrevisDrawerPx,
+    Math.max(LAYOUT_LIMITS.minPrevisDrawerPx, contentMin),
     getPrevisDrawerMaxHeightPx()
   );
   overlay.style.height = `${clamped}px`;
@@ -90,6 +131,25 @@ export function setPrevisDrawerHeightPx(nextHeightPx: number, shouldPersist = tr
   if (shouldPersist) {
     savePreferences({ previsDrawerHeightPx: clamped });
   }
+}
+
+/** Minimum overlay height for the current accordion open/closed mix (prevents clipping). */
+function getPrevisDrawerContentMinHeightPx(): number {
+  const dock = document.getElementById('previs-timeline-dock');
+  const stack = document.getElementById('previs-drawer-stack');
+  if (!dock?.classList.contains('previs-timeline-dock--expanded') || !stack) {
+    return LAYOUT_LIMITS.minPrevisDrawerPx;
+  }
+  if (dock.querySelector('.previs-drawer-unit.is-open.is-fullscreen')) {
+    return LAYOUT_LIMITS.minPrevisDrawerPx;
+  }
+
+  const playback = stack.querySelector<HTMLDetailsElement>('#previs-playback-pane');
+  const timeline = stack.querySelector<HTMLDetailsElement>('#previs-timeline-pane');
+  const anyOpen = Boolean(playback?.open || timeline?.open);
+  return anyOpen
+    ? measurePrevisDrawerAccordionExpandedHeight()
+    : measurePrevisDrawerAccordionCompactHeight();
 }
 
 export function syncPrevisDrawerHeightFromPreferences(): void {
@@ -135,43 +195,55 @@ export function syncPrevisDrawerHeightToAccordion(): void {
     (playback?.open ? 1 : 0) + (timeline?.open ? 1 : 0);
   const measured = measurePrevisDrawerAccordionExpandedHeight();
   const currentPx = parseFloat(overlay.style.height) || 0;
+  const maxPx = getPrevisDrawerMaxHeightPx();
   const rawTarget = openCount >= 2 ? Math.max(measured, currentPx) : measured;
-  const target = clamp(rawTarget, LAYOUT_LIMITS.minPrevisDrawerPx, getPrevisDrawerMaxHeightPx());
+  const target = clamp(
+    rawTarget,
+    Math.max(LAYOUT_LIMITS.minPrevisDrawerPx, measured),
+    maxPx
+  );
   overlay.style.height = `${target}px`;
   overlay.style.flex = '0 0 auto';
+  overlay.classList.toggle('is-height-capped', measured > maxPx);
+
+  // Re-check after layout: avoid clipping when scrollHeight exceeds bbox height.
+  const needPx = Math.ceil(stack.scrollHeight);
+  if (needPx > overlay.clientHeight + 1) {
+    const bumped = clamp(needPx, Math.max(LAYOUT_LIMITS.minPrevisDrawerPx, measured), maxPx);
+    overlay.style.height = `${bumped}px`;
+    overlay.classList.toggle('is-height-capped', needPx > maxPx);
+  }
 }
 
-function measurePrevisDrawerAccordionCompactHeight(): number {
-  const stack = document.getElementById('previs-drawer-stack');
-  const overlay = document.getElementById('previs-drawer-overlay');
-  if (!stack || !overlay) return 52;
-  const prevHeight = overlay.style.height;
-  const prevFlex = overlay.style.flex;
-  overlay.style.height = 'auto';
-  overlay.style.flex = '0 0 auto';
-  const height = Math.ceil(stack.getBoundingClientRect().height);
-  overlay.style.height = prevHeight;
-  overlay.style.flex = prevFlex;
-  return Math.max(52, height);
-}
-
-/** Natural stack height for the current accordion open/closed mix. */
-function measurePrevisDrawerAccordionExpandedHeight(): number {
+/** Natural stack height (scrollHeight) for the current accordion open/closed mix. */
+function measurePrevisDrawerStackHeightPx(expandedOpenSections: boolean): number {
   const stack = document.getElementById('previs-drawer-stack');
   const overlay = document.getElementById('previs-drawer-overlay');
   if (!stack || !overlay) return LAYOUT_LIMITS.minPrevisDrawerPx;
 
-  overlay.classList.add('is-measuring-accordion');
+  if (expandedOpenSections) {
+    overlay.classList.add('is-measuring-accordion');
+  }
   const prevHeight = overlay.style.height;
   const prevFlex = overlay.style.flex;
   overlay.style.height = 'auto';
   overlay.style.flex = '0 0 auto';
-  const height = Math.ceil(stack.getBoundingClientRect().height);
+  const height = Math.ceil(stack.scrollHeight);
   overlay.style.height = prevHeight;
   overlay.style.flex = prevFlex;
-  overlay.classList.remove('is-measuring-accordion');
+  if (expandedOpenSections) {
+    overlay.classList.remove('is-measuring-accordion');
+  }
 
   return Math.max(LAYOUT_LIMITS.minPrevisDrawerPx, height);
+}
+
+function measurePrevisDrawerAccordionCompactHeight(): number {
+  return Math.max(52, measurePrevisDrawerStackHeightPx(false));
+}
+
+function measurePrevisDrawerAccordionExpandedHeight(): number {
+  return measurePrevisDrawerStackHeightPx(true);
 }
 
 export function setPrevisPaneSplitPercent(nextPercent: number, shouldPersist = true): void {

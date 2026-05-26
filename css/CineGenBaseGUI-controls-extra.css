@@ -994,39 +994,7 @@ fieldset.cg-fieldset--ns-primary > .cg-fieldset-legend {
   background: #2f2f2f;
 }
 
-/* ── Segmented Split: status-bar variant (small, outlined) ─────────── */
-.cg-segmented-split.cg-segmented-split--status-bar {
-  gap: 0;
-}
-
-.cg-segmented-split.cg-segmented-split--status-bar .cg-segmented-split-segment {
-  font-size: 10px;
-  padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: transparent;
-  color: var(--text-dim);
-  min-height: 24px;
-}
-
-.cg-segmented-split.cg-segmented-split--status-bar .cg-segmented-split-segment:hover:not(.open) {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-main);
-}
-
-.cg-segmented-split.cg-segmented-split--status-bar .cg-segmented-split-segment.open {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-main);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.cg-segmented-split.cg-segmented-split--status-bar .cg-segmented-split-caret {
-  font-size: 8px;
-  margin-left: 2px;
-}
-
-.cg-segmented-split.cg-segmented-split--status-bar .cg-segmented-split-label {
-  font-size: 10px;
-}
+/* Status-bar segmented split: production rules in CineGenBaseGUI.css (--sb-scale) */
 
 /* ── Layout primitives: cg-grid ──────────────────────────────────── */
 .cg-grid {

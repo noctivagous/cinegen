@@ -1,0 +1,115 @@
+/**
+ * CineGen design tokens — palette, hierarchy first-paint hues, bevel/toolbar surfaces.
+ * Load before CineGenBaseGUI.css. Hierarchy hex mirrors hierarchy-section-theme.ts.
+ */
+:root {
+  --bg-dark: #1e1e1e;
+  --bg-mid: #2b2b2b;
+  --bg-panel: #3c3c3c;
+  --bg-inset: #262626;
+  --border-dark: #141414;
+  --border-light: #4a4a4a;
+  --text-main: #d0d0d0;
+  --text-dim: #909090;
+  --text-highlight: #f0f0f0;
+  --accent-blue: #5a8cd6;
+  --accent-orange: #d6834a;
+  /* AI actions — deep navy (distinct from Pre-Production #8eb8dc) */
+  --accent-ai: #2a4268;
+  --accent-ai-light: #3a5278;
+  --accent-ai-bright: #4a6288;
+  --accent-ai-hover: #5a7298;
+  --accent-ai-border: #152535;
+  --accent-ai-highlight: #5a7090;
+  --selected-bg: #4d4d4d;
+  --font-scene-list: 'Source Sans 3', 'Segoe UI', 'Lucida Grande', sans-serif;
+  --tree-section-preprod: #b8d8f4;
+  --tree-section-preprod-item: #8eb8dc;
+  --tree-section-cinematography: #f4b8b8;
+  --tree-section-cinematography-item: #dc8e8e;
+  --tree-section-design: #f0c898;
+  --tree-section-design-item: #d4a870;
+  --tree-section-casting: #e8c0d8;
+  --tree-section-casting-item: #c898b8;
+  --tree-section-sound: #d4b8f0;
+  --tree-section-sound-item: #b098d8;
+  --tree-section-post: #f0a8b0;
+  --tree-section-post-item: #d88898;
+  --tree-section-assembly: var(--tree-section-post);
+  --tree-section-assembly-item: var(--tree-section-post-item);
+  --tree-section-ai-director: #a8b8d8;
+  --tree-section-ai-director-item: #7a8cb8;
+  --tree-section-scenes: #98e0b8;
+  --tree-section-scenes-item: #78c098;
+  --tree-section-global: #b0b0b0;
+  --tree-section-global-item: #909090;
+  --tree-section-moodboards: #90d4c8;
+  --tree-section-moodboards-item: #68b4a8;
+  --tree-depth-mix-l2: 76%;
+  --tree-depth-mix-l3: 52%;
+  --tree-depth-mix-l4: 36%;
+  --font-size-min: 10px;
+
+  /* Bevel shells */
+  --bevel-raised-bg: linear-gradient(to bottom, #484848 0%, #3c3c3c 3%, #323232 100%);
+  --bevel-sunken-bg: linear-gradient(to bottom, #202020 0%, #262626 100%);
+  --bevel-flat-bottom-edge: #080808;
+  --bevel-flat-right-edge: #0c0c0c;
+  --bevel-sunken-bottom: #444;
+  --bevel-sunken-right: #444;
+  --bevel-raised-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --bevel-raised-drop: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --bevel-sunken-inset: inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 0 1px rgba(0, 0, 0, 0.8);
+  --bevel-flat-inset-stack:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.38);
+
+  /* Toolbar / segmented segment (shared protruded control) */
+  --chrome-btn-bg: linear-gradient(to bottom, #4a4a4a 0%, #383838 50%, #2e2e2e 51%, #323232 100%);
+  --chrome-btn-bg-hover: linear-gradient(to bottom, #525252 0%, #404040 50%, #363636 51%, #3a3a3a 100%);
+  --chrome-btn-bg-active: linear-gradient(to bottom, #282828 0%, #303030 100%);
+  --chrome-border-outer: #1a1a1a;
+  --chrome-border-highlight: #585858;
+  --chrome-inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --chrome-drop-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  --chrome-active-inset: inset 0 2px 3px rgba(0, 0, 0, 0.7);
+  --chrome-active-border: #0a0a0a;
+  --chrome-active-border-top: #1a1a1a;
+
+  /* Main app toolbar (darker than panel toolbars) */
+  --chrome-toolbar-shell-bg: linear-gradient(to bottom, #343434 0%, #2a2a2a 3%, #222222 100%);
+  --chrome-toolbar-shell-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --chrome-toolbar-shell-drop: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --chrome-toolbar-btn-bg: linear-gradient(to bottom, #363636 0%, #282828 50%, #202020 51%, #242424 100%);
+  --chrome-toolbar-btn-bg-hover: linear-gradient(to bottom, #3c3c3c 0%, #2e2e2e 50%, #262626 51%, #2a2a2a 100%);
+  --chrome-toolbar-btn-bg-active: linear-gradient(to bottom, #1a1a1a 0%, #222222 100%);
+  --chrome-toolbar-border: #121212;
+  --chrome-toolbar-border-highlight: #404040;
+
+  /* AI hero button */
+  --btn-ai-bg: linear-gradient(
+    to bottom,
+    var(--accent-ai-bright) 0%,
+    var(--accent-ai-light) 50%,
+    var(--accent-ai) 51%,
+    #304a68 100%
+  );
+  --btn-ai-bg-hover: linear-gradient(
+    to bottom,
+    var(--accent-ai-hover) 0%,
+    var(--accent-ai-bright) 50%,
+    var(--accent-ai-light) 51%,
+    #3a5678 100%
+  );
+  --btn-ai-bg-active: linear-gradient(to bottom, var(--accent-ai) 0%, var(--accent-ai-light) 100%);
+  --btn-ai-inset: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --btn-ai-drop: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --btn-ai-active-inset: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+
+  /* Master-detail panes */
+  --chrome-master-bg: #1c1c1c;
+  --chrome-master-head-bg: #181818;
+  --chrome-detail-bg: #242424;
+  --chrome-list-divider: rgba(0, 0, 0, 0.35);
+}

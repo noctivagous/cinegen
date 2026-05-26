@@ -9,10 +9,9 @@ import {
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { appShellStore } from '@/stores/app-shell';
 import {
+  applyLayoutChromeFromPreferences,
   initLayoutSplitDividers,
-  setInspectorWidthPx,
   setPreprodSplitPercent,
-  setSidebarWidthPx,
   syncLayoutSplitDividers,
 } from '@/services/layout-service';
 import { initModelStatusBar } from '@/services/status-bar-service';
@@ -113,20 +112,10 @@ const App = {
       }
     }
 
-    const inspectorPanel = document.getElementById('inspector-panel');
-    if (inspectorPanel && typeof prefs.inspectorVisible === 'boolean') {
-      inspectorPanel.style.display = prefs.inspectorVisible ? 'flex' : 'none';
-    }
+    applyLayoutChromeFromPreferences(prefs);
+
     const projectSidebar = document.getElementById('project-hierarchy-sidebar');
-    if (projectSidebar && typeof prefs.projectSidebarVisible === 'boolean') {
-      projectSidebar.style.display = prefs.projectSidebarVisible ? 'flex' : 'none';
-    }
-    if (typeof prefs.projectSidebarWidthPx === 'number') {
-      setSidebarWidthPx(prefs.projectSidebarWidthPx, false);
-    }
-    if (typeof prefs.inspectorWidthPx === 'number' && inspectorPanel) {
-      setInspectorWidthPx(prefs.inspectorWidthPx, false);
-    }
+    const inspectorPanel = document.getElementById('inspector-panel');
 
     initLayoutSplitDividers();
     syncLayoutSplitDividers();

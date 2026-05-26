@@ -1,5 +1,5 @@
 import { emitTreeNodeSelect, treeNodeSelectDetail } from '@/events/shell-events';
-import { activeProjectId, getActiveProjectSettings } from '@/data/project-data';
+import { activeProjectId, getActiveProjectSettings, projectData } from '@/data/project-data';
 import {
   persistProjectTreeExpandedState,
   restoreProjectTreeExpandedState,
@@ -32,7 +32,10 @@ type BreakdownRow = {
 };
 
 function getProjectData(): TreeProjectRoot {
-  return ((window as unknown as Record<string, unknown>).projectData as TreeProjectRoot) ?? {
+  const fromWindow = (window as unknown as Record<string, unknown>).projectData as
+    | TreeProjectRoot
+    | undefined;
+  return (fromWindow ?? (projectData as TreeProjectRoot)) || {
     name: 'Project',
     type: 'project',
     children: [],
@@ -172,22 +175,35 @@ function ensureMoodBoardTreeNodes(): void {
   mbFolder.children = mbFolder.children.filter((c: any) => c.type === 'moodboard' && boardIds.has(c.boardId));
   for (const board of boards) {
     const existing = mbFolder.children.find((c: any) => c.boardId === board.id);
+    const itemNodes =
+      board.items?.map((item: any) => ({
+        name: item.label,
+        type: 'moodboard-item',
+        icon:
+          item.type === 'video'
+            ? 'fa-video'
+            : item.type === 'sound'
+              ? 'fa-music'
+              : item.type === 'text'
+                ? 'fa-font'
+                : 'fa-image',
+        view: 'moodboards',
+        boardId: board.id,
+        itemId: item.id,
+      })) ?? [];
     if (!existing) {
       mbFolder.children.push({
         name: board.name,
         type: 'moodboard',
         icon: 'fa-image',
-        view: 'moodboard-detail',
+        view: 'moodboards',
         boardId: board.id,
-        children: board.items?.map((item: any) => ({
-          name: item.label,
-          type: 'moodboard-item',
-          icon: item.type === 'video' ? 'fa-video' : item.type === 'sound' ? 'fa-music' : item.type === 'text' ? 'fa-font' : 'fa-image',
-          view: 'moodboard-detail',
-          boardId: board.id,
-          itemId: item.id,
-        })) ?? [],
+        children: itemNodes,
       });
+    } else {
+      existing.name = board.name;
+      existing.view = 'moodboards';
+      existing.children = itemNodes;
     }
   }
 }
@@ -444,7 +460,9 @@ export function handleTreeNodeSelect(node: TreeNode, sectionKey: string | null):
 }
 
 function resolveTreeNodeViewName(node: TreeNode): string {
+  if (node.type === 'moodboard' || node.type === 'moodboard-item') return 'moodboards';
   const requested = typeof node?.view === 'string' && node.view.trim() ? node.view : 'default';
+  if (requested === 'moodboard-detail') return 'moodboards';
   return SUPPORTED_TREE_VIEWS.has(requested) ? requested : 'default';
 }
 

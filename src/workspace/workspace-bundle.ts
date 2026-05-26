@@ -20,6 +20,7 @@ import { alertCG } from '@/utils/alert-cg';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
 import type { TreeNode } from '@/tree/tree-types';
 import { PREPROD_MODES, SUPPORTED_TREE_VIEWS } from '@/tree/tree-view-contract';
+import { setActiveMoodBoard } from '@/data/project-data';
 import { applyPreprodLayoutToDom, normalizePreprodLayoutMode } from '@/workspace/preprod-layout';
 import {
   TREATMENT_FIELDS,
@@ -131,7 +132,9 @@ function warnTreeRoutingIssue(node: TreeNode, reason: string): void {
 }
 
 function resolveNodeViewOrFallback(node: TreeNode): string {
+  if (node?.type === 'moodboard' || node?.type === 'moodboard-item') return 'moodboards';
   const requested = typeof node?.view === 'string' && node.view.trim() ? node.view : 'default';
+  if (requested === 'moodboard-detail') return 'moodboards';
   if (!SUPPORTED_TREE_VIEWS.has(requested)) {
     warnTreeRoutingIssue(node, 'Unsupported view');
     return 'default';
@@ -141,6 +144,27 @@ function resolveNodeViewOrFallback(node: TreeNode): string {
     return 'overview';
   }
   return requested;
+}
+
+function activateMoodBoardFromTree(node: TreeNode, sectionKey: string | null, itemId?: string): void {
+  const boardId = node.boardId;
+  if (!boardId) return;
+  void switchView('moodboards', node.name, sectionKey).then(() => {
+    setActiveMoodBoard(boardId);
+    const view = document.querySelector('cinegen-moodboards-view') as
+      | (HTMLElement & { requestUpdate?: () => void })
+      | null;
+    view?.requestUpdate?.();
+    if (itemId && view) {
+      view.dispatchEvent(
+        new CustomEvent('moodboard-item-view', {
+          bubbles: true,
+          detail: { boardId, itemId },
+        })
+      );
+    }
+    updateInspector(node.type, node);
+  });
 }
 
 // ==================== VIEW SWITCHING & SCENE DETAIL ====================
@@ -199,6 +223,14 @@ function selectTreeNode(element, node, sectionKeyOverride) {
     void switchView('scene-detail', node.name, sectionKey).then(() => {
       renderSceneDetail();
       updateInspector('scene', window.currentSceneData?.[node.sceneId]);
+    });
+  } else if (node.type === 'moodboard' && node.boardId) {
+    activateMoodBoardFromTree(node, sectionKey);
+  } else if (node.type === 'moodboard-item' && node.boardId) {
+    activateMoodBoardFromTree(node, sectionKey, node.itemId);
+  } else if (node.view === 'moodboards') {
+    void switchView('moodboards', node.name, sectionKey).then(() => {
+      _populateTreeNodeView(node, sectionKey, 'moodboards');
     });
   } else {
     const resolvedView = resolveNodeViewOrFallback(node);
