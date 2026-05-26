@@ -113,7 +113,7 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 
 - [x] Extract script wizard from `toolbar/toolbar-modals-service.ts` into `wizard/script-wizard-*`.
 - [x] Split `toolbar-modals-service` by concern (projects/modals/wizards/debug).
-- [ ] Split `setup-assistant/setup-assistant-bundle.ts` into state, routing tests, UI rendering, and persistence gates.
+- [x] Split `setup-assistant/setup-assistant-bundle.ts` into state, routing tests, UI rendering, and persistence gates.
 
 Progress note (2026-05-26):
 - Completed script wizard extraction in two steps:
@@ -124,7 +124,9 @@ Progress note (2026-05-26):
 - Extracted remaining wizard-generic navigation/dismissal glue into `source/src/toolbar/toolbar-wizard-modals-service.ts` (slide stepping/rendering, wizard modal open/close helpers, wizard action dispatch, project-action + wizard prev/next wiring), completing the toolbar concern split with compatibility wrappers maintained in `toolbar-modals-service.ts`.
 - Began `setup-assistant/setup-assistant-bundle.ts` decomposition by extracting setup-complete + progress persistence gates into `source/src/setup-assistant/setup-assistant-persistence.ts` and rewiring the bundle to call this module (server-state inference, setup complete flag, progress save/load/apply/clear).
 - Extracted setup-assistant state/model utilities into `source/src/setup-assistant/setup-assistant-state.ts` (default wizard state, vendor-slot normalization, vendor lookup/key checks, modality coverage/required-model checks) and rewired bundle wrappers to this module.
-- Remaining Phase B work is focused on decomposing `setup-assistant-bundle.ts`.
+- Extracted setup-assistant routing test orchestration into `source/src/setup-assistant/setup-assistant-routing-tests.ts` (single-modality and vendor-wide connection tests, status updates, model-list persistence hooks), wired via `_saRoutingTestDeps()` in bundle.
+- Extracted setup-assistant UI rendering shell into `source/src/setup-assistant/setup-assistant-render.ts` (`renderSetupStep`, rail/body/footer rendering) while preserving existing step templates and event behavior in bundle.
+- Phase B decomposition goals are complete; remaining cleanup is optional follow-up modularization.
 
 ### Phase C — Legacy bridge retirement
 

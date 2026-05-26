@@ -75,6 +75,16 @@ import {
   saVendorHasKey,
   saVendorsWithKeys,
 } from '@/setup-assistant/setup-assistant-state';
+import {
+  runConnectionTest as saRunConnectionTest,
+  testVendorAllModalities as saTestVendorAllModalities,
+} from '@/setup-assistant/setup-assistant-routing-tests';
+import {
+  renderBody as saRenderBody,
+  renderFooter as saRenderFooter,
+  renderRail as saRenderRail,
+  renderSetupStep as saRenderSetupStep,
+} from '@/setup-assistant/setup-assistant-render';
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
 
@@ -602,99 +612,73 @@ function setupFinish() {
 /* ── Rendering ───────────────────────────────────────────────────────────── */
 
 function _renderSetupStep(idx) {
-  _renderRail(idx);
-  _renderBody(idx);
-  _renderFooter(idx);
+  saRenderSetupStep(
+    idx,
+    {
+      setupSteps: SETUP_STEPS,
+      maxReachableStep: _saMaxReachableStep,
+      renderBody: _renderBody,
+      bindStepControls: _bindStepControls,
+      escHtml,
+    },
+    {
+      setFooterHint: _saFooterHintForStep,
+      onLastStep: idx === SETUP_STEPS.length - 1,
+    }
+  );
 }
 
 function _renderRail(currentIdx) {
-  const rail = document.getElementById('sa-rail');
-  if (!rail) return;
-  rail.innerHTML = SETUP_STEPS.map((step, i) => {
-    let cls = 'sa-rail-step';
-    if (i === currentIdx) cls += ' sa-rail-step--active';
-    else if (i < currentIdx) cls += ' sa-rail-step--done';
-    const reachable = i <= _saMaxReachableStep;
-    if (reachable) cls += ' sa-rail-step--clickable';
-    else cls += ' sa-rail-step--locked';
-    const label = escHtml(step.label);
-    const inner = `
-      <span class="sa-rail-dot"><i class="${step.icon}" aria-hidden="true"></i></span>
-      <span class="sa-rail-label">${label}</span>`;
-    if (reachable) {
-      const selected = i === currentIdx ? 'true' : 'false';
-      return `<button type="button" class="${cls}" data-step-idx="${i}" role="tab" aria-selected="${selected}" aria-label="${label}">${inner}</button>`;
-    }
-    return `<div class="${cls}" role="presentation" aria-disabled="true" title="Complete earlier steps to unlock">${inner}</div>`;
-  }).join('');
+  saRenderRail(currentIdx, {
+    setupSteps: SETUP_STEPS,
+    maxReachableStep: _saMaxReachableStep,
+    renderBody: _renderBody,
+    bindStepControls: _bindStepControls,
+    escHtml,
+  });
 }
 
 function _renderBody(idx) {
-  const step = SETUP_STEPS[idx];
-  if (!step) return;
-
-  const host = document.getElementById('sa-body');
-  if (!host) return;
-
-  // Always use the Lit component host; wait for it if not yet upgraded
-  if (typeof host.showWelcome !== 'function') {
-    // Defer render until custom element is defined
-    customElements.whenDefined('cinegen-sa-step-host').then(() => {
-      _renderBody(idx);
-    });
-    return;
-  }
-
-  if (step.id === 'welcome') host.showWelcome();
-  else host.showStep(step.id);
-  /* Force the active step child component to re-render (Lit won't re-render
-     a child whose own reactive properties haven't changed). */
-  host.updateComplete?.then(() => {
-    const child = host.querySelector(`sa-step-${step.id}`);
-    if (child && typeof child.requestUpdate === 'function') child.requestUpdate();
+  saRenderBody(idx, {
+    setupSteps: SETUP_STEPS,
+    maxReachableStep: _saMaxReachableStep,
+    renderBody: _renderBody,
+    bindStepControls: _bindStepControls,
+    escHtml,
   });
-  _bindStepControls(step.id);
 }
 
 function _renderFooter(idx) {
-  const step     = SETUP_STEPS[idx];
-  const backBtn  = document.getElementById('sa-btn-back');
-  const nextBtn  = document.getElementById('sa-btn-next');
-  const skipBtn  = document.getElementById('sa-btn-skip');
-  const hintEl   = document.getElementById('sa-footer-hint');
-
-  if (!step) return;
-  const isFirst   = idx === 0;
-  const isLast    = idx === SETUP_STEPS.length - 1;
-
-  if (backBtn) {
-    backBtn.hidden    = isFirst;
-    backBtn.disabled  = isFirst;
-  }
-  if (skipBtn) {
-    skipBtn.hidden    = true;
-    skipBtn.disabled  = true;
-  }
-  if (nextBtn) {
-    if (isLast) {
-      nextBtn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Start CineGen';
-    } else {
-      nextBtn.innerHTML = 'Next <i class="fa-solid fa-caret-right" aria-hidden="true"></i>';
+  saRenderFooter(
+    idx,
+    {
+      setupSteps: SETUP_STEPS,
+      maxReachableStep: _saMaxReachableStep,
+      renderBody: _renderBody,
+      bindStepControls: _bindStepControls,
+      escHtml,
+    },
+    {
+      setFooterHint: _saFooterHintForStep,
+      onLastStep: idx === SETUP_STEPS.length - 1,
     }
+  );
+}
+
+function _saFooterHintForStep(stepId) {
+  if (stepId === 'welcome') {
+    return 'Keys never leave this machine except to the AI APIs you call.';
   }
-  if (hintEl) {
-    if (step.id === 'welcome') {
-      hintEl.textContent = 'Keys never leave this machine except to the AI APIs you call.';
-    } else if (step.id === 'providers') {
-      hintEl.textContent = 'Save keys for the services you use — you only need one provider to continue. Assign them to tasks on the next step.';
-    } else if (step.id === 'coverage') {
-      hintEl.textContent = 'Text, Video, and Image / Storyboards are required. Sound can be skipped for now.';
-    } else if (step.id === 'models') {
-      hintEl.textContent = 'Test each assignment and pick a default model. You can change these anytime in Settings.';
-    } else {
-      hintEl.textContent = '';
-    }
+  if (stepId === 'providers') {
+    return 'Save keys for the services you use — you only need one provider to continue. Assign them to tasks on the next step.';
   }
+  if (stepId === 'coverage') {
+    return 'Text, Video, and Image / Storyboards are required. Sound can be skipped for now.';
+  }
+  if (stepId === 'models') {
+    return 'Test each assignment and pick a default model. You can change these anytime in Settings.';
+  }
+  return '';
 }
 
 /* ── Step templates ──────────────────────────────────────────────────────── */
@@ -1597,90 +1581,82 @@ function saWizardRemoveProvider(vendorId) {
  * Test all four modalities for a vendor concurrently. Called automatically after saving a key.
  * Updates vendor.status and writes catalog data. Re-renders the providers step when done.
  */
+function _saRoutingTestDeps() {
+  return {
+    routingModalities: ROUTING_MODALITIES,
+    setupSteps: SETUP_STEPS,
+    getCurrentStep: () => _saCurrentStep,
+    getState: () => _saState,
+    getTestAborts: () => _saTestAborts,
+    setTestAbort: (mod, controller) => {
+      if (controller) _saTestAborts[mod] = controller;
+      else delete _saTestAborts[mod];
+    },
+    getVendorTestAborts: () => _saVendorTestAborts,
+    collectCurrentStep: _saCollectCurrentStep,
+    saveProgress: _saSaveProgress,
+    renderSetupStep: _renderSetupStep,
+    fetchModels: saFetchModels,
+    modalityChipLabel: _saModalityChipLabel,
+    applyVendorCatalogFetchResult:
+      typeof applyVendorCatalogFetchResult === 'function' ? applyVendorCatalogFetchResult : undefined,
+    setVendorModalityCatalog:
+      typeof setVendorModalityCatalog === 'function' ? setVendorModalityCatalog : undefined,
+    ensureModelId: _saEnsureModelId,
+    refreshModelSelect: _saRefreshModelSelect,
+    saveStepData: _saSaveStepData,
+    triggerModelActivityBlink:
+      typeof triggerModelActivityBlink === 'function' ? triggerModelActivityBlink : undefined,
+    syncModalityProviderFromVendor: _saSyncModalityProviderFromVendor,
+    vendorById: _saVendorById,
+    keyFromInput: _saKeyFromInput,
+    setTestStatus: _saSetTestStatus,
+    afterSuccessfulTest: (mod, listedModels, fetchedAt, s) => {
+      if (mod !== 'audio') return;
+      const checkSub = (key) => {
+        const matchFn =
+          typeof window.modelMatchesAudioCapability === 'function'
+            ? (m) => window.modelMatchesAudioCapability(m, key, s.providerId || '')
+            : (m) => {
+                const text = `${m.id} ${m.label || ''}`.toLowerCase();
+                const kw = { tts: ['tts', 'speech', 'voice'], sfx: ['sfx', 'sound', 'effect'], music: ['music', 'song'] }[key] || [];
+                return kw.some((k) => text.includes(k));
+              };
+        const hits = listedModels.filter(matchFn);
+        if (!_saState[key]) {
+          _saState[key] = {
+            status: null,
+            statusMsg: '',
+            listedModels: [],
+            fetchedAt: 0,
+            modelId: '',
+            providerId: '',
+            vendorId: '',
+            baseUrl: '',
+          };
+        }
+        if (hits.length > 0) {
+          _saState[key].status = _saState.audio.status;
+          _saState[key].statusMsg = _saState.audio.statusMsg;
+          _saState[key].listedModels = hits;
+          _saState[key].fetchedAt = fetchedAt;
+          _saState[key].providerId = _saState.audio.providerId;
+          _saState[key].vendorId = _saState.audio.vendorId;
+          _saState[key].baseUrl = _saState.audio.baseUrl;
+          if (_saState[key].listedModels.length && !_saState[key].modelId) {
+            _saState[key].modelId = _saState[key].listedModels[0].id;
+          }
+        }
+      };
+      checkSub('tts');
+      checkSub('sfx');
+      checkSub('music');
+    },
+  };
+}
+
 async function _saTestVendorAllModalities(vendor) {
-  const localKey = String(vendor?.apiKey || '').trim();
-  if (!vendor?.id || !localKey) {
-    vendor.status = 'err';
-    vendor.statusMsg = 'No API key to test.';
-    if (SETUP_STEPS[_saCurrentStep]?.id === 'providers') _renderSetupStep(_saCurrentStep);
-    return;
-  }
-
-  /* Cancel any in-flight test for this vendor. */
-  if (_saVendorTestAborts[vendor.id]) {
-    try { _saVendorTestAborts[vendor.id].abort(); } catch (e) { /* noop */ }
-  }
-  const controller = new AbortController();
-  _saVendorTestAborts[vendor.id] = controller;
-
-  const key        = String(vendor.apiKey || '').trim();
-  const baseUrl    = vendor.baseUrl || '';
-  const providerId = vendor.providerId;
-
-  /* Fetch all modalities concurrently; individual errors are caught internally. */
-  const fetches = ROUTING_MODALITIES.map((mod) =>
-    _saFetchModels(providerId, key, baseUrl, mod, controller.signal)
-      .then((result) => ({ mod, result }))
-      .catch((e) => ({ mod, error: e }))
-  );
-
-  let settled;
-  try {
-    settled = await Promise.all(fetches);
-  } catch (e) {
-    /* Promise.all itself only rejects on abort via the signal; individual fetch errors are caught above. */
-    delete _saVendorTestAborts[vendor.id];
-    if (e.name === 'AbortError') return;
-    vendor.status = 'err';
-    vendor.statusMsg = e.message || 'Test failed.';
-    if (SETUP_STEPS[_saCurrentStep]?.id === 'providers') _renderSetupStep(_saCurrentStep);
-    _saSaveProgress();
-    return;
-  }
-
-  delete _saVendorTestAborts[vendor.id];
-
-  let anyOk = false;
-  const firstErrMsg = [];
-
-  for (const { mod, result, error } of settled) {
-    if (error) {
-      if (error.name === 'AbortError') return;  /* aborted mid-flight */
-      firstErrMsg.push(`${_saModalityChipLabel(mod)}: ${error.message}`);
-      continue;
-    }
-    if ((result.ok || result.rateLimit) && result.models?.length > 0) {
-      anyOk = true;
-      if (typeof applyVendorCatalogFetchResult === 'function') {
-        applyVendorCatalogFetchResult(vendor.id, providerId, mod, result);
-      } else if (typeof setVendorModalityCatalog === 'function') {
-        setVendorModalityCatalog(vendor.id, providerId, mod, result);
-      }
-    } else if (result.rateLimit) {
-      anyOk = true;
-      if (typeof applyVendorCatalogFetchResult === 'function') {
-        applyVendorCatalogFetchResult(vendor.id, providerId, mod, result);
-      } else if (typeof setVendorModalityCatalog === 'function') {
-        setVendorModalityCatalog(vendor.id, providerId, mod, result);
-      }
-    } else if (!result.ok && result.message) {
-      firstErrMsg.push(`${_saModalityChipLabel(mod)}: ${result.message}`);
-    }
-  }
-
-  if (anyOk) {
-    vendor.status = 'ok';
-    vendor.statusMsg = '';
-  } else {
-    vendor.status = 'err';
-    /* Strip the "ModLabel: " prefix from the first error since it may not be meaningful on its own. */
-    vendor.statusMsg = firstErrMsg.length
-      ? firstErrMsg[0].replace(/^[^:]+:\s*/, '')
-      : 'No models found. Check your API key.';
-  }
-
-  if (SETUP_STEPS[_saCurrentStep]?.id === 'providers') _renderSetupStep(_saCurrentStep);
-  _saSaveProgress();
+  await saTestVendorAllModalities(vendor, _saRoutingTestDeps());
 }
 
 async function saWizardTestProvider(vendorId) {
@@ -1932,123 +1908,7 @@ function _saKeyFromInput(mod) {
  * @returns {{ ok: boolean, rateLimit: boolean, message: string, noKey?: boolean }}
  */
 async function _saRunConnectionTest(mod, options) {
-  const updateUi = !options || options.updateUi !== false;
-  _saCollectCurrentStep(_saCurrentStep);
-
-  const s        = _saState[mod];
-  _saSyncModalityProviderFromVendor(mod);
-  const statusEl = document.getElementById(`sa-test-status-${mod}`);
-  const testBtn  = document.getElementById(`sa-test-btn-${mod}`);
-  const key      = _saKeyFromInput(mod);
-  const vendor   = _saVendorById(s.vendorId);
-  const hasServerKey = Boolean(vendor?.hasServerKey);
-
-  if (!key && !hasServerKey) {
-    if (updateUi) _saSetTestStatus(mod, 'err', 'Assign a provider with an API key first.');
-    return { ok: false, rateLimit: false, message: 'Assign a provider with an API key first.', noKey: true };
-  }
-
-  if (_saTestAborts[mod]) { try { _saTestAborts[mod].abort(); } catch (e) { /* noop */ } }
-  const controller   = new AbortController();
-  _saTestAborts[mod] = controller;
-
-  _saState[mod].status = 'testing';
-  if (updateUi) {
-    if (testBtn) { testBtn.disabled = true; testBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Testing…'; }
-    _saSetTestStatus(mod, 'testing', 'Connecting…');
-  }
-
-  const resetTestBtn = () => {
-    if (testBtn) {
-      testBtn.disabled = false;
-      testBtn.innerHTML = '<i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i> Test Connection &amp; List Models';
-    }
-  };
-
-  try {
-    const result = await saFetchModels(s.providerId || _saVendorById(s.vendorId)?.providerId, key, s.baseUrl || _saVendorById(s.vendorId)?.baseUrl || '', mod, controller.signal);
-    if (updateUi) resetTestBtn();
-
-    _saState[mod].status    = result.ok ? 'ok' : (result.rateLimit ? 'ratelimit' : 'err');
-    _saState[mod].statusMsg = result.message;
-
-    if (result.ok || result.rateLimit) {
-      const listedModels = result.models || [];
-      const fetchedAt = Date.now();
-      _saState[mod].listedModels = listedModels;
-      _saState[mod].fetchedAt = fetchedAt;
-      _saEnsureModelId(mod);
-      _saRefreshModelSelect(mod);
-
-      // Propagate test result to audio sub-modalities (TTS, SFX, Music)
-      // Uses modelMatchesAudioCapability cascade (type → capabilities → boolean flags → keywords)
-      if (mod === 'audio') {
-        const checkSub = (key) => {
-          const matchFn = typeof window.modelMatchesAudioCapability === 'function'
-            ? (m) => window.modelMatchesAudioCapability(m, key, s.providerId || '')
-            : (m) => {
-                const text = (m.id + ' ' + (m.label || '')).toLowerCase();
-                const kw = { tts: ['tts', 'speech', 'voice'], sfx: ['sfx', 'sound', 'effect'], music: ['music', 'song'] }[key] || [];
-                return kw.some((k) => text.includes(k));
-              };
-          const hits = listedModels.filter(matchFn);
-          if (!_saState[key]) {
-            _saState[key] = { status: null, statusMsg: '', listedModels: [], fetchedAt: 0, modelId: '', providerId: '', vendorId: '', baseUrl: '' };
-          }
-          if (hits.length > 0) {
-            _saState[key].status = _saState['audio'].status;
-            _saState[key].statusMsg = _saState['audio'].statusMsg;
-            _saState[key].listedModels = hits;
-            _saState[key].fetchedAt = fetchedAt;
-            _saState[key].providerId = _saState['audio'].providerId;
-            _saState[key].vendorId = _saState['audio'].vendorId;
-            _saState[key].baseUrl = _saState['audio'].baseUrl;
-            if (_saState[key].listedModels.length && !_saState[key].modelId) {
-              _saState[key].modelId = _saState[key].listedModels[0].id;
-            }
-          }
-        };
-        checkSub('tts');
-        checkSub('sfx');
-        checkSub('music');
-      }
-
-      if (typeof applyVendorCatalogFetchResult === 'function' && s.vendorId) {
-        applyVendorCatalogFetchResult(s.vendorId, s.providerId, mod, { ...result, fetchedAt });
-      } else if (typeof setVendorModalityCatalog === 'function' && s.vendorId) {
-        setVendorModalityCatalog(s.vendorId, s.providerId, mod, { ...result, fetchedAt });
-      }
-
-      if (typeof triggerModelActivityBlink === 'function') triggerModelActivityBlink(mod);
-
-      if (updateUi) {
-        const count = listedModels.length;
-        const msg = result.rateLimit
-          ? `Rate limited — key is likely valid. <small>(${result.message})</small>`
-          : count
-            ? `<i class="fa-solid fa-circle-check"></i> Connected — ${count} model${count !== 1 ? 's' : ''} listed.`
-            : `<i class="fa-solid fa-circle-check"></i> Connected — no models listed by provider.`;
-        _saSetTestStatus(mod, result.rateLimit ? 'ratelimit' : 'ok', msg, true);
-      }
-
-      _saSaveStepData(mod);
-      _saSaveProgress();
-      return { ok: result.ok, rateLimit: result.rateLimit, message: result.message };
-    }
-
-    if (updateUi) _saSetTestStatus(mod, 'err', result.message);
-    _saSaveProgress();
-    return { ok: false, rateLimit: false, message: result.message || 'Connection failed.' };
-
-  } catch (e) {
-    if (updateUi) resetTestBtn();
-    if (e.name === 'AbortError') return { ok: false, rateLimit: false, message: 'Cancelled.', aborted: true };
-    _saState[mod].status    = 'err';
-    _saState[mod].statusMsg = e.message;
-    if (updateUi) _saSetTestStatus(mod, 'err', `Unexpected error: ${e.message}`);
-    _saSaveProgress();
-    return { ok: false, rateLimit: false, message: e.message };
-  }
+  return saRunConnectionTest(mod, options, _saRoutingTestDeps());
 }
 
 async function saTestConnection(mod) {
