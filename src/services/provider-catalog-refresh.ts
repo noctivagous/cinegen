@@ -4,12 +4,16 @@ import {
 import {
   apiScopeForModality,
   ROUTING_MODALITIES,
-  type RoutingModalityKey,
 } from '@/services/routing-modalities';
 import {
   applyVendorCatalogFetchResult,
   ensureRoutingModelDefaults,
 } from '@/services/provider-model-catalog';
+import { storageService } from '@/services/persistence';
+import { AI_API_SETTINGS_STORAGE_KEY } from '@/constants/storage-keys';
+import { loadApiKeys, renderVendorList } from '@/settings/api-keys-settings-bundle';
+import { populateAiApiSettingsForm } from '@/settings/ai-api-settings-bundle';
+import { updateModelStatusIndicators } from '@/services/status-bar-service';
 
 export type ApiKeysVendor = {
   id: string;
@@ -28,23 +32,15 @@ function normalizeVendor(v: ApiKeysVendor): ApiKeysVendorNormalized | null {
 }
 
 function vendorHasKeyForScope(vendor: ApiKeysVendor, scopeKey: string): boolean {
-  const w = window as Window & { vendorIsConfigured?: (v: ApiKeysVendor) => boolean };
-  if (typeof w.vendorIsConfigured === 'function') {
-    return w.vendorIsConfigured(vendor);
-  }
-  if (typeof window.vendorHasKeyForScope === 'function') {
-    return window.vendorHasKeyForScope(vendor, scopeKey);
-  }
-  const key = typeof window.readVendorKey === 'function'
-    ? window.readVendorKey(vendor, scopeKey)
-    : String(vendor.apiKey ?? '').trim();
+  void scopeKey;
+  const key = String(vendor.apiKey ?? '').trim();
+  if (!key) return Boolean((vendor as { hasServerKey?: boolean }).hasServerKey);
+  if (/^•+$/.test(key)) return true;
   return key.length >= 4;
 }
 
 function readVendorKey(vendor: ApiKeysVendor, scopeKey: string): string {
-  if (typeof window.readVendorKey === 'function') {
-    return window.readVendorKey(vendor, scopeKey);
-  }
+  void scopeKey;
   return String(vendor.apiKey ?? '').trim();
 }
 
@@ -53,10 +49,11 @@ function resolveVendorBaseUrl(vendor: ApiKeysVendorNormalized): string {
   const fromVendor = String(vendor.baseUrl ?? '').trim();
   if (fromVendor) return fromVendor;
 
-  if (typeof window.loadAiApiSettings === 'function') {
-    const ai = window.loadAiApiSettings() as {
-      modalities?: Record<string, { vendorId?: string; baseUrl?: string }>;
-    } | null;
+  try {
+    const raw = storageService.getItem(AI_API_SETTINGS_STORAGE_KEY);
+    const ai = raw
+      ? (JSON.parse(raw) as { modalities?: Record<string, { vendorId?: string; baseUrl?: string }> })
+      : null;
     if (ai?.modalities) {
       for (const m of Object.values(ai.modalities)) {
         if (m?.vendorId === vendor.id && m.baseUrl) {
@@ -64,6 +61,8 @@ function resolveVendorBaseUrl(vendor: ApiKeysVendorNormalized): string {
         }
       }
     }
+  } catch {
+    // noop
   }
   return '';
 }
@@ -113,9 +112,8 @@ export async function refreshVendorCatalog(
 
 /** App-load refresh for every vendor that has at least one saved key. */
 export async function refreshAllProviderCatalogsOnLoad(): Promise<void> {
-  if (typeof window.loadApiKeys !== 'function') return;
-  const { vendors } = window.loadApiKeys();
-  const withKeys = (vendors ?? []).filter((v) =>
+  const { vendors } = loadApiKeys();
+  const withKeys = (vendors ?? []).filter((v: ApiKeysVendor) =>
     ['language', 'image', 'video', 'audio'].some((scope) => vendorHasKeyForScope(v, scope))
   );
 
@@ -126,12 +124,8 @@ export async function refreshAllProviderCatalogsOnLoad(): Promise<void> {
 
   ensureRoutingModelDefaults(true);
 
-  if (typeof window.renderVendorList === 'function') window.renderVendorList();
-  if (typeof window.populateAiApiSettingsForm === 'function') {
-    const modal = document.getElementById('ai-providers-modal');
-    if (modal && !modal.hidden) window.populateAiApiSettingsForm();
-  }
-  if (typeof window.updateModelStatusIndicators === 'function') {
-    window.updateModelStatusIndicators();
-  }
+  renderVendorList();
+  const modal = document.getElementById('ai-providers-modal');
+  if (modal && !modal.hidden) populateAiApiSettingsForm();
+  updateModelStatusIndicators();
 }

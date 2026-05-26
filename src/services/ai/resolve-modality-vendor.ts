@@ -2,6 +2,8 @@ import { storageService } from '@/services/persistence';
 import { loadProviderModelCatalog } from '@/services/provider-model-catalog';
 import type { AiVendorRoute } from '@/services/ai/types';
 import { AI_API_SETTINGS_STORAGE_KEY } from '@/constants/storage-keys';
+import { loadAiApiSettings } from '@/settings/ai-api-settings-bundle';
+import { loadApiKeys, vendorIsConfigured } from '@/settings/api-keys-settings-bundle';
 
 export type ModalityVendorKey = 'llm' | 'image' | 'video' | 'audio';
 
@@ -13,8 +15,7 @@ export interface ModalityVendorRoute {
 /** Resolve configured vendor + model for a modality (matches debug modal routing). */
 export function resolveModalityVendorRoute(modality: ModalityVendorKey): ModalityVendorRoute | null {
   try {
-    const fromWindow =
-      typeof window.loadAiApiSettings === 'function' ? window.loadAiApiSettings() : null;
+    const fromWindow = loadAiApiSettings();
     const raw = storageService.getItem(AI_API_SETTINGS_STORAGE_KEY);
     const settings = fromWindow ?? (raw ? JSON.parse(raw) : null);
     const cfg = settings?.modalities?.[modality] as
@@ -26,23 +27,19 @@ export function resolveModalityVendorRoute(modality: ModalityVendorKey): Modalit
     const vendors = catalog.vendors || {};
     const keyCache = new Map<string, { name?: string; slotId?: string; baseUrl?: string }>();
 
-    if (typeof window.loadApiKeys === 'function') {
-      const keys = window.loadApiKeys() as { vendors?: Array<{ id?: string; name?: string; slotId?: string; baseUrl?: string }> };
-      for (const v of keys?.vendors || []) {
-        if (v.id) keyCache.set(v.id, v);
-      }
+    const keys = loadApiKeys() as {
+      vendors?: Array<{ id?: string; name?: string; slotId?: string; baseUrl?: string }>;
+    };
+    for (const v of keys?.vendors || []) {
+      if (v.id) keyCache.set(v.id, v);
     }
 
-    const w = window as Window & { vendorIsConfigured?: (v: unknown) => boolean };
     const keysState =
-      typeof window.loadApiKeys === 'function'
-        ? (window.loadApiKeys() as {
-            vendors?: Array<{ id?: string; providerId?: string; hasServerKey?: boolean; apiKey?: string }>;
-          })
-        : null;
+      loadApiKeys() as {
+        vendors?: Array<{ id?: string; providerId?: string; hasServerKey?: boolean; apiKey?: string }>;
+      };
     const configuredVendors = (keysState?.vendors || []).filter((v) => {
-      if (typeof w.vendorIsConfigured === 'function') return w.vendorIsConfigured(v);
-      return Boolean(String(v.apiKey || '').trim());
+      return vendorIsConfigured(v);
     });
 
     let vendorId = cfg.vendorId || '';

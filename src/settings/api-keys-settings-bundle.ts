@@ -5,10 +5,19 @@ import {
   ROUTING_MODALITIES,
 } from '@/services/routing-modalities';
 import {
+  mergeRoutingModelOptions,
   sortVendorsForMasterList,
   vendorCatalogHasLiveModels,
   getVendorModalityChips,
 } from '@/services/provider-model-catalog';
+import {
+  closeAiProvidersModal,
+  loadAiApiSettings,
+  openAiProvidersModal,
+  populateAiApiCredentialSelects,
+  sanitizeAiApiVendorIdsInStoredSettings,
+  saveAiApiSettings,
+} from '@/settings/ai-api-settings-bundle';
 
 declare global {
   function populateAiApiSettingsForm(): void;
@@ -160,20 +169,19 @@ export async function initServerKeyStore() {
 
 /* ── Storage ─────────────────────────────────────────────────────────────── */
 
-function loadApiKeys() {
+export function loadApiKeys() {
   if (_apiKeysCache) return _apiKeysCache;
   return mergeApiKeysState(null);
 }
 
 function _reassignModalitiesForRemovedVendors(next: any) {
-  if (typeof (window as any).loadAiApiSettings !== 'function' || typeof (window as any).saveAiApiSettings !== 'function') return;
   const old = loadApiKeys();
   const oldIds = new Set(old.vendors.map((v: any) => v.id));
   const newIds = new Set((next?.vendors || []).map((v: any) => v.id));
   const removedIds = [...oldIds].filter((id) => !newIds.has(id));
   if (!removedIds.length) return;
 
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   const modalities = settings?.modalities;
   if (!modalities) return;
 
@@ -196,15 +204,13 @@ function _reassignModalitiesForRemovedVendors(next: any) {
       mcfg.vendorId = replacement.id;
 
       // Pick first available model for the new vendor/provider
-      if (typeof (window as any).mergeRoutingModelOptions === 'function') {
-        const models = (window as any).mergeRoutingModelOptions(mcfg.provider, mod, mcfg.vendorId) || [];
-        if (models.length) {
-          mcfg.model = models[0].id;
-          mcfg.modelLabel = models[0].label || models[0].id;
-        } else {
-          mcfg.model = '';
-          mcfg.modelLabel = '';
-        }
+      const models = mergeRoutingModelOptions(mcfg.provider, mod, mcfg.vendorId) || [];
+      if (models.length) {
+        mcfg.model = models[0].id;
+        mcfg.modelLabel = models[0].label || models[0].id;
+      } else {
+        mcfg.model = '';
+        mcfg.modelLabel = '';
       }
       mcfg.fallbackModel = '';
       changed = true;
@@ -212,7 +218,7 @@ function _reassignModalitiesForRemovedVendors(next: any) {
   });
 
   if (changed) {
-    (window as any).saveAiApiSettings(settings);
+    saveAiApiSettings(settings);
   }
 }
 
@@ -232,7 +238,7 @@ function saveApiKeys(next: any) {
 }
 
 /** Clear all API keys (in-memory + server-side). Called by resetAppSettingsForDebug(). */
-async function clearApiKeys() {
+export async function clearApiKeys() {
   _apiKeysCache = mergeApiKeysState(null); // reset to seed state with no keys
   await serverClearAllKeys();
   await serverSaveKeys({ vendors: [] });
@@ -241,7 +247,7 @@ async function clearApiKeys() {
 
 /* ── Key utilities ───────────────────────────────────────────────────────── */
 
-function apiScopeForModality(modalityKey: any) {
+export function apiScopeForModality(modalityKey: any) {
   return mapApiScopeForModality(modalityKey as any);
 }
 
@@ -255,16 +261,16 @@ export function vendorIsConfigured(v: any): boolean {
   return true;
 }
 
-function vendorHasApiKey(v: any) {
+export function vendorHasApiKey(v: any) {
   return vendorIsConfigured(v);
 }
 
 /** @deprecated scope ignored — one key per provider */
-function vendorHasKeyForScope(v: any, _scopeKey: any) {
+export function vendorHasKeyForScope(v: any, _scopeKey: any) {
   return vendorHasApiKey(v);
 }
 
-function readVendorKey(v: any, _scopeKey: any) {
+export function readVendorKey(v: any, _scopeKey: any) {
   const k = String(v?.apiKey || '').trim();
   if (k && !/^•+$/.test(k)) return k;
   if (vendorIsConfigured(v)) return '••••••••';
@@ -291,10 +297,10 @@ export function apiKeysListCredentialCandidates(providerId: any, modalityKey: an
     .map((v: any) => ({ id: v.id, name: v.name }));
 }
 
-function getApiKey(scopeKey: any) {
+export function getApiKey(scopeKey: any) {
   // Keys are server-side; this function now only checks if a key exists
   const modality = scopeKey === 'language' ? 'llm' : scopeKey;
-  const ai: any = typeof window.loadAiApiSettings === 'function' ? window.loadAiApiSettings() : null;
+  const ai: any = loadAiApiSettings();
   if (!ai?.modalities?.[modality]) return '';
   const prov     = ai.modalities[modality].provider;
   const vendorId = typeof ai.modalities[modality].vendorId === 'string' ? ai.modalities[modality].vendorId : '';
@@ -331,7 +337,7 @@ export function getDraft() {
   return _apiKeysDraft;
 }
 
-function syncDetailInputsToDraft() {
+export function syncDetailInputsToDraft() {
   const d   = getDraft();
   const vid = d.selectedVendorId;
   const v   = d.vendors.find((x: any) => x.id === vid);
@@ -353,7 +359,7 @@ function syncDetailInputsToDraft() {
 
 /* ── Vendor list render ──────────────────────────────────────────────────── */
 
-function renderVendorList() {
+export function renderVendorList() {
   const d    = getDraft();
   const host = _el('api-keys-vendor-list');
   if (!host) return;
@@ -478,8 +484,8 @@ export function saveApiKeysModalInternal() {
   populateApiKeysForm();
   const hint = _el('ai-providers-save-hint');
   if (hint) hint.textContent = 'Saved.';
-  if (typeof window.sanitizeAiApiVendorIdsInStoredSettings === 'function') window.sanitizeAiApiVendorIdsInStoredSettings();
-  if (typeof window.populateAiApiCredentialSelects === 'function') window.populateAiApiCredentialSelects();
+  sanitizeAiApiVendorIdsInStoredSettings();
+  populateAiApiCredentialSelects();
   refreshAiApiModalityGating();
   const saved = loadApiKeys();
   const vendor = saved.vendors.find((x: any) => x.id === saved.selectedVendorId);
@@ -505,8 +511,8 @@ export function clearApiKey() {
   _syncApiKeysToSaProgress(d);
   _apiKeysDraft = null;
   populateApiKeysForm();
-  if (typeof window.sanitizeAiApiVendorIdsInStoredSettings === 'function') window.sanitizeAiApiVendorIdsInStoredSettings();
-  if (typeof window.populateAiApiCredentialSelects === 'function') window.populateAiApiCredentialSelects();
+  sanitizeAiApiVendorIdsInStoredSettings();
+  populateAiApiCredentialSelects();
   refreshAiApiModalityGating();
 }
 
@@ -582,11 +588,11 @@ export function refreshAiApiModalityGating() {
 /* ── Modal aliases ───────────────────────────────────────────────────────── */
 
 function openApiKeysSettingsModal() {
-  if (typeof window.openAiProvidersModal === 'function') window.openAiProvidersModal();
+  void openAiProvidersModal();
 }
 
 function closeApiKeysSettingsModal() {
-  if (typeof window.closeAiProvidersModal === 'function') window.closeAiProvidersModal();
+  closeAiProvidersModal();
 }
 
 function saveApiKeysModal() { saveApiKeysModalInternal(); }

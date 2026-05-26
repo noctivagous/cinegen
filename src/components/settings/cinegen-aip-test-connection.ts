@@ -9,6 +9,13 @@ import {
   type RoutingModalityKey,
 } from '@/services/provider-fetch';
 import { applyVendorCatalogFetchResult } from '@/services/provider-model-catalog';
+import { loadAiApiSettings, refreshModalityModelOptions } from '@/settings/ai-api-settings-bundle';
+import {
+  getDraft,
+  readVendorKey,
+  renderVendorList,
+  syncDetailInputsToDraft,
+} from '@/settings/api-keys-settings-bundle';
 import { escHtml } from '@/utils/html';
 
 type ApiKeysVendor = {
@@ -49,10 +56,7 @@ export class CinegenAipTestConnection extends CgLightElement {
   }
 
   private _readVendor(): ApiKeysVendor | null {
-    const draft =
-      typeof window.getDraft === 'function'
-        ? (window.getDraft() as { selectedVendorId?: string; vendors?: ApiKeysVendor[] })
-        : null;
+    const draft = getDraft() as { selectedVendorId?: string; vendors?: ApiKeysVendor[] } | null;
     if (!draft?.vendors?.length) return null;
     return draft.vendors.find((v) => v.id === draft.selectedVendorId) ?? null;
   }
@@ -65,15 +69,10 @@ export class CinegenAipTestConnection extends CgLightElement {
       return;
     }
 
-    if (typeof window.syncDetailInputsToDraft === 'function') {
-      window.syncDetailInputsToDraft();
-    }
+    syncDetailInputsToDraft();
 
     const scopeKey = apiScopeForModality(this._modality);
-    const key =
-      typeof window.readVendorKey === 'function'
-        ? window.readVendorKey(vendor, scopeKey)
-        : String(vendor.apiKey ?? '').trim();
+    const key = readVendorKey(vendor, scopeKey);
 
     if (!key) {
       this._validationError =
@@ -106,18 +105,13 @@ export class CinegenAipTestConnection extends CgLightElement {
 
     applyVendorCatalogFetchResult(vendor.id, vendor.providerId, modality, result);
 
-    if (
-      typeof window.refreshModalityModelOptions === 'function' &&
-      typeof window.loadAiApiSettings === 'function'
-    ) {
-      const ai = window.loadAiApiSettings() as {
-        modalities?: Record<string, { vendorId?: string }>;
-      };
-      if (ai.modalities?.[modality]?.vendorId === vendor.id) {
-        window.refreshModalityModelOptions(modality, ai);
-      }
+    const ai = loadAiApiSettings() as {
+      modalities?: Record<string, { vendorId?: string }>;
+    };
+    if (ai.modalities?.[modality]?.vendorId === vendor.id) {
+      refreshModalityModelOptions(modality, ai);
     }
-    if (typeof window.renderVendorList === 'function') window.renderVendorList();
+    renderVendorList();
   }
 
   private _onModalityChange(e: Event): void {

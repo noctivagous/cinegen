@@ -12,7 +12,10 @@ import {
 import { closeAllModals, closeAllModalsExcept, closeModal, openModal } from '@/services/modal-manager';
 import { PREFS_KEY } from '@/services/preferences';
 import { storageService } from '@/services/persistence';
+import { updateSetupIncompleteStatus } from '@/services/status-bar-service';
 import { closeAllToolbarSplitMenus } from '@/services/toolbar-split-service';
+import { clearAiApiRouting, closeAiProvidersModal } from '@/settings/ai-api-settings-bundle';
+import { _apiKeysDraftReset, clearApiKeys } from '@/settings/api-keys-settings-bundle';
 import { alertCG } from '@/utils/alert-cg';
 
 const DEBUG_SETTINGS_STORAGE_KEYS = [
@@ -41,7 +44,7 @@ export function closeDebugModal(): void {
 export function openSetupAssistantForDebug(): void {
   closeAllToolbarSplitMenus();
   closeAllModals();
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   void window.openSetupAssistant?.();
 }
 
@@ -57,7 +60,7 @@ export function resetSetupAssistantProgressForDebug(): void {
 
   storageService.removeItem(SETUP_COMPLETE_STORAGE_KEY);
   storageService.removeItem(SETUP_PROGRESS_STORAGE_KEY);
-  window.updateSetupIncompleteStatus?.();
+  updateSetupIncompleteStatus();
   alertCG('Setup Assistant progress reset.\n\nOpening App Setup Assistant.');
   openSetupAssistantForDebug();
 }
@@ -68,19 +71,17 @@ export async function resetAppSettingsForDebug(): Promise<void> {
   );
   if (!shouldReset) return;
 
-  (window as Window & { _apiKeysDraftReset?: () => void })._apiKeysDraftReset?.();
-  const clearApiKeys = (window as Window & { clearApiKeys?: () => Promise<void> }).clearApiKeys;
-  const clearAiApiRouting = (window as Window & { clearAiApiRouting?: () => Promise<void> }).clearAiApiRouting;
+  _apiKeysDraftReset();
   try {
     await Promise.allSettled([
-      clearApiKeys?.() ?? Promise.resolve(),
-      clearAiApiRouting?.() ?? Promise.resolve(),
+      clearApiKeys(),
+      clearAiApiRouting(),
     ]);
   } catch {
     // Continue with local reset even if server reset endpoints are unavailable.
   }
   DEBUG_SETTINGS_STORAGE_KEYS.forEach((key) => storageService.removeItem(key));
-  window.updateSetupIncompleteStatus?.();
+  updateSetupIncompleteStatus();
   alertCG('App settings reset.\n\nThe page will now reload.');
   window.location.reload();
 }

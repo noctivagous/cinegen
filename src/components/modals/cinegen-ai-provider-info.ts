@@ -7,6 +7,7 @@ import {
   loadProviderModelCatalog,
   modelMatchesAudioCapability,
 } from '@/services/provider-model-catalog';
+import { loadApiKeys, vendorHasApiKey } from '@/settings/api-keys-settings-bundle';
 import { escHtml } from '@/utils/html';
 
 interface VendorInfo {
@@ -247,14 +248,11 @@ export class CinegenAiProviderInfo extends CgLightElement {
     const cacheMap: Record<string, VendorInfo> = {};
 
     const keyVendors =
-      typeof window.loadApiKeys === 'function'
-        ? ((window.loadApiKeys() as { vendors?: Array<{ id: string; name?: string; providerId?: string }> })
-            .vendors || [])
-        : [];
+      (loadApiKeys() as { vendors?: Array<{ id: string; name?: string; providerId?: string }> }).vendors || [];
 
     for (const v of keyVendors) {
       if (!v?.id) continue;
-      if (typeof window.vendorHasApiKey === 'function' && !window.vendorHasApiKey(v)) continue;
+      if (!vendorHasApiKey(v)) continue;
 
       const info = this._ensureVendorRow(
         cacheMap,
@@ -297,13 +295,11 @@ export class CinegenAiProviderInfo extends CgLightElement {
   }
 
   private _vendorName(vendorId: string, providerId: string): string {
-    if (typeof window.loadApiKeys === 'function') {
-      const keys = window.loadApiKeys() as {
-        vendors?: Array<{ id: string; name?: string }>;
-      };
-      const match = keys.vendors?.find((v) => v.id === vendorId);
-      if (match?.name?.trim()) return match.name.trim();
-    }
+    const keys = loadApiKeys() as {
+      vendors?: Array<{ id: string; name?: string }>;
+    };
+    const match = keys.vendors?.find((v) => v.id === vendorId);
+    if (match?.name?.trim()) return match.name.trim();
 
     const prov = AI_API_PROVIDERS.find((p) => p.id === providerId);
     return prov?.label.split(' (')[0] || providerId || vendorId;

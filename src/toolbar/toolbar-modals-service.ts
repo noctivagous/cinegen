@@ -32,6 +32,7 @@ import {
   openDebugModal,
   openSetupAssistantForDebug,
 } from '@/toolbar/toolbar-debug-service';
+import { closeAiProvidersModal, openAiProvidersModal } from '@/settings/ai-api-settings-bundle';
 
 export {
   clearProviderModelCacheForDebug,
@@ -1944,7 +1945,7 @@ function renderGuideModalSection(index: number): void {
 export async function openGuide(sectionId: string): Promise<void> {
   closeAllToolbarSplitMenus();
   closeAllModalsExcept('guide-modal');
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   const index = getGuideSectionIndex(sectionId);
   if (index < 0) return;
   await openModalAsync('guide-modal');
@@ -2014,7 +2015,7 @@ function launchSettingsAction(actionId: string): void {
   }
   if (actionId === 'ai-providers' || actionId === 'ai-api' || actionId === 'api-keys') {
     closeSettingsModal();
-    window.openAiProvidersModal?.();
+    void openAiProvidersModal();
     return;
   }
   const sel = SETTINGS_MODAL_TILES.find((t) => t.id === actionId) || SETTINGS_MODAL_TILES[1];
@@ -2025,7 +2026,7 @@ function launchSettingsAction(actionId: string): void {
 export function openAiAssistModal(): void {
   closeAllToolbarSplitMenus();
   closeAllModalsExcept('ai-assist-modal');
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   openModal('ai-assist-modal');
 }
 
@@ -2191,7 +2192,7 @@ export function openSettings(action: string): void {
     return;
   }
   if (action === 'ai-providers' || action === 'ai-api' || action === 'api-keys') {
-    window.openAiProvidersModal?.();
+    void openAiProvidersModal();
     return;
   }
   openSettingsModal();

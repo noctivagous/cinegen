@@ -2,12 +2,32 @@ import type { ModalityKey } from '@/types/globals';
 import { escHtml } from '@/utils/html';
 import type { CgToolbarSplit } from '@/components/primitives/cg-toolbar-split';
 import { storageService } from '@/services/persistence';
-import { SETUP_PROGRESS_STORAGE_KEY } from '@/constants/storage-keys';
+import { SETUP_COMPLETE_STORAGE_KEY, SETUP_PROGRESS_STORAGE_KEY } from '@/constants/storage-keys';
 import {
   getCachedAudioModelsByCapability,
   getCachedVoicesForVendorAudioModel,
+  listProvidersWithKeyForModality,
+  mergeRoutingModelOptions,
   modelMatchesAudioCapability,
 } from '@/services/provider-model-catalog';
+import { AI_API_PROVIDERS } from '@/data/provider-catalog';
+import {
+  AI_API_MODEL_CATALOG,
+  formatCapsText,
+  getAiApiModelDisplayLabel,
+  loadAiApiSettings,
+  openAiProvidersModal,
+  saveAiApiSettings,
+} from '@/settings/ai-api-settings-bundle';
+import {
+  apiKeysListCredentialCandidates,
+  apiScopeForModality,
+  getApiKey,
+  loadApiKeys,
+  vendorHasApiKey,
+  vendorHasKeyForScope,
+} from '@/settings/api-keys-settings-bundle';
+import { isSetupComplete as readSetupCompleteFlag } from '@/setup-assistant/setup-assistant-persistence';
 
 /** Not shown in audio sub-modality (TTS/SFX/Music) quick-pick menus. */
 const MSB_AUDIO_SUB_EXCLUDED_MODEL_IDS = new Set(['gpt-4o-audio-preview']);
@@ -78,26 +98,24 @@ function getModelStatusInfo(modality: ModalityKey) {
   let isConfigured = false;
 
   // Primary source: aiApiSettings (persistent routing config)
-  if (typeof window.loadAiApiSettings === 'function') {
-    try {
-      const settings = window.loadAiApiSettings() as {
-        modalities?: Record<
-          string,
-          { provider?: string; model?: string; modelLabel?: string; baseUrl?: string; vendorId?: string }
-        >;
-      };
-      const m = settings?.modalities?.[modality];
-      if (m) {
-        if (m.provider) providerId = m.provider;
-        if (m.vendorId) vendorId = m.vendorId;
-        if (m.model) modelId = m.model;
-        if (m.modelLabel) modelLabel = m.modelLabel;
-        if (m.baseUrl) baseUrl = m.baseUrl;
-        if (modality === 'audio' && typeof (m as any).voice === 'string') voice = (m as any).voice;
-      }
-    } catch {
-      /* noop */
+  try {
+    const settings = loadAiApiSettings() as {
+      modalities?: Record<
+        string,
+        { provider?: string; model?: string; modelLabel?: string; baseUrl?: string; vendorId?: string }
+      >;
+    };
+    const m = settings?.modalities?.[modality];
+    if (m) {
+      if (m.provider) providerId = m.provider;
+      if (m.vendorId) vendorId = m.vendorId;
+      if (m.model) modelId = m.model;
+      if (m.modelLabel) modelLabel = m.modelLabel;
+      if (m.baseUrl) baseUrl = m.baseUrl;
+      if (modality === 'audio' && typeof (m as any).voice === 'string') voice = (m as any).voice;
     }
+  } catch {
+    /* noop */
   }
 
   // Secondary source: SA progress (legacy). Only backfill missing fields.
@@ -120,36 +138,26 @@ function getModelStatusInfo(modality: ModalityKey) {
   const scopeKey = modality === 'llm' ? 'language' : modality;
 
   // Prefer getApiKey — handles server-masked keys and empty vendorId + provider match
-  if (typeof window.getApiKey === 'function') {
-    try {
-      const key = window.getApiKey(scopeKey);
-      isConfigured = Boolean(key && String(key).trim().length > 4);
-    } catch {
-      /* noop */
-    }
+  try {
+    const key = getApiKey(scopeKey);
+    isConfigured = Boolean(key && String(key).trim().length > 4);
+  } catch {
+    /* noop */
   }
 
-  if (!isConfigured && typeof window.loadApiKeys === 'function') {
+  if (!isConfigured) {
     try {
-      const keys = window.loadApiKeys();
+      const keys = loadApiKeys();
       if (keys?.vendors?.length) {
-        const routingVendorId =
-          typeof window.loadAiApiSettings === 'function'
-            ? (window.loadAiApiSettings() as { modalities?: Record<string, { vendorId?: string }> })
-                ?.modalities?.[modality]?.vendorId
-            : '';
+        const routingVendorId = (loadAiApiSettings() as { modalities?: Record<string, { vendorId?: string }> })
+          ?.modalities?.[modality]?.vendorId;
         const vendor = keys.vendors.find(
           (v: { id?: string; providerId?: string }) =>
             (routingVendorId && v.id === routingVendorId) ||
             (providerId && v.providerId === providerId)
         );
         if (vendor) {
-          if (typeof window.vendorHasApiKey === 'function') {
-            isConfigured = window.vendorHasApiKey(vendor);
-          } else {
-            const k = String(vendor.apiKey || '').trim();
-            isConfigured = Boolean(k.length > 0 && !/^•+$/.test(k));
-          }
+          isConfigured = vendorHasApiKey(vendor);
         }
       }
     } catch {
@@ -222,10 +230,8 @@ function getModelStatusInfo(modality: ModalityKey) {
 }
 
 function _msbProviderLabel(providerId: string): string {
-  if (window.AI_API_PROVIDERS) {
-    const found = window.AI_API_PROVIDERS.find((p) => p.id === providerId);
-    if (found) return found.label.split(' (')[0];
-  }
+  const found = AI_API_PROVIDERS.find((p) => p.id === providerId);
+  if (found) return found.label.split(' (')[0];
   return providerId || 'Unknown';
 }
 
@@ -235,22 +241,20 @@ function _msbModelLabel(
   modelId: string,
   storedLabel: string
 ): string {
-  if (typeof window.getAiApiModelDisplayLabel === 'function') {
-    const label = window.getAiApiModelDisplayLabel(providerId, modality, modelId, storedLabel);
-    if (label) return label;
-  }
+  const label = getAiApiModelDisplayLabel(providerId, modality, modelId, storedLabel);
+  if (label) return label;
   return modelId || '';
 }
 
 function _msbModelCaps(providerId: string, modality: ModalityKey, modelId: string): string {
-  if (!modelId || !window.AI_API_MODEL_CATALOG) return '';
-  const prov = window.AI_API_MODEL_CATALOG[providerId];
+  if (!modelId) return '';
+  const catalog = AI_API_MODEL_CATALOG as Record<string, any>;
+  const prov = catalog[providerId];
   if (!prov) return '';
-  const list = prov[modality] || [];
+  const list = (prov[modality] || []) as Array<{ id: string; caps?: unknown }>;
   const entry = list.find((m) => m.id === modelId);
   if (!entry?.caps) return '';
-  if (typeof window.formatCapsText === 'function') return window.formatCapsText(entry.caps);
-  return '';
+  return formatCapsText(entry.caps);
 }
 
 function _msbIsProviderLikelyOnline(providerId: string): boolean {
@@ -260,8 +264,9 @@ function _msbIsProviderLikelyOnline(providerId: string): boolean {
 }
 
 function _msbGetAudioSubTypes(providerId: string, modelId: string): string[] {
-  if (!modelId || !providerId || !window.AI_API_MODEL_CATALOG) return [];
-  const prov = window.AI_API_MODEL_CATALOG[providerId];
+  if (!modelId || !providerId) return [];
+  const catalog = AI_API_MODEL_CATALOG as Record<string, any>;
+  const prov = catalog[providerId];
   if (!prov) return [];
   const list = prov.audio || [];
   const entry = list.find((m: any) => m.id === modelId);
@@ -303,13 +308,9 @@ function _msbBuildAudioSubmodalitySection(info: ReturnType<typeof getModelStatus
 }
 
 function _msbGetAvailableProvidersForModality(modality: ModalityKey) {
-  if (typeof (window as any).listProvidersWithKeyForModality === 'function') {
-    return (window as any).listProvidersWithKeyForModality(modality) as Array<{ id: string; label: string }>;
-  }
-  if (window.AI_API_PROVIDERS) {
-    return window.AI_API_PROVIDERS;
-  }
-  return [];
+  const filtered = listProvidersWithKeyForModality(modality);
+  if (filtered.length) return filtered;
+  return AI_API_PROVIDERS;
 }
 
 type ModalityVendorOption = {
@@ -320,26 +321,20 @@ type ModalityVendorOption = {
 
 /** Configured API-key vendors with models for a modality (xAI, Together AI, …). */
 function _msbGetVendorsForModality(modality: ModalityKey): ModalityVendorOption[] {
-  if (typeof window.loadApiKeys !== 'function') return [];
-  const keys = window.loadApiKeys() as {
+  const keys = loadApiKeys() as {
     vendors?: Array<{ id: string; name?: string; providerId?: string; apiKey?: string }>;
   };
-  const scope =
-    typeof window.apiScopeForModality === 'function'
-      ? window.apiScopeForModality(modality)
-      : modality === 'llm'
-        ? 'language'
-        : modality;
+  const scope = apiScopeForModality(modality);
   const out: ModalityVendorOption[] = [];
   const seen = new Set<string>();
   const seenLabelProvider = new Set<string>();
 
   for (const v of keys.vendors || []) {
     if (!v?.id || seen.has(v.id)) continue;
-    if (typeof window.vendorHasKeyForScope === 'function' && !window.vendorHasKeyForScope(v, scope)) {
+    if (!vendorHasKeyForScope(v, scope)) {
       continue;
     }
-    if (typeof window.vendorHasApiKey === 'function' && !window.vendorHasApiKey(v)) continue;
+    if (!vendorHasApiKey(v)) continue;
 
     const providerId = v.providerId || 'openai-compatible';
     const models = _msbGetAvailableModelsForModality(providerId, modality, v.id).filter(
@@ -359,13 +354,7 @@ function _msbGetVendorsForModality(modality: ModalityKey): ModalityVendorOption[
 }
 
 function _msbGetAvailableModelsForModality(providerId: string, modality: ModalityKey, vendorId: string) {
-  if (typeof (window as any).mergeRoutingModelOptions === 'function') {
-    return (window as any).mergeRoutingModelOptions(providerId, modality, vendorId) as Array<{ id: string; label: string }>;
-  }
-  if (typeof (window as any).getModelsForProviderModality === 'function') {
-    return (window as any).getModelsForProviderModality(providerId, modality) as Array<{ id: string; label: string }>;
-  }
-  return [];
+  return mergeRoutingModelOptions(providerId, modality, vendorId) as Array<{ id: string; label: string }>;
 }
 
 /** Models valid for one audio sub-capability (tts / sfx / music), not the full audio list. */
@@ -381,7 +370,8 @@ function _msbGetAudioModelsForSubCapability(
     }
   }
 
-  const catalogAudio = window.AI_API_MODEL_CATALOG?.[providerId]?.audio as
+  const catalog = AI_API_MODEL_CATALOG as Record<string, any>;
+  const catalogAudio = catalog?.[providerId]?.audio as
     | Array<{ id: string; label?: string; caps?: { types?: string[] } }>
     | undefined;
 
@@ -405,17 +395,12 @@ function _msbGetAudioModelsForSubCapability(
 }
 
 function _msbResolveVendorForAudioProvider(providerId: string, preferredVendorId = ''): string {
-  if (typeof window.loadApiKeys !== 'function') return '';
-  const keys = window.loadApiKeys() as { vendors?: Array<{ id: string; providerId?: string; apiKey?: string }> };
+  const keys = loadApiKeys() as { vendors?: Array<{ id: string; providerId?: string; apiKey?: string }> };
   const vendors = (keys.vendors || []).filter((v) => v.providerId === providerId);
   if (preferredVendorId && vendors.some((v) => v.id === preferredVendorId)) {
     return preferredVendorId;
   }
-  const withKey = vendors.find((v) =>
-    typeof window.vendorHasApiKey === 'function'
-      ? window.vendorHasApiKey(v)
-      : Boolean(String(v.apiKey || '').trim())
-  );
+  const withKey = vendors.find((v) => vendorHasApiKey(v));
   return withKey?.id || vendors[0]?.id || '';
 }
 
@@ -427,8 +412,7 @@ type AudioVendorOption = {
 
 /** Configured vendors (xAI, ElevenLabs, …) that expose models for this audio sub-capability. */
 function _msbGetAudioVendorsForSubCapability(subType: string): AudioVendorOption[] {
-  if (typeof window.loadApiKeys !== 'function') return [];
-  const keys = window.loadApiKeys() as {
+  const keys = loadApiKeys() as {
     vendors?: Array<{ id: string; name?: string; providerId?: string; apiKey?: string }>;
   };
   const out: AudioVendorOption[] = [];
@@ -436,7 +420,7 @@ function _msbGetAudioVendorsForSubCapability(subType: string): AudioVendorOption
 
   for (const v of keys.vendors || []) {
     if (!v?.id || seen.has(v.id)) continue;
-    if (typeof window.vendorHasApiKey === 'function' && !window.vendorHasApiKey(v)) continue;
+    if (!vendorHasApiKey(v)) continue;
 
     const providerId = v.providerId || 'openai-compatible';
     const models = _msbGetAudioModelsForSubCapability(providerId, v.id, subType);
@@ -455,8 +439,7 @@ function _msbSwitchAudioVendorForSub(
   vendorId: string,
   subType: string
 ): void {
-  if (typeof (window as any).loadAiApiSettings !== 'function') return;
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   if (!settings?.modalities?.audio) return;
 
   const mcfg = settings.modalities.audio;
@@ -474,15 +457,9 @@ function _msbSwitchAudioVendorForSub(
   if (!voices.includes(mcfg.voice || '')) mcfg.voice = voices[0] || '';
   if (mcfg.fallbackModel === mcfg.model) mcfg.fallbackModel = '';
 
-  if (typeof (window as any).saveAiApiSettings === 'function') {
-    (window as any).saveAiApiSettings(settings);
-  }
-  if (typeof (window as any).updateModelStatusIndicators === 'function') {
-    (window as any).updateModelStatusIndicators();
-  }
-  if (typeof (window as any).updateAudioSubmodalityIndicators === 'function') {
-    (window as any).updateAudioSubmodalityIndicators();
-  }
+  saveAiApiSettings(settings);
+  updateModelStatusIndicators();
+  updateAudioSubmodalityIndicators();
 }
 
 function _msbRefreshModalityMenuModels(modality: ModalityKey, vendorId: string): void {
@@ -543,21 +520,18 @@ function _msbRefreshAudioSubMenuVoices(subType: string, vendorId: string): void 
 }
 
 function _msbSwitchAudioVoice(voice: string): void {
-  if (typeof (window as any).loadAiApiSettings !== 'function') return;
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   if (!settings?.modalities?.audio) return;
   settings.modalities.audio.voice = voice || '';
-  if (typeof (window as any).saveAiApiSettings === 'function') {
-    (window as any).saveAiApiSettings(settings);
-  }
+  saveAiApiSettings(settings);
 }
 
 function _msbSwitchVendorForModality(modality: ModalityKey, vendorId: string): void {
   const vendors = _msbGetVendorsForModality(modality);
   const pick = vendors.find((v) => v.vendorId === vendorId);
-  if (!pick || typeof (window as any).loadAiApiSettings !== 'function') return;
+  if (!pick) return;
 
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   if (!settings?.modalities?.[modality]) return;
 
   const mcfg = settings.modalities[modality];
@@ -573,12 +547,8 @@ function _msbSwitchVendorForModality(modality: ModalityKey, vendorId: string): v
   mcfg.modelLabel = modelPick?.label || modelPick?.id || '';
   if (mcfg.fallbackModel === mcfg.model) mcfg.fallbackModel = '';
 
-  if (typeof (window as any).saveAiApiSettings === 'function') {
-    (window as any).saveAiApiSettings(settings);
-  }
-  if (typeof (window as any).updateModelStatusIndicators === 'function') {
-    (window as any).updateModelStatusIndicators();
-  }
+  saveAiApiSettings(settings);
+  updateModelStatusIndicators();
   _msbRefreshModalityMenuModels(modality, vendorId);
 }
 
@@ -595,8 +565,7 @@ function _msbBuildSelectOptions(items: Array<{ id: string; label: string }>, sel
 }
 
 function _msbSwitchProviderForModality(modality: ModalityKey, newProviderId: string) {
-  if (typeof (window as any).loadAiApiSettings !== 'function') return;
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   if (!settings?.modalities?.[modality]) return;
 
   const mcfg = settings.modalities[modality];
@@ -607,12 +576,10 @@ function _msbSwitchProviderForModality(modality: ModalityKey, newProviderId: str
 
   // Find available vendors for the new provider
   let newVendorId = '';
-  if (typeof (window as any).apiKeysListCredentialCandidatesForModality === 'function') {
-    const candidates = (window as any).apiKeysListCredentialCandidatesForModality(newProviderId, modality) || [];
-    newVendorId = candidates[0]?.id || '';
-  }
-  if (!newVendorId && typeof (window as any).loadApiKeys === 'function') {
-    const keys = (window as any).loadApiKeys();
+  const candidates = apiKeysListCredentialCandidates(newProviderId, modality) || [];
+  newVendorId = candidates[0]?.id || '';
+  if (!newVendorId) {
+    const keys = loadApiKeys();
     const match = keys?.vendors?.find((v: any) => v.providerId === newProviderId && (v.apiKey || '').length > 4);
     if (match) newVendorId = match.id;
   }
@@ -628,12 +595,8 @@ function _msbSwitchProviderForModality(modality: ModalityKey, newProviderId: str
   mcfg.modelLabel = newModelLabel;
   mcfg.fallbackModel = '';
 
-  if (typeof (window as any).saveAiApiSettings === 'function') {
-    (window as any).saveAiApiSettings(settings);
-  }
-  if (typeof (window as any).updateModelStatusIndicators === 'function') {
-    (window as any).updateModelStatusIndicators();
-  }
+  saveAiApiSettings(settings);
+  updateModelStatusIndicators();
   buildModelStatusMenu(modality);
   requestAnimationFrame(() => positionModelStatusMenu(modality));
 }
@@ -643,8 +606,7 @@ function _msbSwitchModelForModality(
   newModelId: string,
   context?: { providerId?: string; vendorId?: string }
 ) {
-  if (typeof (window as any).loadAiApiSettings !== 'function') return;
-  const settings = (window as any).loadAiApiSettings();
+  const settings = loadAiApiSettings();
   if (!settings?.modalities?.[modality]) return;
 
   const mcfg = settings.modalities[modality];
@@ -664,12 +626,8 @@ function _msbSwitchModelForModality(
 
   if (mcfg.fallbackModel === newModelId) mcfg.fallbackModel = '';
 
-  if (typeof (window as any).saveAiApiSettings === 'function') {
-    (window as any).saveAiApiSettings(settings);
-  }
-  if (typeof (window as any).updateModelStatusIndicators === 'function') {
-    (window as any).updateModelStatusIndicators();
-  }
+  saveAiApiSettings(settings);
+  updateModelStatusIndicators();
 }
 
 export function buildModelStatusMenu(modality: ModalityKey): void {
@@ -767,14 +725,12 @@ export function buildModelStatusMenu(modality: ModalityKey): void {
     ${dropdownSection}
     ${audioSubSection}
     <div class="toolbar-split-menu-sep"></div>
-    <button type="button" class="toolbar-split-menu-item"
-            onclick="openModelStatusConfig('${modality}'); closeAllModelStatusMenus();">
+    <button type="button" class="toolbar-split-menu-item" data-msb-action="configure">
       <i class="fa-solid fa-gear" aria-hidden="true"></i> Configure ${escHtml(meta.label)}…
     </button>
     ${
       info.isConfigured
-        ? `<button type="button" class="toolbar-split-menu-item"
-            onclick="testModelStatusConnection('${modality}'); closeAllModelStatusMenus();">
+        ? `<button type="button" class="toolbar-split-menu-item" data-msb-action="test-connection">
       <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i> Test Connection…
     </button>`
         : ''
@@ -814,14 +770,22 @@ export function buildModelStatusMenu(modality: ModalityKey): void {
       vendorId: providerValue || undefined,
     });
   });
+
+  const configureBtn = menu.querySelector<HTMLButtonElement>('[data-msb-action="configure"]');
+  configureBtn?.addEventListener('click', () => {
+    openModelStatusConfig(modality);
+    closeAllModelStatusMenus();
+  });
+
+  const testBtn = menu.querySelector<HTMLButtonElement>('[data-msb-action="test-connection"]');
+  testBtn?.addEventListener('click', () => {
+    testModelStatusConnection(modality);
+    closeAllModelStatusMenus();
+  });
 }
 
 export function openModelStatusConfig(modality: ModalityKey): void {
-  if (typeof window.openAiProvidersModal === 'function') {
-    window.openAiProvidersModal(modality);
-  } else if (typeof window.openSetupAssistant === 'function') {
-    void window.openSetupAssistant?.();
-  }
+  void openAiProvidersModal(modality);
 }
 
 export function testModelStatusConnection(modality: ModalityKey): void {
@@ -1010,12 +974,10 @@ export function buildAudioSubmodalityMenu(subType: string): void {
     </div>
     ${dropdownSection}
     <div class="toolbar-split-menu-sep"></div>
-    <button type="button" class="toolbar-split-menu-item"
-            onclick="openModelStatusConfig('audio'); closeAllModelStatusMenus();">
+    <button type="button" class="toolbar-split-menu-item" data-msb-action="configure-audio">
       <i class="fa-solid fa-gear" aria-hidden="true"></i> Configure Audio…
     </button>
-    ${info.isConfigured ? `<button type="button" class="toolbar-split-menu-item"
-            onclick="testModelStatusConnection('audio'); closeAllModelStatusMenus();">
+    ${info.isConfigured ? `<button type="button" class="toolbar-split-menu-item" data-msb-action="test-audio-connection">
       <i class="fa-solid fa-plug-circle-check" aria-hidden="true"></i> Test Connection…
     </button>` : ''}
   `;
@@ -1040,6 +1002,18 @@ export function buildAudioSubmodalityMenu(subType: string): void {
   });
   voiceSel?.addEventListener('change', () => {
     _msbSwitchAudioVoice(voiceSel.value);
+  });
+
+  const configureBtn = menu.querySelector<HTMLButtonElement>('[data-msb-action="configure-audio"]');
+  configureBtn?.addEventListener('click', () => {
+    openModelStatusConfig('audio');
+    closeAllModelStatusMenus();
+  });
+
+  const testBtn = menu.querySelector<HTMLButtonElement>('[data-msb-action="test-audio-connection"]');
+  testBtn?.addEventListener('click', () => {
+    testModelStatusConnection('audio');
+    closeAllModelStatusMenus();
   });
 }
 
@@ -1138,12 +1112,11 @@ export function triggerModelActivityBlink(modality: ModalityKey): void {
 export function updateSetupIncompleteStatus(): void {
   const container = document.getElementById('setup-status-item');
   if (!container) return;
-  const incomplete = typeof window.isSetupComplete === 'function' ? !window.isSetupComplete() : false;
+  const incomplete = !readSetupCompleteFlag(storageService, SETUP_COMPLETE_STORAGE_KEY);
   container.hidden = !incomplete;
 }
 
 export function initModelStatusBar(): void {
-  (window as any).__statusBarInitCalled = true;
   const mainReady = MODEL_STATUS_MODALITIES.every((mod) => {
     return (
       document.getElementById(`${mod.key}-status-split`) &&
@@ -1190,19 +1163,6 @@ export function initModelStatusBar(): void {
 }
 
 export function installStatusBarGlobals(): void {
-  window.buildModelStatusMenu = buildModelStatusMenu;
-  window.openModelStatusConfig = openModelStatusConfig;
-  window.closeAllModelStatusMenus = closeAllModelStatusMenus;
-  window.updateModelStatusIndicators = updateModelStatusIndicators;
-  window.updateSetupIncompleteStatus = updateSetupIncompleteStatus;
-  window.initModelStatusBar = initModelStatusBar;
-  (window as Window & { positionModelStatusMenu?: typeof positionModelStatusMenu }).positionModelStatusMenu =
-    positionModelStatusMenu;
-  (window as Window & { toggleModelStatusMenu?: typeof toggleModelStatusMenu }).toggleModelStatusMenu =
-    toggleModelStatusMenu;
   window.CineGen = window.CineGen || {};
   window.CineGen.triggerModelActivityBlink = triggerModelActivityBlink;
-  (window as any).buildAudioSubmodalityMenu = buildAudioSubmodalityMenu;
-  (window as any).positionAudioSubmodalityMenu = positionAudioSubmodalityMenu;
-  (window as any).updateAudioSubmodalityIndicators = updateAudioSubmodalityIndicators;
 }

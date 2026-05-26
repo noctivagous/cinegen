@@ -5,7 +5,7 @@ import {
   togglePrevisTimelineDockGlobal,
   toggleProjectSidebar,
 } from '@/components/layout/cinegen-app';
-import { installStatusBarGlobals } from '@/services/status-bar-service';
+import { installStatusBarGlobals, openModelStatusConfig } from '@/services/status-bar-service';
 import { alertCG, initAlertCG } from '@/utils/alert-cg';
 
 export function installCompatBridges(): void {
@@ -20,6 +20,6 @@ export function installCompatBridges(): void {
   window.alertCG = alertCG;
 
   window.testModelStatusConnection = (modality) => {
-    window.openModelStatusConfig?.(modality);
+    openModelStatusConfig(modality);
   };
 }

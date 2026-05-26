@@ -132,14 +132,14 @@ Progress note (2026-05-26):
 ### Phase C — Legacy bridge retirement
 
 - [ ] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
-  - [ ] Create a migration inventory for high-traffic globals in provider/settings/status paths (`rg "window\." source/src/{services,settings,toolbar,components}` + owner/module notes).
-  - [ ] Define explicit import targets for each inventoried global path (service API, store facade, or typed helper), including temporary compatibility adapters where needed.
-  - [ ] Provider flows: migrate call-sites that read/write provider routing, model catalogs, and connection-test state to direct imports (remove `window.CineGen.*` access in these paths).
-  - [ ] Settings flows: migrate settings modal + API key screens to consume module imports/services directly instead of global bridges.
-  - [ ] Status flows: migrate status-bar/model-status interactions to imported service/store APIs; remove direct `window.*` reads/writes in status update paths.
-  - [ ] Add regression guards: ESLint rule or repo lint check to block new `window.CineGen` writes in `source/src/**` (allowlist only temporary bridge files).
-  - [ ] Remove compatibility shims once all call-sites in the three target flows are migrated and verified in `npm run build`.
-  - [ ] Update migration notes in this tracker and record remaining global paths for next wave (workspace/storyboard follow-up).
+  - [x] Create a migration inventory for high-traffic globals in provider/settings/status paths (`rg "window\." source/src/{services,settings,toolbar,components}` + owner/module notes).
+  - [x] Define explicit import targets for each inventoried global path (service API, store facade, or typed helper), including temporary compatibility adapters where needed.
+  - [x] Provider flows: migrate call-sites that read/write provider routing, model catalogs, and connection-test state to direct imports (remove `window.CineGen.*` access in these paths).
+  - [x] Settings flows: migrate settings modal + API key screens to consume module imports/services directly instead of global bridges.
+  - [x] Status flows: migrate status-bar/model-status interactions to imported service/store APIs; remove direct `window.*` reads/writes in status update paths.
+  - [x] Add regression guards: ESLint rule or repo lint check to block new `window.CineGen` writes in `source/src/**` (allowlist only temporary bridge files).
+  - [x] Remove compatibility shims once all call-sites in the three target flows are migrated and verified in `npm run build`.
+  - [x] Update migration notes in this tracker and record remaining global paths for next wave (workspace/storyboard follow-up).
 
 Progress note (2026-05-26):
 - Began Phase C with a settings-flow migration pass:
@@ -147,7 +147,34 @@ Progress note (2026-05-26):
   - rewired `source/src/settings/init-ai-settings.ts` to direct imports for modal init and status indicator refresh
   - rewired `source/src/settings/ai-api-settings-bundle.ts` internal dependencies to imported toolbar/settings helpers instead of `window.*` checks, while keeping compatibility globals installed for legacy callers
   - exported typed helpers from `source/src/settings/api-keys-settings-bundle.ts` so settings modules can import directly
-- Current settings inventory snapshot: `window.*` usages reduced to `source/src/settings/api-keys-settings-bundle.ts` (7 remaining bridge calls).
+- Continued settings-flow migration pass:
+  - removed remaining settings bridge calls in `source/src/settings/api-keys-settings-bundle.ts` (including `(window as any)` access in routing reassignment helpers)
+  - exported `loadAiApiSettings` / `saveAiApiSettings` from `source/src/settings/ai-api-settings-bundle.ts` to support direct module usage from API key flows
+- Current settings inventory snapshot: `source/src/settings/**` has no remaining `window.*` bridge calls.
+- Began status-flow migration pass in `source/src/services/status-bar-service.ts`:
+  - replaced routing/provider/model/key lookups (`loadAiApiSettings`, `loadApiKeys`, vendor/key checks, model label/caps helpers, provider/model option merges) with direct module imports
+  - replaced internal status menu update persistence paths to call imported settings APIs instead of `window` indirection
+  - remaining `window.*` references in this file are mostly browser event/global export compatibility paths for status bar bootstrap and legacy hooks
+- Continued status-flow migration pass:
+  - replaced `window.isSetupComplete` status badge check with direct persistence helper usage (`isSetupComplete(storageService, SETUP_COMPLETE_STORAGE_KEY)`)
+  - removed debug-only global marker write (`__statusBarInitCalled`)
+  - removed `(window as any)` casts in status global installation by using typed local window extension for legacy export bindings
+- Began provider-flow migration pass:
+  - rewired `source/src/services/provider-catalog-refresh.ts` to remove `window.*` access for key checks, base URL lookup, and refresh follow-up hooks (now module-based via storage and imported settings/status APIs)
+  - rewired `source/src/services/ai/resolve-modality-vendor.ts` to use imported settings/api-key services instead of `window.*` access
+  - exported provider-facing helpers needed for module consumption (`populateAiApiSettingsForm`, `renderVendorList`, `readVendorKey`)
+- Continued provider-flow migration pass:
+  - removed remaining `(window as any)` bridge usage in `source/src/services/provider-model-catalog.ts` (`listProvidersWithKeyForModality`) and replaced with direct vendor state checks
+  - normalized `source/src/services/provider-catalog-refresh.ts` to direct module imports for API key/settings/status hooks (removed remaining dynamic-import bridge indirection)
+  - updated provider refresh call-sites in `source/src/settings/ai-api-settings-bundle.ts` and `source/src/settings/init-ai-settings.ts` to static imports (removed dynamic import calls for `provider-catalog-refresh`)
+  - added enforced regression guard script `source/scripts/check-window-cinegen-writes.mjs` (+ `npm run lint:legacy-globals`) with a temporary-file allowlist; wired into `source` build pipeline
+  - removed status-flow compatibility shim reliance in `source/src/services/status-bar-service.ts` by replacing inline menu `onclick` handlers with bound listeners and trimming global status exports to `window.CineGen.triggerModelActivityBlink` only; migrated remaining consumers in `source/src/bridge/compat.ts` and `source/src/toolbar/toolbar-debug-service.ts` to direct imports
+  - additional settings/provider compatibility migration pass:
+    - rewired toolbar/settings consumers to avoid `window.openAiProvidersModal` / `window.closeAiProvidersModal` (`toolbar-modals-service`, `toolbar-project-modals-service`, `toolbar-debug-service`, `setup-assistant/steps/sa-step-done.ts`)
+    - rewired provider/settings UI components to direct imports (`components/settings/cinegen-aip-test-connection.ts`, `components/modals/cinegen-ai-provider-info.ts`)
+    - exported remaining helper APIs needed by direct consumers (`refreshModalityModelOptions`, `syncDetailInputsToDraft`, `clearApiKeys`, `clearAiApiRouting`)
+    - verified target-flow shim removals with `npm run build`; remaining legacy globals are outside Phase C target flows and tracked as next-wave workspace/storyboard cleanup
+  - strengthened lint guards by adding `source/scripts/check-raw-custom-event-strings.mjs` and wiring it into `npm run lint:legacy-globals` to block new raw custom-event string literals outside a temporary legacy allowlist
 - [x] Remove unused barrels only after integration confirmation.
 - [ ] Introduce stricter lint checks to prevent new global write paths and raw string event names.
 
@@ -156,6 +183,15 @@ Progress note (2026-05-26):
 - [ ] Break `source/server/proxy.js` into route-focused modules.
 - [ ] Continue modularizing large workspace/storyboard/status-bar bundles.
 - [ ] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
+
+### Phase E — Next-wave legacy surface cleanup
+
+- [ ] Inventory remaining high-traffic legacy globals outside provider/settings/status (focus: `workspace`, `storyboard`, `toolbar`, `chip`, `fountain` bundles) and rank by user-path frequency.
+- [ ] Replace `window.*` read/write paths in workspace/storyboard/chip flows with explicit imports/services (start with `workspace-bundle`, `storyboard-bundle`, `chip-bundle`, `fountain-bundle`).
+- [ ] Remove string-based inline handlers in remaining legacy-rendered HTML fragments and bind events through module functions.
+- [ ] Shrink `bridge/compat.ts` and `types/globals.d.ts` to only required cross-bundle compatibility symbols; remove dead exports after migration.
+- [ ] Add/expand lint guards for raw string event names and non-allowlisted global writes beyond `window.CineGen`.
+- [ ] Verify end-to-end flows (script edit, storyboard generation/review, workspace navigation, toolbar actions) and `npm run build` before closing the phase.
 
 ---
 

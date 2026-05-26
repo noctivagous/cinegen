@@ -356,15 +356,15 @@ export function mergeRoutingModelOptions(providerId: any, modalityKey: any, vend
 }
 
 export function listProvidersWithKeyForModality(modalityKey: any) {
+  void modalityKey;
   const providerIds = new Set<string>();
   if (typeof loadApiKeys === 'function') {
     loadApiKeys().vendors.forEach((v: any) => {
+      const key = String(v?.apiKey || '').trim();
       const configured =
-        typeof (window as any).vendorIsConfigured === 'function'
-          ? (window as any).vendorIsConfigured(v)
-          : typeof vendorHasApiKey === 'function'
-            ? vendorHasApiKey(v)
-            : Boolean(String(v?.apiKey || '').trim());
+        Boolean(v?.hasServerKey) ||
+        (/^•+$/.test(key) ? true : Boolean(key)) ||
+        (typeof vendorHasApiKey === 'function' ? vendorHasApiKey(v) : false);
       if (configured && v.providerId) providerIds.add(v.providerId);
     });
   }

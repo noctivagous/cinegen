@@ -26,6 +26,7 @@ import {
   getCachedVoicesForVendorAudioModel,
 } from '@/services/provider-model-catalog';
 import { closeAllToolbarSplitMenus } from '@/services/toolbar-split-service';
+import { refreshAllProviderCatalogsOnLoad } from '@/services/provider-catalog-refresh';
 import {
   _apiKeysDraftReset,
   apiKeysListCredentialCandidates,
@@ -77,7 +78,7 @@ const AI_API_MODALITIES = [
  * Audio models: types (tts | sfx | music | voice-clone), notes
  */
 
-const AI_API_MODEL_CATALOG = {
+export const AI_API_MODEL_CATALOG = {
 
   'openai-compatible': {
     llm: [
@@ -321,7 +322,7 @@ function labelFromModelSelect(selectEl: any, modelId: any) {
   return opt?.textContent?.trim() || '';
 }
 
-function getAiApiModelDisplayLabel(providerId: any, modalityKey: any, modelId: any, storedLabel: any) {
+export function getAiApiModelDisplayLabel(providerId: any, modalityKey: any, modelId: any, storedLabel: any) {
   const saved = typeof storedLabel === 'string' ? storedLabel.trim() : '';
   if (saved && !/^custom(\b|[-_])/i.test(saved) && saved.toLowerCase() !== 'custom model id') {
     return saved;
@@ -339,7 +340,7 @@ function getAiApiModelDisplayLabel(providerId: any, modalityKey: any, modelId: a
     .trim();
 }
 
-function formatCapsText(caps: any) {
+export function formatCapsText(caps: any) {
   if (!caps || typeof caps !== 'object') return '—';
   const p = [];
   if (caps.maxDurationSec != null) p.push(`max ~${caps.maxDurationSec}s`);
@@ -433,7 +434,7 @@ function _fetchRoutingFromServer(): string | null {
   return null;
 }
 
-function loadAiApiSettings() {
+export function loadAiApiSettings() {
   const serverRaw = _fetchRoutingFromServer();
 
   const localRaw = storageService.getItem(AI_API_STORAGE_KEY);
@@ -482,7 +483,7 @@ function loadAiApiSettings() {
   return merged;
 }
 
-function saveAiApiSettings(next: any) {
+export function saveAiApiSettings(next: any) {
   const merged = mergeAiApiSettings(next);
   const mergedStr = JSON.stringify(merged);
   // Keep in-memory routing cache hot with the latest local mutation so
@@ -502,7 +503,7 @@ function saveAiApiSettings(next: any) {
   return merged;
 }
 
-async function clearAiApiRouting() {
+export async function clearAiApiRouting() {
   _routingServerCache = null;
   _routingCacheTime = 0;
   try { storageService.removeItem(AI_API_STORAGE_KEY); } catch { /* noop */ }
@@ -537,7 +538,7 @@ export function populateAiApiCredentialSelects() {
   });
 }
 
-function refreshModalityModelOptions(modalityKey: any, settings: any) {
+export function refreshModalityModelOptions(modalityKey: any, settings: any) {
   const provSel  = _el(`ai-api-provider-${modalityKey}`);
   const modelSel = _el(`ai-api-model-${modalityKey}`);
   const fbSel    = _el(`ai-api-fallback-${modalityKey}`);
@@ -590,7 +591,7 @@ function updateCapabilityReadout(modalityKey: any, providerId: any, modelId: any
   el.textContent = entry ? formatCapsText(entry.caps) : '—';
 }
 
-function populateAiApiSettingsForm() {
+export function populateAiApiSettingsForm() {
   const s = loadAiApiSettings();
 
   AI_API_MODALITIES.forEach(({ key }) => {
@@ -762,9 +763,7 @@ export async function openAiProvidersModal(sectionOrModality?: any) {
   populateApiKeysForm();
   populateAiApiSettingsForm();
 
-  void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
-    refreshAllProviderCatalogsOnLoad().then(() => populateAiApiSettingsForm())
-  );
+  void refreshAllProviderCatalogsOnLoad().then(() => populateAiApiSettingsForm());
 
   const draft = getDraft();
   const vendor = draft?.vendors?.find((v: any) => v.id === draft.selectedVendorId);
@@ -816,9 +815,7 @@ export async function saveAiProvidersModal() {
   populateAiApiSettingsForm();
   if (typeof updateModelStatusIndicators === 'function') updateModelStatusIndicators();
 
-  void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
-    refreshAllProviderCatalogsOnLoad()
-  );
+  void refreshAllProviderCatalogsOnLoad();
 }
 
 /* ── Backward-compat aliases (other files still call these) ──────────────── */

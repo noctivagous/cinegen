@@ -9,6 +9,7 @@ import {
   updateAudioSubmodalityIndicators,
   updateModelStatusIndicators,
 } from '@/services/status-bar-service';
+import { refreshAllProviderCatalogsOnLoad } from '@/services/provider-catalog-refresh';
 import { wireAiProvidersModal } from '@/settings/wire-ai-providers-modal';
 
 export function initAiSettings(): void {
@@ -19,9 +20,7 @@ export function initAiSettings(): void {
   initAiProvidersModalOnce();
   // Sync server-side keys, then refresh status bar (keys load after first paint)
   void initServerKeyStore().then(() => {
-    void import('@/services/provider-catalog-refresh').then(({ refreshAllProviderCatalogsOnLoad }) =>
-      refreshAllProviderCatalogsOnLoad()
-    );
+    void refreshAllProviderCatalogsOnLoad();
     updateModelStatusIndicators();
     updateAudioSubmodalityIndicators();
   });

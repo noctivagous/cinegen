@@ -18,6 +18,7 @@ import {
   primePersistedProjectTreeUi,
   resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
+import { closeAiProvidersModal } from '@/settings/ai-api-settings-bundle';
 
 declare const projectRegistry: Array<{
   id: string;
@@ -88,7 +89,7 @@ export function wireProjectsModalList(): void {
 export function openProjectsModal(): void {
   closeAllToolbarSplitMenus();
   closeAllModalsExcept('projects-modal');
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   hydrateProjectRegistryFromPersistence();
   renderProjectsModalList();
   openModal('projects-modal');
@@ -97,7 +98,7 @@ export function openProjectsModal(): void {
 export function openSettingsModal(): void {
   closeAllToolbarSplitMenus();
   closeAllModalsExcept('settings-modal');
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   openModal('settings-modal');
 }
 
@@ -181,7 +182,7 @@ function populateProjectSettingsForm(): void {
 export function openProjectSettingsModal(): void {
   closeAllToolbarSplitMenus();
   closeAllModalsExcept('project-settings-modal');
-  window.closeAiProvidersModal?.();
+  closeAiProvidersModal();
   populateProjectSettingsForm();
   openModal('project-settings-modal');
   (document.getElementById('project-settings-name') as HTMLInputElement | null)?.focus?.();

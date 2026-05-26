@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "setup:key-files": "node scripts/ensure-backend-key-files.mjs",
+    "lint:legacy-globals": "node scripts/check-window-cinegen-writes.mjs && node scripts/check-raw-custom-event-strings.mjs",
     "predev": "npm run setup:key-files",
     "dev": "vite",
     "prebuild": "npm run setup:key-files",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run lint:legacy-globals && tsc --noEmit && vite build",
     "validate:cine": "npx tsx scripts/validate-cine-package-fs.ts",
     "start": "node server/index.mjs",
     "postinstall": "npm run setup:key-files"

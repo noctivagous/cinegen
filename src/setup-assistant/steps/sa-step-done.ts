@@ -8,6 +8,7 @@ import {
   ROUTING_MODALITIES,
 } from '@/setup-assistant/sa-wizard-constants';
 import { getSaWizardApi, getSaWizardState, type AudioCapability } from '@/setup-assistant/sa-wizard-bridge';
+import { openAiProvidersModal } from '@/settings/ai-api-settings-bundle';
 import { escHtml } from '@/utils/html';
 
 @customElement('sa-step-done')
@@ -96,7 +97,7 @@ export class SaStepDone extends CgLightElement {
             class="toolbar-btn toolbar-btn--shape-soft"
             @click=${() => {
               window.closeSetupAssistant?.();
-              window.openAiProvidersModal?.('providers');
+              void openAiProvidersModal('providers');
             }}
           >
             <i class="fa-solid fa-key" aria-hidden="true"></i> Review API keys &amp; providers
