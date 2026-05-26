@@ -14,12 +14,14 @@ import {
   applyProjectSnapshot,
   ensureProjectSettingsRecord,
   mergeDefaultProjectSettings,
+  activeMoodBoardId,
   assetDetailData,
   assetLibrary,
   breakdownData,
   currentSceneData,
   deletedStoryboardFrames,
   locationLibrary,
+  moodBoards,
   projectData,
   projectRegistry,
   projectScreenplay,
@@ -110,6 +112,7 @@ function createBlankSnapshot(projectName: string): AppliedCineProject {
     },
     breakdownData: [],
     assetDetailData: {},
+    referenceImages: { moodBoards: [], activeMoodBoardId: null },
   };
 }
 
@@ -288,7 +291,29 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
     assetLibrary: structuredClone(assetLibrary) as Record<string, unknown>,
     breakdownData: structuredClone(breakdownData),
     assetDetailData: structuredClone(assetDetailData) as Record<string, unknown>,
+    // Stored in the `.cinereferenceimages` document for `.cine` packages.
+    // For local projects, this is simply part of the saved snapshot.
+    referenceImages: {
+      moodBoards: structuredClone(moodBoards),
+      activeMoodBoardId: activeMoodBoardId,
+    },
   };
+}
+
+/** Persist the full runtime snapshot for local projects. */
+export function persistActiveProjectSnapshot(projectId = activeProjectId): void {
+  if (!projectId) return;
+  const entry = projectRegistry.find((p) => p.id === projectId);
+  if (!entry || entry.file) return; // bundled `.cine` packages are read-only
+  const record = readPersistedLocalProjects().find((item) => item.id === projectId);
+  if (!record) return;
+  persistLocalProject({
+    ...record,
+    name: entry.name,
+    settings: { ...(entry.settings || {}) },
+    snapshot: captureRuntimeProjectSnapshot(),
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 function treeNodesMatch(saved: TreeNode, target: TreeNode): boolean {

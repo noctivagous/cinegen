@@ -33,6 +33,22 @@ export function getGenerationPromptPlaceholder(type: MoodBoardItemType): string 
   }
 }
 
+/** Button label for grid generate action from active type tab (`all` → generic). */
+export function getGenerateButtonLabel(typeFilter: string): string {
+  switch (typeFilter) {
+    case 'image':
+      return 'Generate Image...';
+    case 'video':
+      return 'Generate Video...';
+    case 'sound':
+      return 'Generate Sound...';
+    case 'text':
+      return 'Generate Text...';
+    default:
+      return 'Generate Item...';
+  }
+}
+
 function generateId(): string {
   return `mbg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }

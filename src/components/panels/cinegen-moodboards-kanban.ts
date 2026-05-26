@@ -31,6 +31,59 @@ export class CinegenMoodboardsKanban extends CgLightElement {
     return [...items].sort((a, b) => a.order - b.order);
   }
 
+  private _previewText(source: string, max = 120): string {
+    const trimmed = source.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('data:')) return '';
+    return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+  }
+
+  private _renderItemPreview(item: MoodBoardItem) {
+    switch (item.type) {
+      case 'image':
+        return html`
+          <div class="moodboard-kanban-card-thumb">
+            <img
+              src=${item.source}
+              alt=${item.label}
+              @error=${(e: Event) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        `;
+      case 'video':
+        return html`
+          <div class="moodboard-kanban-card-thumb moodboard-kanban-card-thumb--icon">
+            <i class="fa-solid fa-video" aria-hidden="true"></i>
+          </div>
+        `;
+      case 'sound':
+        return html`
+          <div class="moodboard-kanban-card-thumb moodboard-kanban-card-thumb--icon">
+            <i class="fa-solid fa-music" aria-hidden="true"></i>
+          </div>
+        `;
+      case 'text': {
+        const excerpt = this._previewText(item.source);
+        return excerpt
+          ? html`<div class="moodboard-kanban-card-excerpt">${excerpt}</div>`
+          : nothing;
+      }
+      default:
+        return nothing;
+    }
+  }
+
+  private _renderItemSubline(item: MoodBoardItem) {
+    if (item.notes) {
+      return html`<div class="mt-1 text-xs truncate" style="color:var(--text-dim);">${item.notes}</div>`;
+    }
+    if (item.type === 'text') return nothing;
+    const hint = item.source.startsWith('blob:') ? 'Local media' : '';
+    return hint
+      ? html`<div class="mt-1 text-xs truncate" style="color:var(--text-dim);">${hint}</div>`
+      : nothing;
+  }
+
   private _handleAddToColumn(colType: MoodBoardItem['type']): void {
     const label = prompt(`New ${colType} item label:`);
     if (!label?.trim()) return;
@@ -66,7 +119,19 @@ export class CinegenMoodboardsKanban extends CgLightElement {
               <div
                 class="rounded p-2 cursor-pointer"
                 style="border:1px solid var(--border-light);background:var(--bg-panel);font-size:11px;${item.active ? '' : 'opacity:0.5;'}"
+                @dblclick=${(e: Event) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  this.dispatchEvent(
+                    new CustomEvent('moodboard-item-view', {
+                      bubbles: true,
+                      composed: true,
+                      detail: { boardId: this.boardId, itemId: item.id },
+                    })
+                  );
+                }}
               >
+                ${this._renderItemPreview(item)}
                 <div class="flex items-center gap-1">
                   <span class="flex-1 truncate">${item.label}</span>
                   <button
@@ -76,11 +141,7 @@ export class CinegenMoodboardsKanban extends CgLightElement {
                     title="Remove"
                   >×</button>
                 </div>
-                ${item.source && col.key !== 'text' ? html`
-                  <div class="mt-1 text-xs truncate" style="color:var(--text-dim);">${item.source}</div>
-                ` : item.notes ? html`
-                  <div class="mt-1 text-xs" style="color:var(--text-dim);">${item.notes}</div>
-                ` : nothing}
+                ${this._renderItemSubline(item)}
                 <div class="flex gap-1 mt-1">
                   <button
                     class="toolbar-btn text-xs"

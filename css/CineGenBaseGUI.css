@@ -681,6 +681,173 @@ cg-modal-shell cinegen-ai-provider-info {
   flex-direction: column;
 }
 
+/* Panel modal — sized to offset parent (workspace panel), not viewport */
+cg-panel-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+cg-panel-modal[open] {
+  display: flex;
+  pointer-events: auto;
+}
+
+cg-panel-modal:not([open]) > * {
+  display: none !important;
+}
+
+cg-panel-modal .cg-panel-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-dark) 52%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-dark) 65%, transparent);
+}
+
+cg-panel-modal .cg-panel-modal-dialog {
+  position: absolute;
+  inset: 6px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, #000 55%, transparent),
+    0 2px 8px color-mix(in srgb, #000 35%, transparent);
+  z-index: 1;
+}
+
+cg-panel-modal .cg-panel-modal-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+cg-panel-modal .cg-panel-modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+cg-panel-modal .cg-panel-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+cg-panel-modal .cg-panel-modal-close {
+  flex-shrink: 0;
+}
+
+.moodboard-item-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.moodboard-item-viewer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.moodboard-item-viewer-label {
+  font-weight: 600;
+  color: var(--text-highlight);
+}
+
+.moodboard-item-viewer-type {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.moodboard-item-viewer-notes {
+  flex: 1 1 100%;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.moodboard-item-viewer-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-dark);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.moodboard-item-viewer-image,
+.moodboard-item-viewer-video {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.moodboard-item-viewer-audio-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  width: min(480px, 100%);
+}
+
+.moodboard-item-viewer-audio-icon {
+  font-size: 40px;
+  color: var(--tree-section-moodboards);
+  opacity: 0.85;
+}
+
+.moodboard-item-viewer-audio {
+  width: 100%;
+}
+
+.moodboard-item-viewer-text {
+  align-self: stretch;
+  margin: 0;
+  padding: 12px;
+  max-height: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 11px;
+  color: var(--text-main);
+  background: transparent;
+  border: none;
+}
+
+.moodboard-item-viewer-fallback,
+.moodboard-item-viewer-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
 /* Guide modal body (inside cg-modal-shell) */
 .guide-modal-body {
   flex: 1;

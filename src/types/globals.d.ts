@@ -464,6 +464,7 @@ declare global {
     'sa-step-done': import('@/setup-assistant/steps/sa-step-done').SaStepDone;
     'cg-panel-header': import('@/components/primitives/cg-panel-header').CgPanelHeader;
     'cg-modal-shell': import('@/components/primitives/cg-modal-shell').CgModalShell;
+    'cg-panel-modal': import('@/components/primitives/cg-panel-modal').CgPanelModal;
     'cg-vis-toggle': import('@/components/primitives/cg-vis-toggle').CgVisToggle;
     'cg-toggle-group': import('@/components/primitives/cg-toggle-group').CgToggleGroup;
     'cg-stepper': import('@/components/primitives/cg-stepper').CgStepper;
@@ -484,6 +485,7 @@ declare global {
     'cinegen-moodboards-panel': import('@/components/panels/cinegen-moodboards-panel').CinegenMoodboardsPanel;
     'cinegen-moodboards-kanban': import('@/components/panels/cinegen-moodboards-kanban').CinegenMoodboardsKanban;
     'cinegen-moodboard-item-detail': import('@/components/panels/cinegen-moodboard-item-detail').CinegenMoodboardItemDetail;
+    'cinegen-moodboard-item-viewer': import('@/components/panels/cinegen-moodboard-item-viewer').CinegenMoodboardItemViewer;
     'cinegen-overview-view': import('@/components/panels/cinegen-overview-view').CinegenOverviewView;
     'cinegen-asset-detail-view': import('@/components/panels/cinegen-asset-detail-view').CinegenAssetDetailView;
     'cinegen-workspace-empty': import('@/components/panels/cinegen-workspace-empty').CinegenWorkspaceEmpty;

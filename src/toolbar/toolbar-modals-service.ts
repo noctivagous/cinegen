@@ -11,6 +11,7 @@ import { closeAllToolbarSplitMenus, closeToolbarSplitMenu } from '@/services/too
 import { appShellStore } from '@/stores/app-shell';
 import { escHtml } from '@/utils/html';
 import { alertCG } from '@/utils/alert-cg';
+import { persistActiveProjectSnapshot } from '@/services/project-service';
 import {
   AI_API_SETTINGS_STORAGE_KEY,
   API_KEYS_STORAGE_KEY,
@@ -2826,7 +2827,8 @@ export function importScript(): void {
 }
 
 export function saveProject(): void {
-  alertCG('Project saved with full AI generation history.');
+  persistActiveProjectSnapshot();
+  alertCG('Project saved.');
 }
 
 export function openDebugGenerationForDebug(): void {

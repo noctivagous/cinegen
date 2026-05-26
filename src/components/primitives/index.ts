@@ -11,6 +11,7 @@ import './cg-toggle-group';
 import './cg-stepper';
 import './cg-modal-tile-grid';
 import './cg-modal-shell';
+import './cg-panel-modal';
 import './cg-context-menu';
 import './cg-grid';
 import './cg-stack';

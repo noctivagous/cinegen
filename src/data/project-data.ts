@@ -13,6 +13,7 @@ import type {
   StoryboardReferenceBank,
   StoryboardReferenceGenerationStatus,
 } from '@/storyboard/storyboard-types';
+import { loadMoodBoardsOverlay, persistMoodBoardsAutosave } from '@/moodboards/moodboard-persistence';
 import { syncProjectShotFrameLinks } from '@/workspace/shot-frame-bridge';
 
 /** Screenplay storage — plain Fountain text plus format tag for future rich/structured exports */
@@ -253,6 +254,53 @@ export interface MoodBoard {
 export let moodBoards: MoodBoard[] = [];
 export let activeMoodBoardId: string | null = null;
 
+export function normalizeMoodBoards(raw: unknown): MoodBoard[] {
+  if (!Array.isArray(raw)) return [];
+  const boards: MoodBoard[] = [];
+  for (const b of raw) {
+    if (!b || typeof b !== 'object') continue;
+    const board = b as Partial<MoodBoard> & Record<string, unknown>;
+    const id = typeof board.id === 'string' ? board.id : '';
+    const name = typeof board.name === 'string' ? board.name : '';
+    if (!id || !name) continue;
+    boards.push({
+      id,
+      name,
+      items: Array.isArray(board.items) ? (board.items as MoodBoardItem[]) : [],
+      viewMode: board.viewMode === 'kanban' ? 'kanban' : 'grid',
+      createdAt: typeof board.createdAt === 'number' ? board.createdAt : Date.now(),
+      updatedAt: typeof board.updatedAt === 'number' ? board.updatedAt : Date.now(),
+    });
+  }
+  return boards;
+}
+
+/** Autosave mood boards after any mutation (bundled `.cine` overlay or local project snapshot). */
+export function autosaveMoodBoards(): void {
+  if (!activeProjectId) return;
+  const entry = projectRegistry.find((p) => p.id === activeProjectId);
+  persistMoodBoardsAutosave({
+    projectId: activeProjectId,
+    moodBoards,
+    activeMoodBoardId,
+    isBundledCine: Boolean(entry?.file),
+  });
+  if (typeof window.refreshProjectTree === 'function') {
+    window.refreshProjectTree();
+  }
+}
+
+function applyMoodBoardsOverlayForProject(projectId: string, hasCineFile: boolean): void {
+  if (!hasCineFile || !projectId) return;
+  const overlay = loadMoodBoardsOverlay(projectId);
+  if (!overlay) return;
+  moodBoards = normalizeMoodBoards(overlay.moodBoards);
+  activeMoodBoardId = overlay.activeMoodBoardId;
+  if (typeof window.refreshProjectTree === 'function') {
+    window.refreshProjectTree();
+  }
+}
+
 export function addMoodBoard(name: string): MoodBoard {
   const board: MoodBoard = {
     id: `mb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -263,12 +311,14 @@ export function addMoodBoard(name: string): MoodBoard {
     updatedAt: Date.now(),
   };
   moodBoards.push(board);
+  autosaveMoodBoards();
   return board;
 }
 
 export function removeMoodBoard(id: string): void {
   moodBoards = moodBoards.filter((b) => b.id !== id);
   if (activeMoodBoardId === id) activeMoodBoardId = null;
+  autosaveMoodBoards();
 }
 
 export function getMoodBoard(id: string): MoodBoard | undefined {
@@ -277,6 +327,7 @@ export function getMoodBoard(id: string): MoodBoard | undefined {
 
 export function setActiveMoodBoard(id: string | null): void {
   activeMoodBoardId = id;
+  autosaveMoodBoards();
 }
 
 export function addMoodBoardItem(boardId: string, item: Omit<MoodBoardItem, 'id'>): MoodBoardItem | null {
@@ -285,6 +336,7 @@ export function addMoodBoardItem(boardId: string, item: Omit<MoodBoardItem, 'id'
   const full: MoodBoardItem = { ...item, id: `mbi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
   board.items.push(full);
   board.updatedAt = Date.now();
+  autosaveMoodBoards();
   return full;
 }
 
@@ -293,6 +345,7 @@ export function removeMoodBoardItem(boardId: string, itemId: string): void {
   if (!board) return;
   board.items = board.items.filter((i) => i.id !== itemId);
   board.updatedAt = Date.now();
+  autosaveMoodBoards();
 }
 
 export function updateMoodBoardItem(boardId: string, itemId: string, partial: Partial<MoodBoardItem>): void {
@@ -302,6 +355,7 @@ export function updateMoodBoardItem(boardId: string, itemId: string, partial: Pa
   if (idx === -1) return;
   board.items[idx] = { ...board.items[idx], ...partial };
   board.updatedAt = Date.now();
+  autosaveMoodBoards();
 }
 
 export function toggleMoodBoardItemActive(boardId: string, itemId: string): void {
@@ -309,6 +363,7 @@ export function toggleMoodBoardItemActive(boardId: string, itemId: string): void
   if (!board) return;
   const item = board.items.find((i) => i.id === itemId);
   if (item) item.active = !item.active;
+  autosaveMoodBoards();
 }
 
 function resolveInitialCineFile(): string | null {
@@ -391,6 +446,16 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
     : (assetLibrary.locations as any[]);
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
+
+  // Mood boards are stored in `.cinereferenceimages` for `.cine` packages,
+  // and included in local-project snapshots via the same field.
+  const ref = applied.referenceImages && typeof applied.referenceImages === 'object' ? applied.referenceImages : {};
+  const rawMoodBoards = (ref as Record<string, unknown>).moodBoards;
+  moodBoards = normalizeMoodBoards(rawMoodBoards);
+  activeMoodBoardId =
+    typeof (ref as Record<string, unknown>).activeMoodBoardId === 'string'
+      ? String((ref as Record<string, unknown>).activeMoodBoardId)
+      : null;
   syncProjectShotFrameLinks({ migrateOrphans: false });
   notifyStoryboardFramesChanged();
   notifyStoryboardReferencesChanged();
@@ -434,6 +499,7 @@ export function applyProjectSnapshot(
   if (isAppShellInitialized()) {
     patchAppShellState({ activeProjectId: entry.id });
   }
+  applyMoodBoardsOverlayForProject(entry.id, Boolean(meta.file));
 }
 
 /** Reload mutable project state from a `.cine` package in `project-files/`. */
@@ -469,6 +535,9 @@ export async function initProjectData(): Promise<void> {
   hydrateProjectSettingsFromPersistence();
   const activeEntry = projectRegistry.find((p) => p.id === activeProjectId);
   if (activeEntry?.name) projectData.name = activeEntry.name;
+  if (activeProjectId && activeEntry?.file) {
+    applyMoodBoardsOverlayForProject(activeProjectId, true);
+  }
 }
 
 function bindWindowData<K extends string>(

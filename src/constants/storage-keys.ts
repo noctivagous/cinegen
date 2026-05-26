@@ -20,6 +20,8 @@ export const PREFERENCES_STORAGE_KEY = 'cinegen.preferences';
 export const LOCAL_PROJECTS_STORAGE_KEY = 'cinegen.local-projects.v1';
 /** Per-project sidebar tree `expanded` state for bundled `.cine` packages. */
 export const PROJECT_TREE_UI_STORAGE_KEY = 'cinegen.project-tree-ui.v1';
+/** Per-project mood boards for bundled `.cine` packages (read-only on disk). */
+export const MOOD_BOARDS_STORAGE_KEY = 'cinegen.mood-boards.v1';
 /** Per-project settings overrides (name + picture/timebase) for bundled `.cine` packages. */
 export const PROJECT_SETTINGS_STORAGE_KEY = 'cinegen.project-settings.v1';
 /** Script editor previs timeline margin collapsed (1 = collapsed). */
