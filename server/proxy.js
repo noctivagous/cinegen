@@ -6,6 +6,11 @@ import http from 'node:http';
 import https from 'node:https';
 import { URL } from 'node:url';
 import { WebSocketServer } from 'ws';
+import { AGENT_STATIC_ROUTES } from '../src/constants/agent-routes.js';
+import {
+  providerRuntimeByProxyTarget,
+  providerRuntimeBySlotId,
+} from '../src/constants/provider-registry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -54,22 +59,19 @@ function buildProviders() {
     if (v.apiKey) storedBySlot[v.slotId || v.id] = v;
   }
 
-  const envProviders = {
-    openai:     { key: process.env.OPENAI_API_KEY,      baseUrl: process.env.OPENAI_BASE_URL      || 'https://api.openai.com',                      authHeader: 'Bearer',    slotId: 'openai' },
-    anthropic:  { key: process.env.ANTHROPIC_API_KEY,   baseUrl: 'https://api.anthropic.com',                                                       authHeader: 'x-api-key', slotId: 'anthropic' },
-    google:     { key: process.env.GOOGLE_API_KEY,      baseUrl: 'https://generativelanguage.googleapis.com',                                        authHeader: 'Bearer',    slotId: 'google' },
-    elevenlabs: { key: process.env.ELEVENLABS_API_KEY,  baseUrl: 'https://api.elevenlabs.io',                                                        authHeader: 'xi-api-key', slotId: 'elevenlabs' },
-    fal:        { key: process.env.FAL_KEY,             baseUrl: 'https://fal.run',                                                                  authHeader: 'Key',        slotId: 'fal' },
-    replicate:  { key: process.env.REPLICATE_API_TOKEN, baseUrl: 'https://api.replicate.com',                                                        authHeader: 'Bearer',    slotId: 'replicate' },
-    runway:     { key: process.env.RUNWAY_API_KEY,      baseUrl: process.env.RUNWAY_BASE_URL      || 'https://api.dev.runwayml.com',                 authHeader: 'Bearer',    slotId: 'runway' },
-    luma:       { key: process.env.LUMA_API_KEY,        baseUrl: 'https://api.lumalabs.ai',                                                          authHeader: 'Bearer',    slotId: 'luma' },
-    xai:        { key: process.env.XAI_API_KEY,         baseUrl: 'https://api.x.ai',                                                                 authHeader: 'Bearer',    slotId: 'xai' },
-    together:   { key: process.env.TOGETHER_API_KEY,    baseUrl: process.env.TOGETHER_BASE_URL    || 'https://api.together.xyz',                     authHeader: 'Bearer',    slotId: 'together' },
-    groq:       { key: process.env.GROQ_API_KEY,        baseUrl: process.env.GROQ_BASE_URL        || 'https://api.groq.com/openai/v1',                 authHeader: 'Bearer',    slotId: 'groq' },
-    mistral:    { key: process.env.MISTRAL_API_KEY,     baseUrl: process.env.MISTRAL_BASE_URL     || 'https://api.mistral.ai/v1',                      authHeader: 'Bearer',    slotId: 'mistral' },
-    deepseek:   { key: process.env.DEEPSEEK_API_KEY,    baseUrl: process.env.DEEPSEEK_BASE_URL    || 'https://api.deepseek.com/v1',                    authHeader: 'Bearer',    slotId: 'deepseek' },
-    custom:     { key: process.env.CUSTOM_API_KEY,       baseUrl: process.env.CUSTOM_BASE_URL      || '',                                             authHeader: 'Bearer',    slotId: 'custom' },
-  };
+  const runtimeByTarget = providerRuntimeByProxyTarget();
+  const envProviders = Object.fromEntries(
+    Object.entries(runtimeByTarget).map(([proxyTarget, meta]) => {
+      const key = meta.envKey ? process.env[meta.envKey] : '';
+      const envBaseUrl = meta.envBaseUrlKey ? process.env[meta.envBaseUrlKey] : '';
+      return [proxyTarget, {
+        key,
+        baseUrl: envBaseUrl || meta.defaultBaseUrl || '',
+        authHeader: meta.authHeader,
+        slotId: meta.slotId,
+      }];
+    }),
+  );
 
   for (const [, prov] of Object.entries(envProviders)) {
     const runtime = storedBySlot[prov.slotId];
@@ -80,39 +82,22 @@ function buildProviders() {
   return { envProviders, storedBySlot };
 }
 
-/** Map backends/.env slot ids to client provider rows (GET /api/settings/keys merge). */
-const ENV_SLOT_VENDOR_META = {
-  openai:     { name: 'OpenAI', providerId: 'openai-compatible' },
-  anthropic:  { name: 'Anthropic (Claude)', providerId: 'anthropic-messages-api' },
-  google:     { name: 'Google AI (Gemini / Veo)', providerId: 'google-gemini-api' },
-  elevenlabs: { name: 'ElevenLabs (Audio)', providerId: 'elevenlabs-api' },
-  fal:        { name: 'fal.ai (Flux / Kling)', providerId: 'fal-ai' },
-  replicate:  { name: 'Replicate', providerId: 'replicate-api' },
-  runway:     { name: 'Runway ML', providerId: 'runway-api' },
-  luma:       { name: 'Luma AI (Dream Machine)', providerId: 'luma-api' },
-  xai:        { name: 'xAI (Grok)', providerId: 'openai-compatible' },
-  together:   { name: 'Together AI', providerId: 'openai-compatible' },
-  groq:       { name: 'Groq', providerId: 'openai-compatible' },
-  mistral:    { name: 'Mistral AI', providerId: 'openai-compatible' },
-  deepseek:   { name: 'DeepSeek', providerId: 'openai-compatible' },
-  custom:     { name: 'Custom', providerId: 'generic-rest' },
-};
-
 function augmentVendorsWithEnvKeys(stored) {
   const { envProviders } = buildProviders();
+  const runtimeBySlot = providerRuntimeBySlotId();
   const vendors = [...(stored.vendors || [])];
 
   for (const [slotId, envProv] of Object.entries(envProviders)) {
     if (!envProv.key) continue;
-    const meta = ENV_SLOT_VENDOR_META[slotId];
+    const meta = runtimeBySlot[slotId];
     if (!meta) continue;
 
     let vendor = vendors.find((v) => v.slotId === slotId);
     if (!vendor) {
       vendor = {
         id: `env-${slotId}`,
-        name: meta.name,
-        providerId: meta.providerId,
+        name: meta.name || slotId,
+        providerId: meta.providerId || 'generic-rest',
         slotId,
         baseUrl: envProv.baseUrl || '',
         apiKey: envProv.key,
@@ -566,7 +551,7 @@ async function handleAgentApi(req, res) {
 
   const url = req.url || '';
   // Route: POST /api/agents/script/analyze
-  if (url === '/api/agents/script/analyze' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.SCRIPT_ANALYZE && req.method === 'POST') {
     let body;
     try {
       body = await readBody(req);
@@ -600,7 +585,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/casting/build-bibles
-  if (url === '/api/agents/casting/build-bibles' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CASTING_BUILD_BIBLES && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, characters } = body;
@@ -624,7 +609,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/production-design/build-bibles
-  if (url === '/api/agents/production-design/build-bibles' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_BIBLES && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, locations } = body;
@@ -648,7 +633,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/storyboard/generate
-  if (url === '/api/agents/storyboard/generate' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.STORYBOARD_GENERATE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, shotIds } = body;
@@ -672,7 +657,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/beat-board/generate-outline
-  if (url === '/api/agents/beat-board/generate-outline' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.BEAT_BOARD_GENERATE_OUTLINE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, beats, characters, locations } = body;
@@ -709,7 +694,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/cinematography/build-prompt
-  if (url === '/api/agents/cinematography/build-prompt' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CINEMATOGRAPHY_BUILD_PROMPT && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, shotId, preferredProvider } = body;
@@ -731,7 +716,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/cinematography/route-shot
-  if (url === '/api/agents/cinematography/route-shot' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CINEMATOGRAPHY_ROUTE_SHOT && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, shotId, shotType } = body;
@@ -753,7 +738,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/cinematography/audit-clip
-  if (url === '/api/agents/cinematography/audit-clip' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CINEMATOGRAPHY_AUDIT_CLIP && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, shotId, clipDescription } = body;
@@ -775,7 +760,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/cinematography/annotate-spatial
-  if (url === '/api/agents/cinematography/annotate-spatial' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CINEMATOGRAPHY_ANNOTATE_SPATIAL && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, shotId, annotations, provider } = body;
@@ -798,7 +783,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/sound/prepare-audio
-  if (url === '/api/agents/sound/prepare-audio' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.SOUND_PREPARE_AUDIO && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId } = body;
@@ -820,7 +805,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/post/assemble-sequence
-  if (url === '/api/agents/post/assemble-sequence' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.POST_ASSEMBLE_SEQUENCE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, targetDurationSeconds } = body;
@@ -843,7 +828,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/post/color-grade
-  if (url === '/api/agents/post/color-grade' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.POST_COLOR_GRADE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId } = body;
@@ -865,7 +850,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/visual/identify
-  if (url === '/api/agents/visual/identify' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.VISUAL_IDENTIFY && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, images } = body;
@@ -890,7 +875,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/visual/extract-colors
-  if (url === '/api/agents/visual/extract-colors' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.VISUAL_EXTRACT_COLORS && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, images } = body;
@@ -907,7 +892,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/script/generate-outline
-  if (url === '/api/agents/script/generate-outline' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.SCRIPT_GENERATE_OUTLINE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, characters, locations, style } = body;
@@ -934,7 +919,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/concept/generate-concepts
-  if (url === '/api/agents/concept/generate-concepts' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CONCEPT_GENERATE_CONCEPTS && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, moodDescription, vibe, colorPalette, sceneSettings, lightingDesc, atmosphereNotes, atmosphereTags, imageDataUrls } = body;
@@ -967,7 +952,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: POST /api/agents/concept/generate-image
-  if (url === '/api/agents/concept/generate-image' && req.method === 'POST') {
+  if (url === AGENT_STATIC_ROUTES.CONCEPT_GENERATE_IMAGE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { prompt } = body;
@@ -1046,7 +1031,7 @@ async function handleAgentApi(req, res) {
   }
 
   // Route: GET /api/agents/health — reports whether Mastra is ready
-  if (url === '/api/agents/health' && req.method === 'GET') {
+  if (url === AGENT_STATIC_ROUTES.HEALTH && req.method === 'GET') {
     const { resolveDefaultModel } = await getAgentModule();
     const model = resolveDefaultModel();
     json(res, 200, {

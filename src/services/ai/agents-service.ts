@@ -1,3 +1,11 @@
+import {
+  AGENT_STATIC_ROUTES,
+  projectContextPath,
+  projectReviewApprovePath,
+  projectReviewQueuePath,
+  projectReviewRejectPath,
+} from '@/constants/agent-routes.js';
+
 /**
  * source/src/services/ai/agents-service.ts
  *
@@ -157,7 +165,7 @@ async function agentFetch<T>(
  * Returns whether the Mastra agent layer is ready (LLM key configured).
  */
 export async function getAgentHealth(): Promise<AgentHealthStatus> {
-  return agentFetch<AgentHealthStatus>('/api/agents/health');
+  return agentFetch<AgentHealthStatus>(AGENT_STATIC_ROUTES.HEALTH);
 }
 
 // ── Script Agent ──────────────────────────────────────────────────────────────
@@ -174,7 +182,7 @@ export async function analyzeScript(
   projectId: string,
   fountainText: string,
 ): Promise<{ ok: boolean; projectId: string; data: ScriptAnalysisResult }> {
-  return agentFetch('/api/agents/script/analyze', {
+  return agentFetch(AGENT_STATIC_ROUTES.SCRIPT_ANALYZE, {
     method: 'POST',
     body: JSON.stringify({ projectId, fountainText }),
   });
@@ -190,7 +198,7 @@ export async function getProductionContext(
   projectId: string,
 ): Promise<ProductionContext | null> {
   return agentFetch<ProductionContext | null>(
-    `/api/agents/project/${encodeURIComponent(projectId)}/context`,
+    projectContextPath(projectId),
   );
 }
 
@@ -202,7 +210,7 @@ export async function updateProductionContext(
   projectId: string,
   update: Partial<ProductionContext>,
 ): Promise<{ ok: boolean; projectId: string }> {
-  return agentFetch(`/api/agents/project/${encodeURIComponent(projectId)}/context`, {
+  return agentFetch(projectContextPath(projectId), {
     method: 'POST',
     body: JSON.stringify(update),
   });
@@ -217,7 +225,7 @@ export async function getReviewQueue(
   projectId: string,
 ): Promise<{ projectId: string; items: ReviewItem[] }> {
   return agentFetch(
-    `/api/agents/project/${encodeURIComponent(projectId)}/review-queue`,
+    projectReviewQueuePath(projectId),
   );
 }
 
@@ -231,7 +239,7 @@ export async function approveReviewItem(
   notes = '',
 ): Promise<{ ok: boolean; nextState: string }> {
   return agentFetch(
-    `/api/agents/project/${encodeURIComponent(projectId)}/review/${encodeURIComponent(itemId)}/approve`,
+    projectReviewApprovePath(projectId, itemId),
     { method: 'POST', body: JSON.stringify({ notes }) },
   );
 }
@@ -245,7 +253,7 @@ export async function rejectReviewItem(
   reason = '',
 ): Promise<{ ok: boolean; nextState: string }> {
   return agentFetch(
-    `/api/agents/project/${encodeURIComponent(projectId)}/review/${encodeURIComponent(itemId)}/reject`,
+    projectReviewRejectPath(projectId, itemId),
     { method: 'POST', body: JSON.stringify({ reason }) },
   );
 }
@@ -286,7 +294,7 @@ export async function identifyVisualElements(
     characters: Array<{ name: string }>;
     locations: Array<{ name: string; intExt: string }>;
     props: Array<{ name: string }>;
-  }>('/api/agents/visual/identify', {
+  }>(AGENT_STATIC_ROUTES.VISUAL_IDENTIFY, {
     method: 'POST',
     body: JSON.stringify({ projectId, images }),
   });
@@ -306,7 +314,7 @@ export async function extractColorPalette(
   images: Array<{ dataUrl: string }>,
 ): Promise<{ palette: string[]; mood: string }> {
   return agentFetch<{ palette: string[]; mood: string }>(
-    '/api/agents/visual/extract-colors',
+    AGENT_STATIC_ROUTES.VISUAL_EXTRACT_COLORS,
     { method: 'POST', body: JSON.stringify({ projectId, images }) },
   );
 }
@@ -327,7 +335,7 @@ export async function generateScriptFromVisuals(
     style: { palette: string[]; mood: string; notes: string };
   },
 ): Promise<{ outline: string }> {
-  return agentFetch<{ outline: string }>('/api/agents/script/generate-outline', {
+  return agentFetch<{ outline: string }>(AGENT_STATIC_ROUTES.SCRIPT_GENERATE_OUTLINE, {
     method: 'POST',
     body: JSON.stringify({ projectId, ...context }),
   });
@@ -360,7 +368,7 @@ export async function generateConcepts(
   locations: Array<{ name: string; description: string; intExt: string }>;
   archetypes: Array<{ archetype: string; name: string; description: string; vibe: string; suggestedRole: string }>;
 }> {
-  return agentFetch('/api/agents/concept/generate-concepts', {
+  return agentFetch(AGENT_STATIC_ROUTES.CONCEPT_GENERATE_CONCEPTS, {
     method: 'POST',
     body: JSON.stringify({ projectId, ...payload }),
   });
@@ -373,7 +381,7 @@ export async function generateConcepts(
 export async function generateConceptImage(
   prompt: string,
 ): Promise<{ url: string; provider: string; model: string }> {
-  return agentFetch('/api/agents/concept/generate-image', {
+  return agentFetch(AGENT_STATIC_ROUTES.CONCEPT_GENERATE_IMAGE, {
     method: 'POST',
     body: JSON.stringify({ prompt }),
   });
@@ -390,7 +398,7 @@ export async function buildCharacterBibles(
   projectId: string,
   characters?: Array<{ name: string; role: string; description: string }>,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/casting/build-bibles', {
+  return agentFetch(AGENT_STATIC_ROUTES.CASTING_BUILD_BIBLES, {
     method: 'POST',
     body: JSON.stringify({ projectId, characters }),
   });
@@ -405,7 +413,7 @@ export async function buildLocationBibles(
   projectId: string,
   locations?: Array<{ name: string; intExt: string; description: string }>,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/production-design/build-bibles', {
+  return agentFetch(AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_BIBLES, {
     method: 'POST',
     body: JSON.stringify({ projectId, locations }),
   });
@@ -420,7 +428,7 @@ export async function generateStoryboardFrames(
   projectId: string,
   shotIds?: string[],
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/storyboard/generate', {
+  return agentFetch(AGENT_STATIC_ROUTES.STORYBOARD_GENERATE, {
     method: 'POST',
     body: JSON.stringify({ projectId, shotIds }),
   });
@@ -437,7 +445,7 @@ export async function buildGenerationPrompt(
   shotId: string,
   preferredProvider?: string,
 ): Promise<{ ok: boolean; projectId: string; shotId: string; data: string }> {
-  return agentFetch('/api/agents/cinematography/build-prompt', {
+  return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_BUILD_PROMPT, {
     method: 'POST',
     body: JSON.stringify({ projectId, shotId, preferredProvider }),
   });
@@ -452,7 +460,7 @@ export async function routeGenerationJob(
   shotId: string,
   shotType?: string,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/cinematography/route-shot', {
+  return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_ROUTE_SHOT, {
     method: 'POST',
     body: JSON.stringify({ projectId, shotId, shotType }),
   });
@@ -469,7 +477,7 @@ export async function auditGeneratedClip(
   shotId: string,
   clipDescription?: string,
 ): Promise<{ ok: boolean; projectId: string; shotId: string; data: string }> {
-  return agentFetch('/api/agents/cinematography/audit-clip', {
+  return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_AUDIT_CLIP, {
     method: 'POST',
     body: JSON.stringify({ projectId, shotId, clipDescription }),
   });
@@ -485,7 +493,7 @@ export async function translateSpatialAnnotations(
   annotations: Record<string, unknown>,
   provider?: string,
 ): Promise<{ ok: boolean; projectId: string; shotId: string; data: string }> {
-  return agentFetch('/api/agents/cinematography/annotate-spatial', {
+  return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_ANNOTATE_SPATIAL, {
     method: 'POST',
     body: JSON.stringify({ projectId, shotId, annotations, provider }),
   });
@@ -500,7 +508,7 @@ export async function translateSpatialAnnotations(
 export async function prepareAudioPlan(
   projectId: string,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/sound/prepare-audio', {
+  return agentFetch(AGENT_STATIC_ROUTES.SOUND_PREPARE_AUDIO, {
     method: 'POST',
     body: JSON.stringify({ projectId }),
   });
@@ -514,7 +522,7 @@ export async function assembleSequence(
   projectId: string,
   targetDurationSeconds?: number,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/post/assemble-sequence', {
+  return agentFetch(AGENT_STATIC_ROUTES.POST_ASSEMBLE_SEQUENCE, {
     method: 'POST',
     body: JSON.stringify({ projectId, targetDurationSeconds }),
   });
@@ -527,7 +535,7 @@ export async function assembleSequence(
 export async function colorGradeSequence(
   projectId: string,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/post/color-grade', {
+  return agentFetch(AGENT_STATIC_ROUTES.POST_COLOR_GRADE, {
     method: 'POST',
     body: JSON.stringify({ projectId }),
   });
@@ -548,7 +556,7 @@ export async function generateOutlineFromBeats(
     locations?: Array<{ name: string; intExt?: string }>;
   },
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch('/api/agents/beat-board/generate-outline', {
+  return agentFetch(AGENT_STATIC_ROUTES.BEAT_BOARD_GENERATE_OUTLINE, {
     method: 'POST',
     body: JSON.stringify({ projectId, ...payload }),
   });

@@ -1,3 +1,9 @@
+/**
+ * NOTE:
+ * The canonical routing modality set is in `services/routing-modalities.ts`.
+ * Setup Assistant intentionally presents `video` before `image` because that
+ * step is framed around shot generation decisions first, then storyboard images.
+ */
 export const ROUTING_MODALITIES = ['llm', 'video', 'image', 'audio'] as const;
 export type RoutingModality = (typeof ROUTING_MODALITIES)[number];
 

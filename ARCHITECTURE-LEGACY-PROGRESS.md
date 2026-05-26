@@ -58,6 +58,18 @@ This is a living reference for incremental cleanup until legacy bundles and glob
   - `source/src/services/provider-model-catalog.ts`
   - `source/src/settings/api-keys-settings-bundle.ts`
 
+### Agent route SSOT
+
+- `UPDATED` Shared agent route manifest introduced at `source/src/constants/agent-routes.js` (+ TS declarations).
+- `UPDATED` `source/src/services/ai/agents-service.ts` now consumes shared route constants/helpers.
+- `UPDATED` `source/server/proxy.js` now consumes shared static route constants for agent endpoint matching.
+
+### Provider metadata SSOT
+
+- `UPDATED` Canonical provider runtime metadata registry introduced at `source/src/constants/provider-registry.js` (+ TS declarations).
+- `UPDATED` `source/server/proxy.js` now derives env-key/base-url/authHeader/slot/provider mappings from the shared registry.
+- `UPDATED` `source/src/services/ai/provider-router.ts` now resolves default provider → proxy target via the shared registry.
+
 ### Setup state consistency fix
 
 - `UPDATED` Setup auto-open gate now checks server-side routing + keys completeness before opening wizard.
@@ -84,8 +96,8 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 ### Dead/unused candidates
 
 - `VERIFIED` `legacy/script-order.ts` is removed.
-- `OPEN` `source/src/wizard/index.ts` appears unused in runtime imports (keep candidate for removal once confirmed by maintainers).
-- `OPEN` `source/src/services/ai/index.ts` appears unused in runtime imports (same caveat).
+- `UPDATED` Removed unused `source/src/wizard/index.ts` barrel after integration confirmation (build verified).
+- `UPDATED` Removed unused `source/src/services/ai/index.ts` barrel after integration confirmation (build verified).
 
 ---
 
@@ -93,9 +105,9 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 
 ### Phase A — SSOT completion (near-term)
 
-- [ ] Create shared agent route manifest consumed by `agents-service` and proxy agent router.
-- [ ] Consolidate provider metadata registry (`providerId`, `slotId`, `defaultBaseUrl`, `proxyTarget`, `envKey`) into one canonical module + adapter.
-- [ ] Normalize setup assistant modality order to consume shared `ROUTING_MODALITIES` (or explicitly document why order differs).
+- [x] Create shared agent route manifest consumed by `agents-service` and proxy agent router.
+- [x] Consolidate provider metadata registry (`providerId`, `slotId`, `defaultBaseUrl`, `proxyTarget`, `envKey`) into one canonical module + adapter.
+- [x] Normalize setup assistant modality order to consume shared `ROUTING_MODALITIES` (or explicitly document why order differs).
 
 ### Phase B — Bundle decomposition
 
@@ -106,7 +118,7 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 ### Phase C — Legacy bridge retirement
 
 - [ ] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
-- [ ] Remove unused barrels only after integration confirmation.
+- [x] Remove unused barrels only after integration confirmation.
 - [ ] Introduce stricter lint checks to prevent new global write paths and raw string event names.
 
 ### Phase D — Structural cleanup

@@ -1,19 +1,9 @@
 import type { AiVendorRoute } from '@/services/ai/types';
 import { resolveOpenAiCompatibleTarget } from '@/services/ai/openai-compatible-target';
-
-const TARGET_MAP: Record<string, string> = {
-  'openai-compatible': 'openai',
-  'anthropic-messages-api': 'anthropic',
-  'google-gemini-api': 'google',
-  'elevenlabs-api': 'elevenlabs',
-  'fal-ai': 'fal',
-  'runway-api': 'runway',
-  'luma-api': 'luma',
-  'replicate-api': 'replicate',
-};
+import { defaultProxyTargetForProvider } from '@/constants/provider-registry.js';
 
 export function providerTarget(providerId: string): string {
-  return TARGET_MAP[providerId] || 'custom';
+  return defaultProxyTargetForProvider(providerId);
 }
 
 export function resolveVendorTarget(vendor: AiVendorRoute): string {
