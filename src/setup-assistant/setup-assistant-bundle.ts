@@ -50,6 +50,31 @@ import {
   saStatusHtml,
 } from '@/setup-assistant/connection-test';
 import { injectSetupStyles } from '@/setup-assistant/setup-styles';
+import {
+  applySavedProgress,
+  clearSetupProgress,
+  inferSetupCompleteFromServerState,
+  isSetupComplete as saIsSetupComplete,
+  loadSetupProgress,
+  markSetupComplete as saMarkSetupComplete,
+  resetSetupComplete as saResetSetupComplete,
+  saveSetupProgress,
+} from '@/setup-assistant/setup-assistant-persistence';
+import {
+  saCoverageSatisfied,
+  saDefaultState,
+  saFindVendorForSlot,
+  saIsSlotActive,
+  saManualVendors,
+  saModalityIsRequired,
+  saNormalizeVendorsToSlots,
+  saRequiredModelsAssigned,
+  saSlotMatchesVendor,
+  saSyncModalityProviderFromVendor,
+  saVendorById,
+  saVendorHasKey,
+  saVendorsWithKeys,
+} from '@/setup-assistant/setup-assistant-state';
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
 
@@ -115,27 +140,7 @@ let _saActiveProviderSlots = new Set();
 let _saProviderStepListenerBound = false;
 
 function _saDefaultState() {
-  return {
-    vendors:     [],
-    llm:   _saDefaultModality(),
-    video: _saDefaultModality(),
-    image: _saDefaultModality(),
-    audio: _saDefaultModality(),
-  };
-}
-
-function _saDefaultModality() {
-  return {
-    vendorId:     '',
-    skip:         false,
-    providerId:   '',
-    baseUrl:      '',
-    modelId:      '',
-    modelLabel:   '',
-    status:       null,
-    statusMsg:    '',
-    listedModels: [],
-  };
+  return saDefaultState();
 }
 
 function _saNewWizardVendorId() {
@@ -143,282 +148,108 @@ function _saNewWizardVendorId() {
 }
 
 function _saVendorById(vendorId) {
-  if (!vendorId || !_saState?.vendors) return null;
-  return _saState.vendors.find((v) => v.id === vendorId) || null;
+  return saVendorById(_saState, vendorId);
 }
 
 function _saVendorHasKey(v) {
-  return Boolean(v?.hasServerKey) || String(v?.apiKey || '').trim().length > 4;
+  return saVendorHasKey(v);
 }
 
 function _saVendorsWithKeys() {
-  return (_saState?.vendors || []).filter((v) => _saVendorHasKey(v));
+  return saVendorsWithKeys(_saState);
 }
 
 function _saSyncModalityProviderFromVendor(mod) {
-  const m = _saState[mod];
-  const v = _saVendorById(m.vendorId);
-  m.providerId = v ? v.providerId : '';
-  // Do NOT copy the vendor's baseUrl here — it may be stale from a previous
-  // session (e.g. Together AI's URL when xAI is selected).  The base URL
-  // should only come from the user's explicit input on the coverage step.
+  saSyncModalityProviderFromVendor(_saState, mod);
 }
 
 function _saSlotMatchesVendor(slot, vendor) {
-  if (!slot || !vendor) return false;
-  if (vendor.slotId && vendor.slotId === slot.slotId) return true;
-  const names = [slot.name, ...(slot.matchNames || [])].map((n) => String(n).trim().toLowerCase());
-  const vName = String(vendor.name || '').trim().toLowerCase();
-  if (names.includes(vName)) return true;
-  if (slot.providerId === vendor.providerId && slot.baseUrl && vendor.baseUrl) {
-    return String(slot.baseUrl).trim() === String(vendor.baseUrl).trim();
-  }
-  return false;
+  return saSlotMatchesVendor(slot, vendor);
 }
 
 function _saFindVendorForSlot(slot) {
-  if (!slot || !_saState?.vendors) return null;
-  return _saState.vendors.find((v) => _saSlotMatchesVendor(slot, v)) || null;
+  return saFindVendorForSlot(_saState, slot);
 }
 
 function _saIsCatalogVendor(vendor) {
-  return getSaProviderSlots().some((slot) => _saSlotMatchesVendor(slot, vendor));
+  return getSaProviderSlots().some((slot) => saSlotMatchesVendor(slot, vendor));
 }
 
 function _saManualVendors() {
-  return (_saState?.vendors || []).filter((v) => !_saIsCatalogVendor(v));
+  return saManualVendors(_saState, getSaProviderSlots);
 }
 
 function _saNormalizeVendorsToSlots() {
-  if (!_saState?.vendors) return;
-  const claimed = new Set();
-  getSaProviderSlots().forEach((slot) => {
-    const match = _saState.vendors.find((v) => !claimed.has(v.id) && _saSlotMatchesVendor(slot, v));
-    if (!match) return;
-    claimed.add(match.id);
-    match.slotId = slot.slotId;
-    if (!match.name || match.name === 'Provider' || match.name === 'New provider') match.name = slot.name;
-    if (slot.baseUrl && !match.baseUrl) match.baseUrl = slot.baseUrl;
-    if (match.providerId === 'openai-compatible' || !match.providerId) match.providerId = slot.providerId;
-  });
+  saNormalizeVendorsToSlots(_saState, getSaProviderSlots);
 }
 
 function _saIsSlotActive(slotId) {
-  const slot = getSaProviderSlots().find((s) => s.slotId === slotId);
-  if (!slot) return _saActiveProviderSlots.has(slotId);
-  const v = _saFindVendorForSlot(slot);
-  const hasKey = v && _saVendorHasKey(v);
-  return hasKey || _saActiveProviderSlots.has(slotId);
+  return saIsSlotActive(slotId, _saState, _saActiveProviderSlots, getSaProviderSlots);
 }
 
 function _saModalityIsRequired(mod) {
-  return REQUIRED_ROUTING_MODALITIES.includes(mod);
+  return saModalityIsRequired(mod, REQUIRED_ROUTING_MODALITIES);
 }
 
 function _saRequiredModelsAssigned() {
-  return REQUIRED_ROUTING_MODALITIES.every((mod) => Boolean(_saState[mod]?.modelId));
+  return saRequiredModelsAssigned(_saState, REQUIRED_ROUTING_MODALITIES);
 }
 
 function _saCoverageSatisfied() {
-  return ROUTING_MODALITIES.every((mod) => {
-    const m = _saState[mod];
-    if (m.skip) return !_saModalityIsRequired(mod);
-    if (!m.vendorId) return !_saModalityIsRequired(mod);
-    const v = _saVendorById(m.vendorId);
-    return Boolean(v && _saVendorHasKey(v));
-  });
+  return saCoverageSatisfied(_saState, ROUTING_MODALITIES, REQUIRED_ROUTING_MODALITIES);
 }
 
 /* ── Setup complete flag ─────────────────────────────────────────────────── */
 
 function isSetupComplete() {
-  try {
-    const raw = storageService.getItem(SETUP_COMPLETE_STORAGE_KEY);
-    if (raw == null) return false;
-    const normalized = String(raw).trim().toLowerCase();
-    return normalized === '1' || normalized === 'true';
-  }
-  catch (e) { return true; }
+  return saIsSetupComplete(storageService, SETUP_COMPLETE_STORAGE_KEY);
 }
 
 function markSetupComplete() {
-  try { storageService.setItem(SETUP_COMPLETE_STORAGE_KEY, '1'); }
-  catch (e) { /* noop */ }
+  saMarkSetupComplete(storageService, SETUP_COMPLETE_STORAGE_KEY);
 }
 
 function resetSetupComplete() {
-  try { storageService.removeItem(SETUP_COMPLETE_STORAGE_KEY); }
-  catch (e) { /* noop */ }
-}
-
-function _saVendorConfigured(vendor) {
-  if (!vendor || typeof vendor !== 'object') return false;
-  if (typeof vendorIsConfigured === 'function') return vendorIsConfigured(vendor);
-  if (vendor.hasServerKey) return true;
-  const key = String(vendor.apiKey || '').trim();
-  return Boolean(key) && !/^•+$/.test(key);
-}
-
-function _saRoutingLooksComplete(routing) {
-  const modalities = routing?.modalities || {};
-  return REQUIRED_ROUTING_MODALITIES.every((mod) => {
-    const cfg = modalities[mod] || {};
-    return Boolean(
-      String(cfg.provider || '').trim() &&
-      String(cfg.vendorId || '').trim() &&
-      String(cfg.model || '').trim()
-    );
-  });
-}
-
-function _saRoutingVendorIds(routing) {
-  const ids = new Set();
-  const modalities = routing?.modalities || {};
-  REQUIRED_ROUTING_MODALITIES.forEach((mod) => {
-    const vendorId = String(modalities?.[mod]?.vendorId || '').trim();
-    if (vendorId) ids.add(vendorId);
-  });
-  return ids;
-}
-
-function _saKeysCoverRoutingVendors(keysState, vendorIds) {
-  if (!keysState || !vendorIds || !vendorIds.size) return false;
-  const configured = new Set(
-    (keysState.vendors || [])
-      .filter((v) => _saVendorConfigured(v))
-      .map((v) => String(v.id || '').trim())
-      .filter(Boolean)
-  );
-  return [...vendorIds].every((id) => configured.has(id));
+  saResetSetupComplete(storageService, SETUP_COMPLETE_STORAGE_KEY);
 }
 
 async function _saInferSetupCompleteFromServerState() {
-  try {
-    let routing = null;
-    let keys = null;
-
-    try {
-      const [routingRes, keysRes] = await Promise.all([
-        fetch('/api/settings/routing'),
-        fetch('/api/settings/keys'),
-      ]);
-      if (routingRes.ok) routing = await routingRes.json();
-      if (keysRes.ok) keys = await keysRes.json();
-    } catch {
-      /* fall back to globals/cache below */
-    }
-
-    if (!routing && typeof loadAiApiSettings === 'function') {
-      try { routing = loadAiApiSettings(); } catch { /* noop */ }
-    }
-    if (!keys && typeof loadApiKeys === 'function') {
-      try { keys = loadApiKeys(); } catch { /* noop */ }
-    }
-
-    if (!_saRoutingLooksComplete(routing)) return false;
-    const requiredVendorIds = _saRoutingVendorIds(routing);
-    if (!requiredVendorIds.size) return false;
-    if (!_saKeysCoverRoutingVendors(keys, requiredVendorIds)) return false;
-
-    markSetupComplete();
-    return true;
-  } catch {
-    return false;
-  }
+  return inferSetupCompleteFromServerState({
+    requiredRoutingModalities: REQUIRED_ROUTING_MODALITIES,
+    markSetupComplete,
+    vendorIsConfigured: typeof vendorIsConfigured === 'function' ? vendorIsConfigured : undefined,
+    loadAiApiSettings: typeof loadAiApiSettings === 'function' ? loadAiApiSettings : undefined,
+    loadApiKeys: typeof loadApiKeys === 'function' ? loadApiKeys : undefined,
+  });
 }
 
 /* ── Wizard progress (resume after refresh) ──────────────────────────────── */
 
 function _saSaveProgress() {
-  if (!_saState) return;
-  try {
-    storageService.setItem(SETUP_PROGRESS_STORAGE_KEY, JSON.stringify({
-      step: _saCurrentStep,
-      maxReachableStep: _saMaxReachableStep,
-      vendors: _saState.vendors.map((v) => ({
-        id: v.id,
-        name: v.name,
-        providerId: v.providerId,
-        slotId: v.slotId,
-        baseUrl: v.baseUrl,
-        apiKey: v.apiKey || '',
-        hasServerKey: Boolean(v.hasServerKey),
-        status: v.status || null,
-        statusMsg: v.statusMsg || '',
-      })),
-      state: {
-        llm:   { ..._saState.llm },
-        video: { ..._saState.video },
-        image: { ..._saState.image },
-        audio: { ..._saState.audio },
-      },
-    }));
-
-    // Sync modality routing to aiApiSettings so the status bar and settings modal
-    // see the same models the SA configured — eliminates dual-storage confusion.
-    if (typeof loadAiApiSettings === 'function' && typeof saveAiApiSettings === 'function') {
-      const routing = loadAiApiSettings();
-      ROUTING_MODALITIES.forEach((mod) => {
-        const s = _saState[mod];
-        if (!s.vendorId) return;
-        const vendor = _saVendorById(s.vendorId);
-        routing.modalities[mod] = {
-          ...routing.modalities[mod],
-          provider:   s.providerId || vendor?.providerId || '',
-          model:      s.modelId || '',
-          modelLabel: _saResolveModelLabel(s, mod),
-          baseUrl:    s.baseUrl || vendor?.baseUrl || '',
-          vendorId:   s.vendorId,
-        };
-      });
-      saveAiApiSettings(routing);
-    }
-  } catch (e) {
-    console.warn('CineGen: could not save setup progress.', e);
-  }
+  saveSetupProgress({
+    storageService,
+    setupProgressStorageKey: SETUP_PROGRESS_STORAGE_KEY,
+    currentStep: _saCurrentStep,
+    maxReachableStep: _saMaxReachableStep,
+    state: _saState,
+    routingModalities: ROUTING_MODALITIES,
+    vendorById: _saVendorById,
+    resolveModelLabel: _saResolveModelLabel,
+    loadAiApiSettings: typeof loadAiApiSettings === 'function' ? loadAiApiSettings : undefined,
+    saveAiApiSettings: typeof saveAiApiSettings === 'function' ? saveAiApiSettings : undefined,
+  });
 }
 
 function _saLoadProgress() {
-  try {
-    const raw = storageService.getItem(SETUP_PROGRESS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    const step = typeof parsed.step === 'number' ? parsed.step : 0;
-    if (step < 0 || step >= SETUP_STEPS.length) return null;
-    return parsed;
-  } catch (e) {
-    return null;
-  }
+  return loadSetupProgress(storageService, SETUP_PROGRESS_STORAGE_KEY, SETUP_STEPS.length);
 }
 
 function _saClearProgress() {
-  try { storageService.removeItem(SETUP_PROGRESS_STORAGE_KEY); }
-  catch (e) { /* noop */ }
+  clearSetupProgress(storageService, SETUP_PROGRESS_STORAGE_KEY);
 }
 
 function _saApplySavedProgress(progress) {
-  if (!progress || !_saState) return;
-  if (Array.isArray(progress.vendors)) {
-    _saState.vendors = progress.vendors.map((v) => ({
-      id: v.id,
-      name: v.name || '',
-      providerId: v.providerId || '',
-      slotId: v.slotId || '',
-      baseUrl: v.baseUrl || '',
-      apiKey: v.apiKey || '',
-      hasServerKey: Boolean(v.hasServerKey),
-      status: v.status || null,
-      statusMsg: v.statusMsg || '',
-    }));
-  }
-  const st = progress.state;
-  if (!st) return;
-  ROUTING_MODALITIES.forEach((mod) => {
-    if (st[mod] && typeof st[mod] === 'object') {
-      _saState[mod] = { ..._saState[mod], ...st[mod] };
-    }
-  });
+  applySavedProgress(progress, _saState, ROUTING_MODALITIES);
 }
 
 /* ── Open / Close ─────────────────────────────────────────────────────────── */

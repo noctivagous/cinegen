@@ -111,9 +111,20 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 
 ### Phase B — Bundle decomposition
 
-- [ ] Extract script wizard from `toolbar/toolbar-modals-service.ts` into `wizard/script-wizard-*`.
-- [ ] Split `toolbar-modals-service` by concern (projects/modals/wizards/debug).
+- [x] Extract script wizard from `toolbar/toolbar-modals-service.ts` into `wizard/script-wizard-*`.
+- [x] Split `toolbar-modals-service` by concern (projects/modals/wizards/debug).
 - [ ] Split `setup-assistant/setup-assistant-bundle.ts` into state, routing tests, UI rendering, and persistence gates.
+
+Progress note (2026-05-26):
+- Completed script wizard extraction in two steps:
+  - moved script-wizard state/entities helpers into `source/src/wizard/script-wizard-state.ts`
+  - moved script wizard slide definitions into `source/src/wizard/script-wizard-bundle.ts`, with `toolbar-modals-service.ts` now wiring dependencies into that module
+- Began concern-based split of `toolbar-modals-service.ts` by extracting debug/settings reset behavior into `source/src/toolbar/toolbar-debug-service.ts` and re-exporting existing debug APIs from `toolbar-modals-service.ts` for compatibility.
+- Continued concern-based split by extracting project/settings modal workflows into `source/src/toolbar/toolbar-project-modals-service.ts` (projects list wiring/open, project settings form save/open, active project name sync), with compatibility re-exports kept in `toolbar-modals-service.ts`.
+- Extracted remaining wizard-generic navigation/dismissal glue into `source/src/toolbar/toolbar-wizard-modals-service.ts` (slide stepping/rendering, wizard modal open/close helpers, wizard action dispatch, project-action + wizard prev/next wiring), completing the toolbar concern split with compatibility wrappers maintained in `toolbar-modals-service.ts`.
+- Began `setup-assistant/setup-assistant-bundle.ts` decomposition by extracting setup-complete + progress persistence gates into `source/src/setup-assistant/setup-assistant-persistence.ts` and rewiring the bundle to call this module (server-state inference, setup complete flag, progress save/load/apply/clear).
+- Extracted setup-assistant state/model utilities into `source/src/setup-assistant/setup-assistant-state.ts` (default wizard state, vendor-slot normalization, vendor lookup/key checks, modality coverage/required-model checks) and rewired bundle wrappers to this module.
+- Remaining Phase B work is focused on decomposing `setup-assistant-bundle.ts`.
 
 ### Phase C — Legacy bridge retirement
 

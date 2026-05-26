@@ -1,28 +1,11 @@
-import { html, type TemplateResult } from 'lit';
+import { html } from 'lit';
 import type { CgModalTileGrid } from '@/components/primitives/cg-modal-tile-grid';
 import type { CinegenGuideModalBody } from '@/components/modals/cinegen-guide-modal-body';
-import type { CinegenEntryWizardBody } from '@/components/modals/cinegen-entry-wizard-body';
-import {
-  CG_PROJECT_OPEN,
-  type CgProjectOpenDetail,
-  type CinegenProjectsModalList,
-} from '@/components/modals/cinegen-projects-modal-list';
 import { closeAllToolbarSplitMenus, closeToolbarSplitMenu } from '@/services/toolbar-split-service';
 import { appShellStore } from '@/stores/app-shell';
 import { escHtml } from '@/utils/html';
 import { alertCG } from '@/utils/alert-cg';
 import { persistActiveProjectSnapshot } from '@/services/project-service';
-import {
-  AI_API_SETTINGS_STORAGE_KEY,
-  API_KEYS_STORAGE_KEY,
-  CONSOLE_HISTORY_STORAGE_KEY,
-  PROVIDER_MODEL_CATALOG_STORAGE_KEY,
-  SECTION_VISIBILITY_STORAGE_KEY,
-  SETUP_COMPLETE_STORAGE_KEY,
-  SETUP_PROGRESS_STORAGE_KEY,
-  STORYBOARD_GENERATION_MODE_STORAGE_KEY,
-  STORYBOARD_REFERENCE_STORAGE_KEY,
-} from '@/constants/storage-keys';
 import {
   AI_ASSIST_ASSISTANT_TILES,
   AI_ASSIST_TASK_TILES,
@@ -32,21 +15,9 @@ import {
 } from '@/toolbar/toolbar-data';
 import {
   createBlankProject,
-  hydrateProjectRegistryFromPersistence,
-  openProject as openProjectFromService,
-  persistActiveProjectSettings,
-  prepareActiveProjectTreeUiForSwitch,
 } from '@/services/project-service';
-import { activeProjectId, getActiveProjectRegistryEntry, moodBoards } from '@/data/project-data';
+import { moodBoards } from '@/data/project-data';
 import {
-  activatePersistedProjectTreeSelection,
-  primePersistedProjectTreeUi,
-  resetProjectTreeUiRestoreFlag,
-} from '@/tree/project-tree-service';
-import { PREFS_KEY } from '@/services/preferences';
-import { storageService } from '@/services/persistence';
-import {
-  closeAllModals,
   closeAllModalsExcept,
   closeModal,
   openModal,
@@ -54,479 +25,128 @@ import {
   registerModal,
 } from '@/services/modal-manager';
 import { buildCheckboxTreeNodes, getCurrentSectionKey } from '@/services/section-visibility-service';
+import { resetScriptWizardState } from '@/wizard/script-wizard-state';
+import { createScriptWizardSlides } from '@/wizard/script-wizard-bundle';
+import {
+  closeDebugModal,
+  openDebugModal,
+  openSetupAssistantForDebug,
+} from '@/toolbar/toolbar-debug-service';
+
+export {
+  clearProviderModelCacheForDebug,
+  logSettingsStorageForDebug,
+  openDebugGenerationForDebug,
+  openSetupAssistantForDebug,
+  reloadAppForDebug,
+  resetAppSettingsForDebug,
+  resetSetupAssistantProgressForDebug,
+} from '@/toolbar/toolbar-debug-service';
+import {
+  closeProjectSettingsModal,
+  closeProjectsModal,
+  closeSettingsModal,
+  initProjectSettingsAspectToResolutionSync,
+  openProjectSettingsModal,
+  openProjectsModal,
+  openSettingsModal,
+  renderProjectsModalList,
+  saveProjectSettingsModal,
+  syncActiveProjectName,
+  wireProjectsModalList,
+} from '@/toolbar/toolbar-project-modals-service';
+import {
+  closeAssetWizardModal as closeAssetWizardModalFromService,
+  closeConceptWizardModal as closeConceptWizardModalFromService,
+  closeScriptWizardModal as closeScriptWizardModalFromService,
+  closeStoryboardWizardModal as closeStoryboardWizardModalFromService,
+  closeVisualWizardModal as closeVisualWizardModalFromService,
+  closeWizardsModal as closeWizardsModalFromService,
+  launchWizardAction as launchWizardActionFromService,
+  openAssetWizardModal as openAssetWizardModalFromService,
+  openConceptWizardModal as openConceptWizardModalFromService,
+  openScriptWizardModal as openScriptWizardModalFromService,
+  openStoryboardWizardModal as openStoryboardWizardModalFromService,
+  openVisualWizardModal as openVisualWizardModalFromService,
+  openWizardsModal as openWizardsModalFromService,
+  renderEntryWizardSlide as renderEntryWizardSlideFromService,
+  type WizardSlide,
+  wireWizardNavigationAndActions,
+} from '@/toolbar/toolbar-wizard-modals-service';
+
+export {
+  closeProjectSettingsModal,
+  closeProjectsModal,
+  closeSettingsModal,
+  openProjectSettingsModal,
+  openProjectsModal,
+  openSettingsModal,
+  saveProjectSettingsModal,
+  syncActiveProjectName,
+  wireProjectsModalList,
+};
 
 let guideModalSectionIndex = 0;
 
 /* ── Entry-point wizard slide data ─────────────────────────────────────────── */
 
-type WizardSlide = {
-  title: string;
-  body?: string;
-  tip?: string;
-  renderFn?: (host: CinegenEntryWizardBody) => TemplateResult;
+const legacyGlobal = window as unknown as Record<string, unknown>;
+const legacySetProjectFountainText = (text: string): void => {
+  const fn = legacyGlobal.setProjectFountainText;
+  if (typeof fn === 'function') (fn as (value: string) => void)(text);
+};
+const legacyHydrateScriptEditorFromProject = (): void => {
+  const fn = legacyGlobal.hydrateScriptEditorFromProject;
+  if (typeof fn === 'function') (fn as () => void)();
+};
+const legacyGenerateStoryboardReferences = async (): Promise<void> => {
+  const fn = legacyGlobal.generateStoryboardReferences;
+  if (typeof fn === 'function') {
+    await (fn as () => Promise<void>)();
+  }
+};
+const legacyGenerateBoards = async (): Promise<void> => {
+  const fn = legacyGlobal.generateBoards;
+  if (typeof fn === 'function') {
+    await (fn as () => Promise<void>)();
+  }
+};
+const legacyAddItemsToLibrary = (
+  bucket: string,
+  values: string[],
+  icon?: string,
+  desc?: string
+): void => {
+  const fn = legacyGlobal.addItemsToLibrary;
+  if (typeof fn === 'function') {
+    (fn as (b: string, v: string[], i?: string, d?: string) => void)(bucket, values, icon, desc);
+  }
+};
+const legacyRenderBreakdownTable = (): void => {
+  const fn = legacyGlobal.renderBreakdownTable;
+  if (typeof fn === 'function') (fn as () => void)();
+};
+const legacyScheduleFountainRender = (): void => {
+  const fn = legacyGlobal.scheduleFountainRender;
+  if (typeof fn === 'function') (fn as () => void)();
 };
 
-/* ── Script Wizard State & Helpers ─────────────────────────────────────────── */
-
-interface ScriptWizardCharacter {
-  name: string;
-  age: string;
-  build: string;
-  vibe: string;
-}
-
-interface ScriptWizardLocation {
-  name: string;
-  description: string;
-  isInterior: boolean;
-}
-
-interface ScriptWizardState {
-  projectId: string | null;
-  scriptText: string;
-  detectedCharacters: string[];
-  detectedLocations: string[];
-  characters: ScriptWizardCharacter[];
-  locations: ScriptWizardLocation[];
-  styleNotes: string;
-  referencesGenerated: boolean;
-  references: Array<{ label: string; imageUrl?: string; category: string }>;
-  storyboardsGenerated: boolean;
-  storyboardFrameCount: number;
-}
-
-let scriptWizardState: ScriptWizardState = createEmptyScriptWizardState();
-
-function createEmptyScriptWizardState(): ScriptWizardState {
-  return {
-    projectId: null,
-    scriptText: '',
-    detectedCharacters: [],
-    detectedLocations: [],
-    characters: [],
-    locations: [],
-    styleNotes: '',
-    referencesGenerated: false,
-    references: [],
-    storyboardsGenerated: false,
-    storyboardFrameCount: 0,
-  };
-}
-
-function resetScriptWizardState(): void {
-  scriptWizardState = createEmptyScriptWizardState();
-}
-
-function uniqueByName(names: string[]): string[] {
-  const seen = new Set<string>();
-  return names.filter((n) => {
-    const key = n.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function extractEntitiesFromText(text: string): { characters: string[]; locations: string[] } {
-  const lines = text.split('\n');
-  const characters: string[] = [];
-  const locations: string[] = [];
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    if (/^[A-Z][A-Z0-9 .'\-()]+$/.test(trimmed) && trimmed.length <= 40) {
-      const cleaned = trimmed.replace(/\s*\([^)]*\)\s*$/, '').trim();
-      if (cleaned && !characters.includes(cleaned)) characters.push(cleaned);
-    }
-    if (/^\s*(INT\.?|EXT\.?|EST\.?|INT\/EXT\.?|I\/E\.?)\s+/i.test(trimmed)) {
-      let slug = trimmed.replace(/^(INT\.?|EXT\.?|EST\.?|INT\/EXT\.?|I\/E\.?)\s*/i, '').trim();
-      slug = slug.split(/\s+-\s+/)[0].trim();
-      if (slug && !locations.includes(slug)) locations.push(slug);
-    }
-  });
-
-  return { characters: uniqueByName(characters), locations: uniqueByName(locations) };
-}
-
-function inferInteriorFromName(name: string, scriptText: string): boolean {
-  const re = new RegExp(`^\\s*(INT\\.?|EXT\\.?)\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'im');
-  const match = scriptText.match(re);
-  if (match) return /^INT/i.test(match[1]);
-  return false;
-}
-
-function populateScriptWizardAssets(): void {
-  const state = scriptWizardState;
-  addItemsToLibrary(
-    'characters',
-    state.characters.map((c) => c.name),
-    'fa-user',
-    'Added from script wizard'
-  );
-  addItemsToLibrary(
-    'locations',
-    state.locations.map((l) => l.name),
-    'fa-map-location-dot',
-    'Added from script wizard'
-  );
-}
-
 const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
-  'script-wizard-modal': [
-    /* Slide 1 — Script Import & Review */
-    {
-      title: 'Script Import & Review',
-      renderFn: () => {
-        const state = scriptWizardState;
-        const onCreate = () => {
-          if (!state.scriptText.trim()) {
-            alertCG('Please paste or type a script first.');
-            return;
-          }
-          const created = createBlankProject();
-          appShellStore.setActiveProjectId(created.id);
-          syncActiveProjectName(created.name);
-          setProjectFountainText(state.scriptText);
-          hydrateScriptEditorFromProject();
-          const refresh = window as unknown as Record<string, (() => void) | undefined>;
-          refresh.renderFullTree?.();
-          refresh.renderBreakdownTable?.();
-          refresh.renderStoryboard?.();
-          refresh.renderTimeline?.();
-          refresh.hydrateScriptEditorFromProject?.();
-          window.renderProjectsMenu?.();
-          renderProjectsModalList();
-          const { characters, locations } = extractEntitiesFromText(state.scriptText);
-          state.projectId = created.id;
-          state.detectedCharacters = characters;
-          state.detectedLocations = locations;
-          renderEntryWizardSlide('script-wizard-modal', 1);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Paste your Fountain screenplay below. CineGen will automatically detect scene headings, characters, and locations.</p>
-            <textarea
-              class="cg-field"
-              style="min-height:160px;"
-              placeholder="Paste your script here..."
-              .value=${state.scriptText}
-              @input=${(e: Event) => { state.scriptText = (e.target as HTMLTextAreaElement).value; }}
-            ></textarea>
-            <button class="toolbar-btn btn-ai" @click=${onCreate}>Create Project & Analyze Script</button>
-          </div>
-        `;
-      },
-    },
-    /* Slide 2 — Core Elements Extraction */
-    {
-      title: 'Core Elements Extraction',
-      renderFn: (host) => {
-        const state = scriptWizardState;
-        const removeChar = (name: string) => {
-          state.detectedCharacters = state.detectedCharacters.filter((n) => n !== name);
-          host.requestUpdate();
-        };
-        const removeLoc = (name: string) => {
-          state.detectedLocations = state.detectedLocations.filter((n) => n !== name);
-          host.requestUpdate();
-        };
-        const addChar = () => {
-          const input = host.querySelector<HTMLInputElement>('#sw-add-char');
-          const name = input?.value.trim();
-          if (name && !state.detectedCharacters.includes(name)) {
-            state.detectedCharacters.push(name);
-            if (input) input.value = '';
-            host.requestUpdate();
-          }
-        };
-        const addLoc = () => {
-          const input = host.querySelector<HTMLInputElement>('#sw-add-loc');
-          const name = input?.value.trim();
-          if (name && !state.detectedLocations.includes(name)) {
-            state.detectedLocations.push(name);
-            if (input) input.value = '';
-            host.requestUpdate();
-          }
-        };
-        const onConfirm = () => {
-          state.characters = state.detectedCharacters.map((name) => ({
-            name,
-            age: '',
-            build: '',
-            vibe: '',
-          }));
-          state.locations = state.detectedLocations.map((name) => ({
-            name,
-            description: '',
-            isInterior: inferInteriorFromName(name, state.scriptText),
-          }));
-          renderEntryWizardSlide('script-wizard-modal', 2);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Review the characters and locations detected from your script. Remove false positives or add missing ones.</p>
-            <div class="script-wizard-section">
-              <h4>Characters (${state.detectedCharacters.length})</h4>
-              <div class="script-wizard-chip-list">
-                ${state.detectedCharacters.map((name) => html`
-                  <span class="entity-chip entity-chip--character">
-                    ${name}
-                    <button type="button" class="remove-chip-btn" @click=${() => removeChar(name)} aria-label="Remove ${name}">×</button>
-                  </span>
-                `)}
-              </div>
-              <div class="script-wizard-add-row">
-                <input id="sw-add-char" class="cg-field" type="text" placeholder="Add character..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addChar()} />
-                <button class="toolbar-btn" @click=${addChar}>Add</button>
-              </div>
-            </div>
-            <div class="script-wizard-section">
-              <h4>Locations (${state.detectedLocations.length})</h4>
-              <div class="script-wizard-chip-list">
-                ${state.detectedLocations.map((name) => html`
-                  <span class="entity-chip entity-chip--location">
-                    ${name}
-                    <button type="button" class="remove-chip-btn" @click=${() => removeLoc(name)} aria-label="Remove ${name}">×</button>
-                  </span>
-                `)}
-              </div>
-              <div class="script-wizard-add-row">
-                <input id="sw-add-loc" class="cg-field" type="text" placeholder="Add location..." @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && addLoc()} />
-                <button class="toolbar-btn" @click=${addLoc}>Add</button>
-              </div>
-            </div>
-            <button class="toolbar-btn btn-ai" @click=${onConfirm}>Confirm & Continue</button>
-          </div>
-        `;
-      },
-    },
-    /* Slide 3 — Casting Setup */
-    {
-      title: 'Casting Setup',
-      renderFn: () => {
-        const state = scriptWizardState;
-        const onNext = () => {
-          renderEntryWizardSlide('script-wizard-modal', 3);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Add basic details for each character. These become casting notes and reference prompts.</p>
-            <div class="script-wizard-cards">
-              ${state.characters.map((char, i) => html`
-                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
-                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-user" aria-hidden="true"></i> ${char.name}</legend>
-                  <div class="cg-fieldset-body">
-                    <div class="script-wizard-field-row">
-                      <span>Age</span>
-                      <input class="cg-field" type="text" .value=${char.age} @input=${(e: Event) => { state.characters[i].age = (e.target as HTMLInputElement).value; }} placeholder="e.g. 30s" />
-                    </div>
-                    <div class="script-wizard-field-row">
-                      <span>Build</span>
-                      <input class="cg-field" type="text" .value=${char.build} @input=${(e: Event) => { state.characters[i].build = (e.target as HTMLInputElement).value; }} placeholder="e.g. Athletic, slender" />
-                    </div>
-                    <div class="script-wizard-field-row">
-                      <span>Vibe</span>
-                      <textarea class="cg-field" .value=${char.vibe} @input=${(e: Event) => { state.characters[i].vibe = (e.target as HTMLTextAreaElement).value; }} placeholder="General personality, energy, archetype..."></textarea>
-                    </div>
-                  </div>
-                </fieldset>
-              `)}
-            </div>
-            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
-          </div>
-        `;
-      },
-    },
-    /* Slide 4 — Production Design Setup */
-    {
-      title: 'Production Design Setup',
-      renderFn: () => {
-        const state = scriptWizardState;
-        const onNext = () => {
-          populateScriptWizardAssets();
-          renderBreakdownTable();
-          scheduleFountainRender();
-          renderEntryWizardSlide('script-wizard-modal', 4);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Define each primary location. Descriptions help keep generated references consistent.</p>
-            <div class="script-wizard-cards">
-              ${state.locations.map((loc, i) => html`
-                <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
-                  <legend class="cg-fieldset-legend"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> ${loc.name}</legend>
-                  <div class="cg-fieldset-body">
-                    <div class="script-wizard-field-row">
-                      <span>Type</span>
-                      <select class="cg-field" .value=${loc.isInterior ? 'int' : 'ext'} @change=${(e: Event) => { state.locations[i].isInterior = (e.target as HTMLSelectElement).value === 'int'; }}>
-                        <option value="int">Interior</option>
-                        <option value="ext">Exterior</option>
-                      </select>
-                    </div>
-                    <div class="script-wizard-field-row">
-                      <span>Description</span>
-                      <textarea class="cg-field" .value=${loc.description} @input=${(e: Event) => { state.locations[i].description = (e.target as HTMLTextAreaElement).value; }} placeholder="Atmosphere, period, key architectural notes..."></textarea>
-                    </div>
-                  </div>
-                </fieldset>
-              `)}
-            </div>
-            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
-          </div>
-        `;
-      },
-    },
-    /* Slide 5 — Style Foundation */
-    {
-      title: 'Style Foundation',
-      renderFn: (host) => {
-        const state = scriptWizardState;
-        const presets = ['Cinematic noir', 'Warm naturalistic', 'High-contrast sci-fi', 'Muted period drama', 'Vibrant comedy'];
-        const applyPreset = (p: string) => {
-          state.styleNotes = p;
-          host.requestUpdate();
-        };
-        const onNext = () => {
-          renderEntryWizardSlide('script-wizard-modal', 5);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Set the overall aesthetic for the project. This influences storyboard and reference generation.</p>
-            <textarea
-              class="cg-field"
-              style="min-height:100px;"
-              .value=${state.styleNotes}
-              @input=${(e: Event) => { state.styleNotes = (e.target as HTMLTextAreaElement).value; }}
-              placeholder="Describe the overall look: lighting style, color palette, mood, era..."
-            ></textarea>
-            <div class="script-wizard-presets">
-              ${presets.map((p) => html`
-                <button class="toolbar-btn script-wizard-preset" @click=${() => applyPreset(p)}>${p}</button>
-              `)}
-            </div>
-            <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
-          </div>
-        `;
-      },
-    },
-    /* Slide 6 — Minimal References */
-    {
-      title: 'Minimal References',
-      renderFn: (host) => {
-        const state = scriptWizardState;
-        const onGenerate = async () => {
-          try {
-            await generateStoryboardReferences();
-            const bank = (window as any).storyboardReferenceBank as Record<string, Array<{ label: string; imageUrl?: string }>>;
-            state.references = [];
-            for (const [category, slots] of Object.entries(bank)) {
-              for (const slot of slots) {
-                state.references.push({ label: slot.label, imageUrl: slot.imageUrl, category });
-              }
-            }
-            state.referencesGenerated = true;
-            host.requestUpdate();
-          } catch (err) {
-            alertCG('Reference generation failed: ' + (err instanceof Error ? err.message : String(err)));
-          }
-        };
-        const onNext = () => {
-          renderEntryWizardSlide('script-wizard-modal', 6);
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Generate starter reference images for the first scene using the characters and locations you defined.</p>
-            ${!state.referencesGenerated
-              ? html`<button class="toolbar-btn btn-ai" @click=${onGenerate}>Generate Starter References</button>`
-              : html`
-                  <div class="script-wizard-ref-grid">
-                    ${state.references.map((ref) => html`
-                      <div class="script-wizard-ref-item">
-                        ${ref.imageUrl ? html`<img src=${ref.imageUrl} alt=${ref.label} />` : html`<div class="script-wizard-ref-placeholder">Generating...</div>`}
-                        <span class="script-wizard-ref-label">${ref.label}</span>
-                        <span class="script-wizard-ref-cat">${ref.category}</span>
-                      </div>
-                    `)}
-                  </div>
-                  <button class="toolbar-btn btn-ai" @click=${onNext}>Continue</button>
-                `}
-          </div>
-        `;
-      },
-    },
-    /* Slide 7 — Scene Kit Preview & Confirmation */
-    {
-      title: 'Scene Kit Preview & Confirmation',
-      renderFn: () => {
-        const state = scriptWizardState;
-        const onBack = () => renderEntryWizardSlide('script-wizard-modal', 4);
-        const onNext = () => renderEntryWizardSlide('script-wizard-modal', 7);
-        return html`
-          <div class="script-wizard-form">
-            <p>Here is what CineGen has assembled for your first scene kit.</p>
-            <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
-              <legend class="cg-fieldset-legend"><i class="fa-solid fa-cube" aria-hidden="true"></i> Scene Kit Summary</legend>
-              <div class="cg-fieldset-body script-wizard-summary">
-                <div class="script-wizard-summary-row">
-                  <strong>Characters:</strong> ${state.characters.length} — ${state.characters.map((c) => c.name).join(', ')}
-                </div>
-                <div class="script-wizard-summary-row">
-                  <strong>Locations:</strong> ${state.locations.length} — ${state.locations.map((l) => l.name).join(', ')}
-                </div>
-                <div class="script-wizard-summary-row">
-                  <strong>References:</strong> ${state.references.length} generated
-                </div>
-                <div class="script-wizard-summary-row">
-                  <strong>Style:</strong> ${state.styleNotes || 'Not specified'}
-                </div>
-              </div>
-            </fieldset>
-            <div class="script-wizard-actions">
-              <button class="toolbar-btn" @click=${onBack}>Go Back</button>
-              <button class="toolbar-btn btn-ai" @click=${onNext}>Looks Good — Continue</button>
-            </div>
-          </div>
-        `;
-      },
-    },
-    /* Slide 8 — Generate Initial Storyboards */
-    {
-      title: 'Generate Initial Storyboards',
-      renderFn: (host) => {
-        const state = scriptWizardState;
-        const onGenerate = async () => {
-          try {
-            const before = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;
-            await generateBoards();
-            const after = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;
-            state.storyboardFrameCount = after - before;
-            state.storyboardsGenerated = true;
-            host.requestUpdate();
-          } catch (err) {
-            alertCG('Storyboard generation failed: ' + (err instanceof Error ? err.message : String(err)));
-          }
-        };
-        const onFinish = () => {
-          closeScriptWizardModal();
-        };
-        return html`
-          <div class="script-wizard-form">
-            <p>Create the first set of storyboard frames from the scene kit and style foundation.</p>
-            ${!state.storyboardsGenerated
-              ? html`<button class="toolbar-btn btn-ai" @click=${onGenerate}>Generate Storyboards</button>`
-              : html`
-                  <div class="script-wizard-success">
-                    <p><strong>${state.storyboardFrameCount}</strong> draft frame(s) created.</p>
-                    <p>You can review and generate thumbnails in the Pre-production workspace.</p>
-                  </div>
-                  <button class="toolbar-btn btn-ai" @click=${onFinish}>Finish & Close Wizard</button>
-                `}
-          </div>
-        `;
-      },
-    },
-  ],
+  'script-wizard-modal': createScriptWizardSlides({
+    createBlankProject,
+    setActiveProjectId: (projectId: string) => appShellStore.setActiveProjectId(projectId),
+    syncActiveProjectName,
+    setProjectFountainText: legacySetProjectFountainText,
+    hydrateScriptEditorFromProject: legacyHydrateScriptEditorFromProject,
+    renderProjectsModalList,
+    renderEntryWizardSlide: (modalId: string, index: number) => renderEntryWizardSlide(modalId, index),
+    generateStoryboardReferences: legacyGenerateStoryboardReferences,
+    generateBoards: legacyGenerateBoards,
+    closeScriptWizardModal,
+    addItemsToLibrary: legacyAddItemsToLibrary,
+    renderBreakdownTable: legacyRenderBreakdownTable,
+    scheduleFountainRender: legacyScheduleFountainRender,
+  }),
   'visual-wizard-modal': [
     /* Slide 1 — Upload Visual Anchors */
     {
@@ -2280,29 +1900,6 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
   ],
 };
 
-const wizardIndices: Record<string, number> = {};
-
-const DEBUG_SETTINGS_STORAGE_KEYS = [
-  PREFS_KEY,
-  SETUP_COMPLETE_STORAGE_KEY,
-  SETUP_PROGRESS_STORAGE_KEY,
-  AI_API_SETTINGS_STORAGE_KEY,
-  API_KEYS_STORAGE_KEY,
-  PROVIDER_MODEL_CATALOG_STORAGE_KEY,
-  STORYBOARD_GENERATION_MODE_STORAGE_KEY,
-  STORYBOARD_REFERENCE_STORAGE_KEY,
-  SECTION_VISIBILITY_STORAGE_KEY,
-  CONSOLE_HISTORY_STORAGE_KEY,
-];
-
-declare const projectRegistry: Array<{
-  id: string;
-  name: string;
-  settings?: Record<string, unknown>;
-  file?: string;
-}>;
-declare const projectData: { name: string };
-declare const loadProjectFromCineFile: (filename: string) => void;
 declare let currentSceneId: string | undefined;
 declare const currentSceneData: Record<string, { broll?: Array<{ id: number; label: string }> }>;
 declare function addItemsToLibrary(bucket: string, values: string[], icon?: string, desc?: string): void;
@@ -2367,102 +1964,46 @@ export function guideModalStep(delta: number): void {
 /* ── Entry-point wizard navigation (generic + per-modal) ───────────────────── */
 
 function renderEntryWizardSlide(modalId: string, index: number): void {
-  const slides = WIZARD_SLIDES[modalId];
-  const slide = slides?.[index];
-  const modal = document.getElementById(modalId);
-  const titleEl = document.getElementById(`${modalId}-title`);
-  const bodyEl = document.querySelector<CinegenEntryWizardBody>(`#${modalId} cinegen-entry-wizard-body`);
-  const progressEl = document.getElementById(`${modalId}-progress`);
-  const prevBtn = document.getElementById(`${modalId}-prev`) as HTMLButtonElement | null;
-  const nextBtn = document.getElementById(`${modalId}-next`) as HTMLButtonElement | null;
-  if (!slide || !modal || !titleEl || !bodyEl) return;
-
-  wizardIndices[modalId] = index;
-  bodyEl.slides = slides;
-  bodyEl.showSlide(index);
-  titleEl.innerHTML = `<i class="${escHtml(getWizardIcon(modalId))}" aria-hidden="true"></i> ${escHtml(slide.title)}`;
-  if (progressEl) progressEl.textContent = `${index + 1} of ${slides.length}`;
-  if (prevBtn) prevBtn.disabled = index <= 0;
-  if (nextBtn) nextBtn.disabled = index >= slides.length - 1;
-}
-
-function getWizardIcon(modalId: string): string {
-  const map: Record<string, string> = {
-    'script-wizard-modal': 'fa-solid fa-scroll',
-    'visual-wizard-modal': 'fa-solid fa-image',
-    'concept-wizard-modal': 'fa-solid fa-palette',
-    'asset-wizard-modal': 'fa-solid fa-boxes-stacked',
-    'storyboard-wizard-modal': 'fa-solid fa-pen-ruler',
-  };
-  return map[modalId] ?? 'fa-solid fa-wand-magic-sparkles';
-}
-
-function entryWizardStep(modalId: string, delta: number): void {
-  const current = wizardIndices[modalId] ?? 0;
-  const next = current + delta;
-  const slides = WIZARD_SLIDES[modalId];
-  if (!slides || next < 0 || next >= slides.length) return;
-  renderEntryWizardSlide(modalId, next);
-}
-
-async function openEntryWizardModal(modalId: string): Promise<void> {
-  closeAllToolbarSplitMenus();
-  closeAllModalsExcept(modalId);
-  await openModalAsync(modalId);
-  renderEntryWizardSlide(modalId, 0);
+  renderEntryWizardSlideFromService(modalId, index, WIZARD_SLIDES);
 }
 
 export function openScriptWizardModal(): void {
-  resetScriptWizardState();
-  void openEntryWizardModal('script-wizard-modal');
+  openScriptWizardModalFromService(WIZARD_SLIDES);
 }
 export function closeScriptWizardModal(): void {
-  closeModal('script-wizard-modal');
+  closeScriptWizardModalFromService();
 }
 
 export function openVisualWizardModal(): void {
-  void openEntryWizardModal('visual-wizard-modal');
+  openVisualWizardModalFromService(WIZARD_SLIDES);
 }
 export function closeVisualWizardModal(): void {
-  closeModal('visual-wizard-modal');
+  closeVisualWizardModalFromService();
 }
 
 export function openConceptWizardModal(): void {
-  void openEntryWizardModal('concept-wizard-modal');
+  openConceptWizardModalFromService(WIZARD_SLIDES);
 }
 export function closeConceptWizardModal(): void {
-  closeModal('concept-wizard-modal');
+  closeConceptWizardModalFromService();
 }
 
 export function openAssetWizardModal(): void {
-  void openEntryWizardModal('asset-wizard-modal');
+  openAssetWizardModalFromService(WIZARD_SLIDES);
 }
 export function closeAssetWizardModal(): void {
-  closeModal('asset-wizard-modal');
+  closeAssetWizardModalFromService();
 }
 
 export function openStoryboardWizardModal(): void {
-  (window as any).CineGen?.beatBoard?.reset();
-  void openEntryWizardModal('storyboard-wizard-modal');
+  openStoryboardWizardModalFromService(WIZARD_SLIDES);
 }
 export function closeStoryboardWizardModal(): void {
-  closeModal('storyboard-wizard-modal');
-}
-
-export function closeProjectsModal(): void {
-  closeModal('projects-modal');
-}
-
-export function closeSettingsModal(): void {
-  closeModal('settings-modal');
+  closeStoryboardWizardModalFromService();
 }
 
 export function closeAiAssistModal(): void {
   closeModal('ai-assist-modal');
-}
-
-export function closeProjectSettingsModal(): void {
-  closeModal('project-settings-modal');
 }
 
 function launchSettingsAction(actionId: string): void {
@@ -2489,7 +2030,7 @@ export function openAiAssistModal(): void {
 }
 
 export function openWizardsModal(): void {
-  openEntryWizardModal('wizards-modal');
+  openWizardsModalFromService(WIZARD_SLIDES);
 }
 
 export function openMoodBoardsModal(): void {
@@ -2512,7 +2053,7 @@ export function openMoodBoardItemDetail(boardId: string, itemId: string): void {
 }
 
 export function closeWizardsModal(): void {
-  closeModal('wizards-modal');
+  closeWizardsModalFromService();
 }
 
 const WIZARD_ACTIONS: Record<string, () => void> = {
@@ -2524,9 +2065,7 @@ const WIZARD_ACTIONS: Record<string, () => void> = {
 };
 
 export function launchWizardAction(wizardId: string): void {
-  closeWizardsModal();
-  const action = WIZARD_ACTIONS[wizardId];
-  if (action) action();
+  launchWizardActionFromService(wizardId, WIZARD_ACTIONS);
 }
 
 export function launchAiAssistAction(kind: string, actionId: string): void {
@@ -2632,203 +2171,6 @@ export function buildSettingsModalGrid(): void {
   initProjectSettingsAspectToResolutionSync();
 }
 
-function initProjectSettingsAspectToResolutionSync(): void {
-  const aspect = document.getElementById('project-settings-aspect');
-  if (!aspect || aspect.dataset.cgResolutionSync === '1') return;
-  aspect.dataset.cgResolutionSync = '1';
-  aspect.addEventListener('change', () => {
-    const aspectSel = aspect as HTMLSelectElement;
-    const res = document.getElementById('project-settings-resolution') as HTMLSelectElement | null;
-    renderProjectSettingsResolutionSelect(aspectSel.value, res?.value || '');
-  });
-}
-
-function renderProjectSettingsResolutionSelect(
-  aspectValue: string,
-  preferredResolution?: string
-): void {
-  const sel = document.getElementById('project-settings-resolution') as HTMLSelectElement | null;
-  if (!sel || typeof window.getProjectResolutionOptionGroups !== 'function') return;
-  const groups = window.getProjectResolutionOptionGroups(aspectValue);
-  sel.replaceChildren();
-  groups.forEach((group: { groupLabel: string; options: Array<{ value: string; label: string }> }) => {
-    const og = document.createElement('optgroup');
-    og.label = group.groupLabel;
-    group.options.forEach((optDef) => {
-      const o = document.createElement('option');
-      o.value = optDef.value;
-      o.textContent = optDef.label;
-      og.appendChild(o);
-    });
-    sel.appendChild(og);
-  });
-  const want = preferredResolution != null ? String(preferredResolution) : '';
-  const match = want && [...sel.options].some((o) => o.value === want);
-  if (match) {
-    sel.value = want;
-    return;
-  }
-  const first = groups[0]?.options?.[0]?.value;
-  if (first) sel.value = first;
-}
-
-function readProjectSettingsSelectValue(id: string, fallback = ''): string {
-  const el = document.getElementById(id) as HTMLSelectElement | null;
-  return el?.value ?? fallback;
-}
-
-function populateProjectSettingsForm(): void {
-  const active = getActiveProjectRegistryEntry();
-  const settings =
-    typeof window.getActiveProjectSettings === 'function' ? window.getActiveProjectSettings() : {};
-  const hintEl = document.getElementById('project-settings-save-hint');
-  if (hintEl) hintEl.textContent = 'Changes apply to this project only.';
-
-  const labelEl = document.getElementById('project-settings-active-label');
-  if (labelEl && active) {
-    labelEl.textContent = active.name || projectData.name || 'Untitled production';
-  }
-
-  const nameInput = document.getElementById('project-settings-name') as HTMLInputElement | null;
-  if (nameInput) nameInput.value = projectData.name || active?.name || '';
-
-  function applySelect(selectId: string, value: string, fallbackPickFirst?: boolean): void {
-    const sel = document.getElementById(selectId) as HTMLSelectElement | null;
-    if (!sel) return;
-    const exists = [...sel.options].some((o) => o.value === value);
-    if (exists) sel.value = value;
-    else if (fallbackPickFirst && sel.options.length) sel.selectedIndex = 0;
-  }
-
-  applySelect('project-settings-aspect', settings.aspectRatio as string, true);
-  const aspectEl = document.getElementById('project-settings-aspect') as HTMLSelectElement | null;
-  const aspectForRes = aspectEl ? aspectEl.value : (settings.aspectRatio as string);
-  renderProjectSettingsResolutionSelect(aspectForRes, settings.defaultResolution as string);
-  applySelect('project-settings-colorspace', settings.colorSpace as string);
-  applySelect('project-settings-fps', String(settings.frameRate));
-  applySelect('project-settings-tc-mode', (settings.timecodeMode as string) || 'ndf');
-}
-
-export function openProjectSettingsModal(): void {
-  closeAllToolbarSplitMenus();
-  closeAllModalsExcept('project-settings-modal');
-  window.closeAiProvidersModal?.();
-  populateProjectSettingsForm();
-  openModal('project-settings-modal');
-  (document.getElementById('project-settings-name') as HTMLInputElement | null)?.focus?.();
-}
-
-export function saveProjectSettingsModal(): void {
-  const project = getActiveProjectRegistryEntry();
-  const nameEl = document.getElementById('project-settings-name') as HTMLInputElement | null;
-  if (!project || !nameEl) {
-    console.warn('CineGen: cannot save project settings — no active project.');
-    return;
-  }
-
-  const rawName = String(nameEl.value || '').trim();
-  if (!rawName) {
-    nameEl.focus();
-    return;
-  }
-
-  window.ensureProjectSettingsRecord?.(project);
-  const aspectRaw = readProjectSettingsSelectValue('project-settings-aspect', '16:9');
-  project.settings = project.settings || {};
-  project.settings.aspectRatio =
-    typeof window.normalizeProjectAspectRatio === 'function'
-      ? window.normalizeProjectAspectRatio(aspectRaw)
-      : aspectRaw;
-  const resRaw = readProjectSettingsSelectValue('project-settings-resolution');
-  project.settings.defaultResolution =
-    typeof window.normalizeProjectResolutionForAspect === 'function'
-      ? window.normalizeProjectResolutionForAspect(project.settings.aspectRatio as string, resRaw)
-      : resRaw;
-  project.settings.frameRate = readProjectSettingsSelectValue(
-    'project-settings-fps',
-    String(project.settings.frameRate ?? '24')
-  );
-  project.settings.timecodeMode = readProjectSettingsSelectValue(
-    'project-settings-tc-mode',
-    String(project.settings.timecodeMode ?? 'ndf')
-  );
-  project.settings.colorSpace = readProjectSettingsSelectValue(
-    'project-settings-colorspace',
-    String(project.settings.colorSpace ?? 'Rec.709')
-  );
-
-  project.name = rawName;
-  syncActiveProjectName(rawName);
-  persistActiveProjectSettings(activeProjectId);
-  window.updateProjectTreeHeader?.();
-  window.renderProjectsMenu?.();
-
-  const hintEl = document.getElementById('project-settings-save-hint');
-  if (hintEl) hintEl.textContent = 'Saved.';
-  closeProjectSettingsModal();
-}
-
-function renderProjectsModalList(): void {
-  document.querySelector<CinegenProjectsModalList>('cinegen-projects-modal-list')?.refresh();
-}
-
-export function wireProjectsModalList(): void {
-  const list = document.querySelector<CinegenProjectsModalList>('cinegen-projects-modal-list');
-  if (!list || list.dataset.cgProjectOpenWired === '1') return;
-  list.dataset.cgProjectOpenWired = '1';
-  list.addEventListener(CG_PROJECT_OPEN, (e: Event) => {
-    const { projectId } = (e as CustomEvent<CgProjectOpenDetail>).detail;
-    openProjectFromProjectsHub(projectId);
-  });
-}
-
-export function openProjectsModal(): void {
-  closeAllToolbarSplitMenus();
-  closeAllModalsExcept('projects-modal');
-  window.closeAiProvidersModal?.();
-  hydrateProjectRegistryFromPersistence();
-  renderProjectsModalList();
-  openModal('projects-modal');
-}
-
-function openProjectFromProjectsHub(projectId: string): void {
-  const proj = projectRegistry.find((p) => p.id === projectId);
-  if (!proj || projectId === appShellStore.activeProjectId) return;
-  prepareActiveProjectTreeUiForSwitch();
-  resetProjectTreeUiRestoreFlag();
-  if (proj.file) loadProjectFromCineFile(proj.file);
-  const local = !proj.file ? openProjectFromService(projectId) : null;
-  appShellStore.setActiveProjectId(projectId);
-  syncActiveProjectName(projectData.name || local?.name || proj.name);
-  const refresh = window as unknown as Record<string, (() => void) | undefined>;
-  refresh.renderFullTree?.();
-  refresh.renderBreakdownTable?.();
-  refresh.renderStoryboard?.();
-  refresh.renderTimeline?.();
-  refresh.hydrateScriptEditorFromProject?.();
-  window.renderProjectsMenu?.();
-  primePersistedProjectTreeUi(projectId);
-  queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
-  closeProjectsModal();
-}
-
-export function openSettingsModal(): void {
-  closeAllToolbarSplitMenus();
-  closeAllModalsExcept('settings-modal');
-  window.closeAiProvidersModal?.();
-  openModal('settings-modal');
-}
-
-export function syncActiveProjectName(name: string): void {
-  const trimmed = (name || '').trim();
-  if (!trimmed) return;
-  projectData.name = trimmed;
-  const active = projectRegistry.find((p) => p.id === appShellStore.activeProjectId);
-  if (active) active.name = trimmed;
-  window.updateProjectTreeHeader?.();
-  window.dispatchEvent(new CustomEvent('cinegen:project-name-changed', { detail: { name: trimmed } }));
-}
-
 export function importScript(): void {
   closeToolbarSplitMenu('import-split');
   window.triggerFDXImport?.();
@@ -2839,82 +2181,13 @@ export function saveProject(): void {
   alertCG('Project saved.');
 }
 
-export function openDebugGenerationForDebug(): void {
-  openDebugModal();
-}
-
-export function openSetupAssistantForDebug(): void {
-  closeAllToolbarSplitMenus();
-  closeAllModals();
-  window.closeAiProvidersModal?.();
-  void window.openSetupAssistant?.();
-}
-
-export function resetSetupAssistantProgressForDebug(): void {
-  const shouldReset = window.confirm(
-    'Reset Setup Assistant progress and completion state?\n\nThis does not remove provider keys or modality routing settings.'
-  );
-  if (!shouldReset) return;
-
-  storageService.removeItem(SETUP_COMPLETE_STORAGE_KEY);
-  storageService.removeItem(SETUP_PROGRESS_STORAGE_KEY);
-  window.updateSetupIncompleteStatus?.();
-  alertCG('Setup Assistant progress reset.\n\nOpening App Setup Assistant.');
-  openSetupAssistantForDebug();
-}
-
-export async function resetAppSettingsForDebug(): Promise<void> {
-  const shouldReset = window.confirm(
-    'Reset all stored app settings?\n\nThis clears Preferences, Setup Assistant progress, provider credentials, modality routing, and provider model cache.\n\nLocal projects are not removed.'
-  );
-  if (!shouldReset) return;
-
-  (window as Window & { _apiKeysDraftReset?: () => void })._apiKeysDraftReset?.();
-  const clearApiKeys = (window as Window & { clearApiKeys?: () => Promise<void> }).clearApiKeys;
-  const clearAiApiRouting = (window as Window & { clearAiApiRouting?: () => Promise<void> }).clearAiApiRouting;
-  try {
-    await Promise.allSettled([
-      clearApiKeys?.() ?? Promise.resolve(),
-      clearAiApiRouting?.() ?? Promise.resolve(),
-    ]);
-  } catch {
-    // Continue with local reset even if server reset endpoints are unavailable.
-  }
-  DEBUG_SETTINGS_STORAGE_KEYS.forEach((key) => storageService.removeItem(key));
-  window.updateSetupIncompleteStatus?.();
-  alertCG('App settings reset.\n\nThe page will now reload.');
-  window.location.reload();
-}
-
-export function clearProviderModelCacheForDebug(): void {
-  storageService.removeItem(PROVIDER_MODEL_CATALOG_STORAGE_KEY);
-  alertCG('Provider model cache cleared.');
-}
-
-export function logSettingsStorageForDebug(): void {
-  const snapshot = Object.fromEntries(
-    DEBUG_SETTINGS_STORAGE_KEYS.map((key) => [key, storageService.getItem(key)])
-  );
-  console.group('CineGen debug settings snapshot');
-  console.table(snapshot);
-  console.groupEnd();
-  alertCG('Stored settings snapshot logged to the browser console.');
-}
-
-export function reloadAppForDebug(): void {
-  window.location.reload();
-}
-
 export function openSettings(action: string): void {
   if (action === 'project-settings') {
     openProjectSettingsModal();
     return;
   }
   if (action === 'app-setup-assistant') {
-    closeAllToolbarSplitMenus();
-    closeAllModals();
-    window.closeAiProvidersModal?.();
-    void window.openSetupAssistant?.();
+    openSetupAssistantForDebug();
     return;
   }
   if (action === 'ai-providers' || action === 'ai-api' || action === 'api-keys') {
@@ -2961,16 +2234,6 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'asset-wizard-modal' });
   registerModal({ id: 'storyboard-wizard-modal' });
   registerModal({ id: 'moodboard-item-detail', elementId: 'view-moodboard-detail' });
-}
-
-export function openDebugModal(): void {
-  closeAllToolbarSplitMenus();
-  closeAllModalsExcept('debug-modal');
-  openModal('debug-modal');
-}
-
-export function closeDebugModal(): void {
-  closeModal('debug-modal');
 }
 
 export async function openSectionSettingsModal(): Promise<void> {
@@ -3082,13 +2345,6 @@ export function wireToolbarModalDismissals(): void {
     closeAiAssistModal()
   );
 
-  document.querySelectorAll('[data-cg-close="wizards-modal"]').forEach((el) => {
-    el.addEventListener('click', () => closeWizardsModal());
-  });
-  document.querySelector('#wizards-modal .settings-modal-backdrop')?.addEventListener('click', () =>
-    closeWizardsModal()
-  );
-
   document.querySelectorAll('[data-cg-close="project-settings-modal"]').forEach((el) => {
     el.addEventListener('click', () => closeProjectSettingsModal());
   });
@@ -3121,7 +2377,7 @@ export function wireToolbarModalDismissals(): void {
     });
   }
 
-  const PROJECT_ACTIONS: Record<string, () => void> = {
+  const projectActions: Record<string, () => void> = {
     'blank-project': stubNewBlankProject,
     'script-wizard': openScriptWizardModal,
     'visual-wizard': openVisualWizardModal,
@@ -3129,15 +2385,6 @@ export function wireToolbarModalDismissals(): void {
     'asset-wizard': openAssetWizardModal,
     'storyboard-wizard': openStoryboardWizardModal,
   };
-  document.querySelectorAll('[data-project-action]').forEach((el) => {
-    const action = (el as HTMLElement).dataset.projectAction;
-    if (!action || !PROJECT_ACTIONS[action]) return;
-    el.addEventListener('click', PROJECT_ACTIONS[action]);
-  });
-
-  for (const modalId of Object.keys(WIZARD_SLIDES)) {
-    document.getElementById(`${modalId}-prev`)?.addEventListener('click', () => entryWizardStep(modalId, -1));
-    document.getElementById(`${modalId}-next`)?.addEventListener('click', () => entryWizardStep(modalId, 1));
-  }
+  wireWizardNavigationAndActions(WIZARD_SLIDES, projectActions);
 }
 
