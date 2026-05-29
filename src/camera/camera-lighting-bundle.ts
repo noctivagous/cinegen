@@ -3,6 +3,8 @@ import { updateInspector } from '@/components/panels/cinegen-inspector';
 import { previsSelectionState, currentSceneData, styleGuide } from '@/data/project-data';
 import { colorState } from '@/color/color-state';
 import { getShotById } from '@/workspace/shot-frame-bridge';
+import { CG_PREVIS_SELECTION_CHANGED } from '@/events/shell-events';
+import { markProjectDirty } from '@/services/project-service';
 
 /** Camera, lighting and atmosphere option data */
 
@@ -177,12 +179,53 @@ function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): vo
     const idx = scene.coverage.findIndex((s: { id: number }) => s.id === shotId);
     if (idx >= 0) scene.coverage[idx] = shot;
   }
+
+  markProjectDirty(['scenes']);
 }
 
 /** Camera / lighting / atmosphere panel */
 
 // ==================== CAMERA / LIGHTING / ATMOSPHERE VIEW ====================
+/** Read active shot's cinematography metadata into global chip selections */
+export function syncCameraSelectionsFromActiveShot(): void {
+  const sceneId = previsSelectionState.sceneId;
+  const shotId = previsSelectionState.shotId;
+  if (!sceneId || shotId == null) return;
+
+  const shot = getShotById(sceneId, shotId);
+  if (!shot) return;
+
+  const fieldToSection: Record<string, string> = {
+    shotType: 'shotTypes',
+    cameraAngle: 'angles',
+    lightingTechnique: 'lighting',
+    composition: 'composition',
+    cameraMovement: 'movements',
+  };
+
+  cameraLightingSelections = {
+    shotTypes: null,
+    angles: null,
+    lighting: null,
+    composition: null,
+    movements: null,
+    atmosphere: null,
+  };
+
+  for (const [field, section] of Object.entries(fieldToSection)) {
+    const val = (shot as Record<string, unknown>)[field];
+    if (typeof val === 'string') {
+      cameraLightingSelections[section] = val;
+    }
+  }
+
+  if (Array.isArray(shot.atmosphereTags) && shot.atmosphereTags.length) {
+    cameraLightingSelections['atmosphere'] = shot.atmosphereTags[0];
+  }
+}
+
 export function renderCameraLighting(scrollToSection?: string): void {
+  syncCameraSelectionsFromActiveShot();
   const content = document.getElementById('camera-lighting-content');
   if (!content) return;
 
@@ -339,4 +382,11 @@ export function installCameraLightingBundleGlobals(): void {
   w.addAssetToScene = addAssetToScene;
   w.cameraLightingData = cameraLightingData;
   w.cameraLightingSelections = cameraLightingSelections;
+
+  // Auto-sync camera lighting chips when shot selection changes
+  window.addEventListener(CG_PREVIS_SELECTION_CHANGED, () => {
+    syncCameraSelectionsFromActiveShot();
+    renderCameraLighting();
+    updateInspector('camera-lighting', cameraLightingSelections);
+  });
 }

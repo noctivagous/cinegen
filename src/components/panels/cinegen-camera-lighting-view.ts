@@ -1,7 +1,8 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import { colorState } from '@/color/color-state';
+import { styleGuide } from '@/data/project-data';
 
 @customElement('cinegen-camera-lighting-view')
 export class CinegenCameraLightingView extends CgLightElement {
@@ -53,6 +54,7 @@ export class CinegenCameraLightingView extends CgLightElement {
         <span class="cl-prompt-label"><i class="fa-solid fa-film"></i> Shot Config:</span>
         <span id="camera-lighting-prompt-text" class="cl-prompt-text"></span>
       </div>
+      ${this._renderStyleGuideIndicator()}
       <div
         id="camera-lighting-content"
         class="flex-1 overflow-auto p-3"
@@ -73,6 +75,34 @@ export class CinegenCameraLightingView extends CgLightElement {
           ></cg-color-palette>
         </div>
       </details>
+    `;
+  }
+
+  private _renderStyleGuideIndicator() {
+    const hasLighting = !!styleGuide.lightingMood;
+    const hasTone = !!styleGuide.visualTone;
+    const hasLens = !!styleGuide.lensStyle;
+    const hasPalette = styleGuide.colorPalette?.length > 0;
+
+    if (!hasLighting && !hasTone && !hasLens && !hasPalette) {
+      return nothing;
+    }
+
+    const chips: string[] = [];
+    if (hasPalette) chips.push(`Palette: ${styleGuide.colorPalette.join(', ')}`);
+    if (hasLighting) chips.push(`Lighting: ${styleGuide.lightingMood}`);
+    if (hasTone) chips.push(`Tone: ${styleGuide.visualTone}`);
+    if (hasLens) chips.push(`Lens: ${styleGuide.lensStyle}`);
+
+    return html`
+      <div
+        class="flex items-center gap-2 px-3 py-1.5"
+        style="background: var(--bg-surface); border-bottom: 1px solid #333; font-size: 11px;"
+        title="Project style guide values that flow into shot prompts"
+      >
+        <span style="color: #888; white-space: nowrap;"><i class="fa-solid fa-book-open"></i> Style Guide</span>
+        <span style="color: #4c6;">${chips.join(' · ')}</span>
+      </div>
     `;
   }
 }

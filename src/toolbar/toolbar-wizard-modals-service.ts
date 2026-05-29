@@ -133,7 +133,7 @@ export function launchWizardAction(wizardId: string, actions: WizardActions): vo
 
 export function wireWizardNavigationAndActions(
   wizardSlides: WizardSlidesByModal,
-  projectActions: Record<string, () => void>
+  projectActions: Record<string, () => void | Promise<void>>
 ): void {
   document.querySelectorAll('[data-cg-close="wizards-modal"]').forEach((el) => {
     el.addEventListener('click', () => closeWizardsModal());

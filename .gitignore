@@ -15,6 +15,9 @@ backends/.env
 server/keys.json
 server/routing.json
 server/app-state.json
+server/projects/
+server/agents.db
+server/production-context.json
 
 # Vite
 .vite/

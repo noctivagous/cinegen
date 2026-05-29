@@ -408,6 +408,9 @@ export function scheduleScriptEditorProjectSync(): void {
   scriptProjectSyncTimer = setTimeout(() => {
     scriptProjectSyncTimer = null;
     syncScriptEditorToProject();
+    void import('@/services/project-service').then(({ markProjectDirty }) => {
+      markProjectDirty(['screenplay']);
+    });
   }, 250);
 }
 

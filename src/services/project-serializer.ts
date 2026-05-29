@@ -19,11 +19,11 @@ import type { AppliedCineProject } from '@/data/cine-project-loader';
 // NOTE: validateCrossFileIntegrity is currently module-private in cine-project-loader.
 // For real serialization we will either export it or run an equivalent server-side check.
 import { parseCineManifest } from '@/data/cine-project-loader';
+import { validateCrossFileIntegrity } from '@/data/cine-project-validator';
 
 export type SerializeResult = {
   manifest: CineProjectManifest;
   documents: Record<string, string>; // document filename -> serialized JSON content
-  /** true if validateCrossFileIntegrity passed (currently always true until gate is wired) */
   valid: boolean;
   errors: string[];
 };
@@ -111,15 +111,23 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
     [featuresFilename]: JSON.stringify(featuresDoc, null, 2),
   };
 
-  // Validation gate (documented; enforcement comes when validator is shared)
-  const valid = true;
+  // Validation gate
+  let valid = true;
   const errors: string[] = [];
 
-  // Future:
-  // try {
-  //   parseCineManifest(JSON.stringify(manifest), `serializer:${projectId}`);
-  //   validateCrossFileIntegrity({ packageBasename: projectId, scenes: scenesDoc, ... });
-  // } catch (e) { valid = false; errors.push(...) }
+  try {
+    parseCineManifest(JSON.stringify(manifest), `serializer:${projectId}`);
+    validateCrossFileIntegrity({
+      packageBasename: projectId,
+      scenes: scenesDoc,
+      storyboard: storyboardDoc,
+      locations: locationsDoc,
+      characters: charactersDoc,
+    });
+  } catch (e) {
+    valid = false;
+    errors.push(e instanceof Error ? e.message : String(e));
+  }
 
   return { manifest, documents, valid, errors };
 }

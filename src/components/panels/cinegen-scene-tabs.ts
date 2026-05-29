@@ -8,6 +8,7 @@ import { workspaceState } from '@/workspace/workspace-state';
 import { escHtml } from '@/utils/html';
 import { currentSceneData } from '@/data/project-data';
 import { cameraLightingData } from '@/camera/camera-lighting-bundle';
+import { markProjectDirty } from '@/services/project-service';
 import {
   formatShotDisplayLabel,
   getFramesForShot,
@@ -74,6 +75,33 @@ export class CinegenSceneTabs extends CgLightElement {
     const shot = scene.coverage.find((s: SceneShot) => s.id === shotId);
     if (!shot) return;
     (shot as Record<string, unknown>)[field] = value;
+    markProjectDirty(['scenes']);
+    this.requestUpdate();
+  }
+
+  private _renumberShots(sceneId: string): void {
+    const scene = currentSceneData[sceneId];
+    if (!scene || !Array.isArray(scene.coverage)) return;
+    scene.coverage.forEach((shot: SceneShot, idx: number) => {
+      shot.number = idx + 1;
+    });
+  }
+
+  private _reorderShot(sceneId: string, shotId: number, direction: 'up' | 'down'): void {
+    const scene = currentSceneData[sceneId];
+    if (!scene || !Array.isArray(scene.coverage)) return;
+    const idx = scene.coverage.findIndex((s: SceneShot) => s.id === shotId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= scene.coverage.length) return;
+
+    // Swap
+    const temp = scene.coverage[idx];
+    scene.coverage[idx] = scene.coverage[swapIdx];
+    scene.coverage[swapIdx] = temp;
+
+    this._renumberShots(sceneId);
+    markProjectDirty(['scenes']);
     this.requestUpdate();
   }
 
@@ -224,7 +252,7 @@ export class CinegenSceneTabs extends CgLightElement {
       case 2:
         return html`
           <div class="grid grid-cols-2 gap-4">
-            ${scene.coverage.map((shot) => {
+            ${scene.coverage.map((shot, shotIdx) => {
               const sceneId = this._sceneId ?? workspaceState.currentSceneId ?? '';
               const frames = sceneId ? getFramesForShot(sceneId, shot.id) : [];
               const shotLabel =
@@ -240,6 +268,8 @@ export class CinegenSceneTabs extends CgLightElement {
               const movementOptions = cameraLightingData.movements.items.map(
                 (i) => html`<option value=${i.abbr} ?selected=${shot.cameraMovement === i.abbr}>${escHtml(i.abbr)} — ${escHtml(i.name)}</option>`
               );
+              const isFirst = shotIdx === 0;
+              const isLast = shotIdx === scene.coverage.length - 1;
               return html`
                 <div data-ws-inspect-shot=${String(shot.id)} class="storyboard-frame p-2">
                   <div class="frame-image"><i class="fa-solid fa-camera"></i></div>
@@ -255,6 +285,26 @@ export class CinegenSceneTabs extends CgLightElement {
                     ${shot.bestTake
                       ? html`<span class="text-emerald-400 text-[10px]">★ BEST TAKE</span>`
                       : nothing}
+                    <div class="flex gap-1 mt-1">
+                      <button
+                        type="button"
+                        class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400 disabled:opacity-30"
+                        ?disabled=${isFirst}
+                        title="Move shot earlier"
+                        @click=${() => this._reorderShot(sceneId, shot.id, 'up')}
+                      >
+                        <i class="fa-solid fa-arrow-up"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400 disabled:opacity-30"
+                        ?disabled=${isLast}
+                        title="Move shot later"
+                        @click=${() => this._reorderShot(sceneId, shot.id, 'down')}
+                      >
+                        <i class="fa-solid fa-arrow-down"></i>
+                      </button>
+                    </div>
                     <div class="mt-2 space-y-1">
                       <select
                         class="bg-[#1f1f1f] text-[10px] text-[var(--text-dim)] border border-[var(--border)] rounded px-1 py-0.5 w-full"

@@ -88,8 +88,8 @@ Architecture note: canonical static hierarchy lives in `source/src/tree/project-
 - [x] Alt+1…9 hierarchy shortcuts skip disabled top-level sections.
 - [x] Selection reroutes to first enabled node when the current target is hidden after a config change.
 - [x] Start-from-Script wizard enables `production-office` and `scenes` branches after `syncFountainToProject()` via `enableFeatureBranch()`.
-- [ ] Wire `enableFeatureBranch()` (or targeted `enableFeatureIds()`) on other entry wizards when they hydrate departments (Visual-First, Concept/Mood-First, Beat Board, asset import).
-- [ ] Align **Blank project** toolbar action with server path: `stubNewBlankProject()` still uses local `createBlankProject()`; consider routing through `createNewProject()` so every blank project is server-resident with matching `features.cinefeatures`.
+- [x] Wire `enableFeatureBranch()` (or targeted `enableFeatureIds()`) on other entry wizards when they hydrate departments (Visual-First, Concept/Mood-First, Beat Board, asset import).
+- [x] Align **Blank project** toolbar action with server path: `stubNewBlankProject()` now routes through `createNewProject()` so every blank project is server-resident with matching `features.cinefeatures`.
 - [ ] Serializer incremental flush: honor `DIRTY_DOCS` so only changed files (including `features.cinefeatures`) POST on autosave — today flush serializes the full document set.
 - [ ] Add `features.cinefeatures` to bundled sample manifests (optional) so duplicated samples carry explicit feature order.
 - [ ] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
@@ -150,7 +150,9 @@ Architecture note: as this path is built, extract the shot parameter accumulatio
   - [x] `selectCameraItem()` now writes selections directly into the active shot's metadata via `writeSelectionToActiveShot()` (no globals).
   - [x] Writes to: `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, `composition`, `atmosphereTags`.
   - [x] Shot config reflected back into `currentSceneData` for persistence.
-  - [ ] Chip selections do not yet auto-initialize from the active shot when the panel opens (panel reads global `cameraLightingSelections`; two-way sync pending).
+  - [x] Chip selections auto-initialize from the active shot when the panel opens.
+    - `syncCameraSelectionsFromActiveShot()` in `camera-lighting-bundle.ts` reads shot metadata into `cameraLightingSelections` before rendering.
+    - Wired to `previs-selection-changed` event so selecting a different shot updates chips automatically.
 
 - [~] Wire "Build Shot Prompt" through to the Prompt Engineer Agent.
   - [x] `buildCameraPrompt()` now gathers active shot's cinematography parameters first, falling back to global selections.
@@ -172,7 +174,9 @@ Architecture note: as this path is built, extract the shot parameter accumulatio
 
 - [~] Make the shot list table in scene detail editable.
   - [x] Allow inline editing of shot type, angle, and movement via dropdowns in each coverage shot card.
-  - [ ] Allow reordering shots within a scene.
+  - [x] Allow reordering shots within a scene.
+    - Up/down arrow buttons on each coverage shot card in `cinegen-scene-tabs.ts`.
+    - `_reorderShot()` swaps adjacent shots and `_renumberShots()` reassigns sequential shot numbers.
   - [x] Show per-shot generation status badges.
   - [x] Avoid rebuilding the table from a global render function; bind events through module functions.
 
@@ -195,20 +199,22 @@ Architecture note: mood board item types `'image' | 'video' | 'sound' | 'text'` 
   - [x] Each scene gets an empty `sceneReferenceOverrides` entry on sync.
   - [x] `styleGuide` defaults stored in project scaffold (client `createBlankSnapshot` + server `POST /api/projects`).
 
-- [ ] Wire the Concept/Mood-First wizard into mood board state.
+- [x] Wire the Concept/Mood-First wizard into mood board state.
   - The wizard's `moodDescription`, `lightingDesc`, `atmosphereTags`, `atmosphereNotes`, and `colorPalette` fields (already in `concept-wizard-state.ts`) should write directly into the project's `styleGuide` on wizard completion.
   - Extracted palette colors should populate `colorState` so they propagate automatically to the storyboard prompt builder.
   - The wizard's generated images should be added as mood board items of type `'image'`.
+  - Done via `applyConceptWizardSceneKit()` in `concept-wizard-bundle.ts`.
 
-- [ ] Make mood board → style guide → shot prompt a visible data pipeline.
-  - In the Camera/Lighting panel, show an indicator when the active project style guide has color palette or lighting mood values.
-  - When "Build Shot Prompt" is triggered, explicitly incorporate `colorState.getPalette()` and `styleGuide.lightingMood` into the prompt context.
+- [x] Make mood board → style guide → shot prompt a visible data pipeline.
+  - In the Camera/Lighting panel, show an indicator when the active project style guide has color palette or lighting mood values. (Done in `cinegen-camera-lighting-view.ts` `_renderStyleGuideIndicator()`.)
+  - When "Build Shot Prompt" is triggered, explicitly incorporate `colorState.getPalette()` and `styleGuide.lightingMood` into the prompt context. (Done in `camera-lighting-bundle.ts` `buildCameraPrompt()`.)
   - Let users see and override these values per shot without losing the project-level defaults.
 
-- [ ] Add image upload to mood boards.
+- [x] Add image upload to mood boards.
   - Accept drag-drop or file picker for still images (JPG, PNG, WebP).
   - Store as mood board item of type `'image'` with a local file URL.
   - Allow marking any mood board image as a "style reference" that becomes a `refImageUrl` in storyboard prompt generation.
+  - Drag-drop and file picker exist in `cinegen-moodboards-view.ts`. Style reference toggle added to `cinegen-moodboard-item-viewer.ts`; sets `styleGuide.styleReference` which `buildCameraPrompt()` already consumes.
 
 - [ ] Surface mood board in the Beat Board and Visual-First wizards.
   - Beat board entries have a `assetNeeds` field and a camera notes field; link these to mood board items as loose references.
@@ -326,23 +332,25 @@ Rationale: there are five entry wizards (Start-from-Script, Visual-First, Concep
   - Generate a script outline from the visual assets.
   - Produce scene kit (scenes based on identified locations, characters cast from uploaded faces).
 
-- [ ] Complete the Concept/Mood-First wizard.
+- [x] Complete the Concept/Mood-First wizard.
   - Mood description, scene settings, lighting description, atmosphere tags → produce `styleGuide`.
   - Color palette → populate `colorState`.
   - Character archetypes → produce placeholder character entries.
   - Generate 3–5 mood board images from the concept description.
   - Generate a style-locked prompt template for all future shot prompts.
+  - Implemented via `applyConceptWizardSceneKit()` in `concept-wizard-bundle.ts`, called on Slide 8 (Scene Kit Initialization).
 
-- [ ] Complete the Beat Board wizard (8 slides).
+- [x] Complete the Beat Board wizard (8 slides).
   - Story beats with title, description, camera notes, asset needs, and duration.
   - Beat-to-shot mapping: each beat maps to one or more shots with initial cinematography parameters.
   - Import beat board as project Fountain outline and shots.
   - Option to trigger Storyboard Agent on the resulting shots.
+  - Implemented via `applyBeatBoardSceneKit()` in `beat-board-bundle.ts`: generates Fountain from beats, calls `syncFountainToProject()`, enriches scenes with beat-derived shots, and adds characters/locations to asset library. Storyboard Agent trigger added to Slide 7.
 
-- [ ] Add a shared wizard completion hook.
+- [x] Add a shared wizard completion hook.
   - After any wizard completes, call: `syncFountainToProject()` (if screenplay text changed), `enableFeatureBranch()` for departments the wizard touched, autosave, tree refresh, and navigate to the first enabled scene or mood board.
   - No wizard should end on a blank screen.
-  - [x] Start-from-Script step 1 partially implements this (sync + `enableFeatureBranch('production-office'|'scenes')` + tree refresh); shared hook still to extract.
+  - Implemented in `source/src/wizard/wizard-completion-hook.ts` as `runWizardCompletion()`. All five entry wizards (Script, Visual-First, Concept/Mood-First, Asset Import, Beat Board) now use it on scene-kit build.
 
 ---
 
@@ -586,6 +594,192 @@ Rationale: these are not aspirational — they are the checks that confirm the t
 - [ ] `source/server/proxy.js` is split into route-focused modules without duplicating provider or agent route constants.
 - [ ] `npm run build` and `npm run lint:legacy-globals` pass after each PR.
 
+
+---
+
+## Condition Assessment (as of 2026-05-29)
+
+This section is a snapshot of what has been built, what works reliably, and where the known gaps are. It is an honest read of the codebase, not aspirational.
+
+### What Is Solid
+
+**Project foundation.** The three-tier project model is working. Bundled read-only samples load through Vite's `import.meta.glob`. Server-resident writable projects exist in `source/server/projects/` and are created, loaded, and incrementally written via the `GET /api/projects`, `GET /api/projects/:id/load`, `POST /api/projects`, and `POST /api/projects/:id/documents` endpoints in `proxy.js`. The `Duplicate Sample As Local Project` path exercises the full serializer → write → load round-trip and has been verified to work.
+
+**Serializer.** `project-serializer.ts` maps `AppliedCineProject` snapshots to the ten core `.cine` document files: `screenplay.cinescript`, `treatment.cinetreatment`, `storyboard.cinestoryboard`, `scenes.cinescenes`, `breakdown.cinebreakdown`, `characters.cinecharacters`, `locations.cinelocations`, `references.cinereferenceimages`, `style.cinestyle`, and `features.cinefeatures`. These cover the MVP filmmaker loop documents. The AI Director department documents (generation queue, review queue, agent log) and cinematography documents (shot library, camera presets, spatial annotations) are not yet serialized; those paths have explicit TODOs.
+
+**Autosave.** Dirty-document tracking with debounce is in place via `markProjectDirty()` and `triggerProjectSave()` in `project-service.ts`. Write failures surface as a visible "Save failed" badge with console detail. Read-only bundled projects correctly no-op on write paths.
+
+**Validator.** `validateCrossFileIntegrity` in `cine-project-loader.ts` is thorough: it validates referential integrity across scenes, characters, locations, shots, frames, tree nodes, asset detail keys, media paths, and output path status. It runs on every bundled package load. This is a strong foundation.
+
+**Script → project sync.** `syncFountainToProject()` in `source/src/script/script-to-project.ts` deterministically produces scenes, breakdown rows, starter shots (ECU through ELS), character and location placeholders, and mood-board attachment points from a Fountain script with no LLM dependency. The Start-from-Script wizard triggers this on step 1 and enables the right feature branches after sync.
+
+**Shot architecture.** `SceneShot` in `scene-types.ts` carries `shotType`, `cameraAngle`, `cameraMovement`, `lens`, `lightingTechnique`, `composition`, `atmosphereTags`, `status`, `linkedFrameIds`, `linkedClipId`, `linkedAudioId`, and `sceneReferenceSlots`. Coverage shot cards show status badges; inline dropdowns allow editing. Reorder up/down is wired.
+
+**Project Features.** The progressive disclosure system (blank project → Mood Boards only; wizard completion → enable departments) is working end-to-end with `features.cinefeatures` persistence, the modal UI, `Alt+1…9` section jumping respecting disabled sections, and selection rerouting on config change.
+
+**Legacy bridge retirement.** Phase A (SSOT), Phase B (bundle decomposition), and Phase C (provider/settings/status migration) are complete. Lint guards (`check-window-cinegen-writes.mjs`, `check-raw-custom-event-strings.mjs`) enforce no new unguarded globals on committed MVP paths. Phase D (structural cleanup) and Phase E (workspace/storyboard globals) are open.
+
+**Agent layer.** All twelve Mastra agent routes are registered. `agent-context-adapter.ts` maps `ProductionContext` outputs into UI project state. The AI Director review queue UI (`cinegen-review-queue-view`) surfaces `getReviewQueue()` with Approve/Reject controls. Agent health check is wired in the Setup Assistant done step.
+
+### Known Gaps
+
+**Validator enforced on writes.** ✅ Extracted `validateCrossFileIntegrity` and all helpers into `cine-project-validator.ts`. The shared module accepts an optional `packageFileSet`; when omitted, file-existence checks are skipped so it can validate server-resident projects. `project-serializer.ts` now calls the validator in its write gate; failures set `valid = false` and surface the error in `errors`.
+
+**Autosave call sites are solid.** ✅ `markProjectDirty()` now fires from: script editor (`fountain-bundle.ts`), scene detail shot edits and reordering (`cinegen-scene-tabs.ts`), camera/lighting chip selections (`camera-lighting-bundle.ts`), and mood board mutations (`autosaveMoodBoards` in `project-data.ts`).
+
+**Incremental dirty flush not fully wired.** The autosave debounce fires and POSTs documents, but the serializer always includes the full document set in the payload — it does not yet read the `DIRTY_DOCS` set to limit which files are written on each cycle. So every autosave tick writes all ten documents, not just the changed ones. The server-side write is still idempotent and correct, but it is less efficient than the architecture intended.
+
+**Serializer AI Director documents missing.** `generationQueue`, `reviewQueue`, `agentLog`, `costTracking`, `shotLibrary`, `cameraPresets`, and `spatialAnnotations` are not yet serialized. These are listed as explicit TODOs in `project-serializer.ts`. Until they are wired, AI Director state is not persisted across reloads.
+
+**No format version migration.** `parseCineManifest` hard-rejects on any version number other than `2`. There is no migration path. If the format needs to evolve, any package written at version 2 will break unless a migration layer is added first.
+
+**No write atomicity on the server.** `POST /api/projects/:id/documents` writes files one at a time via `fs.promises.writeFile`. A crash or kill signal mid-write leaves the `.cine` directory in a partially-updated state. The async write queue planned in P2 does not yet exist.
+
+**Media URL portability is unresolved.** AI-generated image and video URLs from providers (Fal, Replicate, Runway, etc.) are stored as external URLs that expire. There is no media caching layer, no local copy path, and no import/export media handling yet.
+
+**Import/export not built.** `GET /api/projects/:id/export` and `POST /api/projects/import` do not exist yet. The format and serializer are ready; the server-side zip handling and client UI are P1 work that has not started.
+
+---
+
+## `.cine` Package Architecture: Evaluation and Alternatives
+
+This section evaluates the current `.cine` format architecture honestly — what it does well, where it is fragile, and what alternative or enhancement patterns are worth considering as the format becomes load-bearing for real filmmaker projects.
+
+### The Current Design
+
+The `.cine` package is a directory of JSON text files, each with a domain-specific extension (`.cinescript`, `.cinescenes`, `.cinecharacters`, etc.), anchored by a `cine.manifest.json` that names each document by key. The server reads and writes these files directly via `fs.promises.readFile` / `fs.promises.writeFile`. The Vite build compiles bundled samples via `import.meta.glob` with `?raw` import so they are loaded without a network round-trip.
+
+**Strengths of this design:**
+
+- **Human-readable and git-diffable.** Each `.cine` document is a pretty-printed JSON file. A filmmaker can open the package directory, read the Fountain screenplay directly, inspect their shot list as JSON, and commit changes to version control. This is meaningful for a creative tool where the content matters and where machine-readable formats tend to resist inspection.
+- **Domain isolation by file.** Each document owns exactly one concern. A partial save (script only, or features only) writes one file and leaves all others intact. This is a natural boundary for dirty-document tracking and for import/export validation.
+- **Extension-based type safety.** The `.cinescript` / `.cinescenes` / `.cinecharacters` naming convention gives the validator and loader unambiguous type expectations without embedding a `type` field in every file. `parseCineManifest` and `loadOptionalArrayDoc` enforce this at load time.
+- **Cross-file integrity validation.** `validateCrossFileIntegrity` checks referential integrity across all documents — scene IDs, character IDs, location IDs, shot/frame links, tree node views, media paths — before any package is applied to in-memory state. This is a strong correctness guarantee for bundled samples.
+- **Portable zip format.** Because the package is already a flat directory of text files, zipping it for export is a `tar` or `archiver` call away. The format is self-describing: another CineGen instance (or a text editor) can understand it without a proprietary reader.
+- **Document-per-concern scales naturally.** Adding a new department (e.g. a `vr-previs.cinevr` document) is a manifest key addition plus a loader function. No existing documents are touched.
+
+**Weaknesses of the current implementation:**
+
+1. **Validator is module-private and not called on writes.** The best correctness guarantee in the codebase (`validateCrossFileIntegrity`) is only reachable from inside `cine-project-loader.ts`, which operates on Vite-compiled bundled packages (the `./project-files/` path prefix is hardcoded into the internal `packageFileSet` builder). The serializer cannot call it. Until the validator is refactored into a server-runnable form that operates on plain `Record<string, string>` document payloads rather than on the Vite `import.meta.glob` map, write-time validation cannot be enforced. This is the single largest structural gap.
+
+2. **No write atomicity.** Writing ten files in a `for` loop is not a transaction. A killed process leaves an inconsistent state where, for example, `scenes.cinescenes` is updated but `storyboard.cinestoryboard` is stale. For a creative project that a filmmaker has spent hours building, this is a real risk.
+
+3. **No version migration.** Hard-rejecting on version mismatch with a thrown error is correct for a validator, but unusable for a shipped app. A package written by a slightly older instance of CineGen will fail to open on a newer one, with no path forward.
+
+4. **`unknown[]` and `Record<string, unknown>` are too loose.** The storyboard frames array (`CineProjectStoryboard.frames: unknown[]`), and most of the optional fields on `CineProjectFile`, use the weakest possible TypeScript types. The cross-file validator compensates at load time, but the type system offers no help at mutation or serialization time. When the serializer maps `applied.storyboardFrames ?? []` into the storyboard document, TypeScript accepts anything.
+
+5. **Vite glob coupling.** The loader's `packageRawByPath` map is populated by `import.meta.glob('./project-files/**/*', { query: '?raw' })`. This works perfectly for Vite-compiled bundled samples but is completely unavailable to the server-side `proxy.js`. The server reads `.cine` directories with `fs.promises.readdir` / `fs.promises.readFile`. These two paths are fully parallel, with no shared validation code between them. Any validation improvement in the loader does not automatically apply to server-resident projects.
+
+6. **No content-addressed change detection.** Every autosave cycle serializes all ten documents to JSON strings and POSTs them. There is no check whether the content actually changed since the last write. A filmmaker editing a single shot description causes all ten files to be written, including the Fountain screenplay (potentially many KB) and the full storyboard document.
+
+---
+
+### Alternative Architectures
+
+#### Option A: Keep JSON files, add a server-side validator and staging write (recommended near-term)
+
+This is the lowest-risk path and requires no format change.
+
+**A1 — Refactor the validator into a format-agnostic module.** Extract `validateCrossFileIntegrity` (and its helpers) from `cine-project-loader.ts` into a new `source/src/data/cine-project-validator.ts` that accepts `{ manifest: CineProjectManifest, documents: Record<string, string> }` — the same shape the serializer already produces and the server already writes. This module can be `import`ed by both the client-side loader and the server-side `proxy.js` (or a future route module). The bundled-sample loader calls it with document strings from `packageRawByPath`; the server calls it with strings from `fs.promises.readFile`. One implementation, two call sites.
+
+**A2 — Add write staging for atomicity.** Before writing documents to `source/server/projects/<id>.cine/`, write them to a temporary `.cine.stage/` directory in the same parent. Once all files are written without error, rename `.cine.stage/` to the target `.cine/` directory (on the same filesystem, this is an atomic `rename` on most operating systems). If the write fails midway, the staging directory is abandoned and the committed `.cine/` directory is intact. Node's `fs.promises.rename` is atomic on POSIX when source and destination are on the same mount.
+
+**A3 — Content-hash skip on unchanged documents.** In the serializer, compute a `SHA-256` of each serialized document string before deciding whether to include it in the POST payload. Store the last-written hashes (a small in-memory map per project, persisted as `checksums.json` inside the `.cine/` directory). On autosave, only include documents whose hash has changed. This eliminates redundant writes with no format change and negligible overhead.
+
+**A4 — Formal version migration registry.** Add `source/src/data/cine-migrations/` with numbered modules (`v2-to-v3.ts`, etc.). `parseCineManifest` accepts a `{ migrate: boolean }` option; when true, it runs migrations instead of rejecting on version mismatch. Each migration function receives the raw document strings and returns updated strings, so it operates at the file level before any hydration. Migrations are additive only: they may rename or add keys but never delete data.
+
+This combination — shared validator, staging writes, content hashing, and migration registry — addresses all five weaknesses without changing the format or touching the manifest shape. It is the right first path because it preserves all the current strengths (human-readable, git-diffable, portable) while closing the correctness and atomicity gaps.
+
+---
+
+#### Option B: SQLite per project (strong alternative for performance and concurrency)
+
+LibSQL (used by Mastra for `agents.db`) is already a dependency. A project could be stored as a single `project.db` SQLite file with a `documents` table:
+
+```
+CREATE TABLE documents (
+  key TEXT PRIMARY KEY,  -- 'screenplay', 'scenes', 'characters', etc.
+  content TEXT NOT NULL, -- JSON payload
+  updated_at INTEGER NOT NULL
+);
+```
+
+**Advantages:**
+- **Atomic writes.** `BEGIN; UPDATE documents SET content = ? WHERE key = 'scenes'; UPDATE documents SET content = ? WHERE key = 'storyboard'; COMMIT;` — the whole autosave batch is atomic or not committed at all.
+- **Concurrent write safety.** SQLite's WAL mode handles concurrent readers with a single writer safely. No custom async write queue needed.
+- **Fast selective reads.** `SELECT content FROM documents WHERE key = 'screenplay'` loads only the screenplay; the storyboard is not touched until needed. This is lazy document loading without any architectural complexity.
+- **Change detection built in.** `SELECT updated_at FROM documents WHERE key = ?` before writing lets the autosave skip unchanged documents trivially.
+- **Export is still possible.** On export, `SELECT * FROM documents` plus a Fountain file reconstruction gives back the full package. The zip can still contain JSON files (materialized from the database) so the export format remains human-readable even if the on-disk format is SQLite.
+
+**Disadvantages:**
+- **Loses direct git-diffability.** A SQLite binary is not human-readable. Filmmakers who want to version-control their project with git cannot diff a screenplay change as a text diff. This is a meaningful loss for a creative tool.
+- **Requires a binary-to-text round-trip for export.** The readable `.cine` export format needs to be materialized from the database, adding a layer that the current format does not need.
+- **Database tooling cost.** Queries need to be written and maintained. The current format's file-system operations are simpler and easier to audit.
+- **Bundled samples become a different format.** The Vite `import.meta.glob` path for bundled samples cannot load SQLite databases at build time; samples would need to be stored differently from user projects (the current design actually handles this elegantly because everything is text).
+
+**Recommendation:** SQLite is worth reconsidering if CineGen gains multi-user or cloud sync requirements, where atomic write guarantees are non-negotiable and binary storage is acceptable. For the current local-dev, single-filmmaker, single-machine context, the atomicity problem is better solved with staging writes (Option A2), which costs nothing in tooling complexity.
+
+---
+
+#### Option C: Event-sourced append-only log (powerful but high complexity)
+
+Instead of saving document snapshots, record every mutation as an event:
+
+```json
+{ "id": "evt-001", "ts": 1748500000, "type": "shot.created", "sceneId": "scene01", "shotId": 3, "payload": { ... } }
+{ "id": "evt-002", "ts": 1748500001, "type": "shot.updated", "shotId": 3, "field": "shotType", "value": "CU" }
+```
+
+The project state is the result of replaying all events from the beginning (or from the last snapshot checkpoint).
+
+**Advantages:**
+- **Perfect undo history.** Every change is recorded; undo is replaying to an earlier point.
+- **Zero write conflicts.** Appending to an event log is safe under concurrent writes; there is no file that needs to be fully replaced.
+- **Agent auditability.** Every agent action, every human override, every shot parameter change has a named event and timestamp. This is exactly what the AI Director department needs.
+- **Natural streaming.** Events can be streamed over WebSocket to a second browser window (real-time collaboration).
+
+**Disadvantages:**
+- **Load time grows with project age.** Replaying 50,000 events to open a project is unacceptable. Requires checkpointing — periodic snapshots that restart the replay — which is the current snapshot model re-introduced as a dependency.
+- **Massive schema complexity.** Every mutation type needs an event schema, a reducer, a migration path when the event schema changes, and a snapshot format. The current codebase has ten document types; an event-sourced system has potentially fifty event types.
+- **No human-readable at rest.** An event log is cryptic without a tool to replay and display it.
+
+**Recommendation:** Do not adopt full event sourcing for the core project format. However, adopt the *pattern* selectively for the AI Director department: the `agentLog` document in `.cine` is already an append-only log of agent actions, and the review queue and generation queue are already event-like. These can grow into a lightweight event stream for the agent layer without touching the screenplay, shot, or character documents.
+
+---
+
+#### Option D: Zod schemas as the single source of truth (high-value enhancement, no format change)
+
+The current validator in `cine-project-loader.ts` is ~500 lines of imperative `assertObject` / `assertStringField` / `assertArray` calls. Zod is already a dependency (used by the Mastra agent tools). Replacing the bespoke validator with Zod schemas would give:
+
+- **TypeScript types inferred automatically.** `z.infer<typeof CineScenesSchema>` replaces `Record<string, unknown>`. Every document type becomes a strict TypeScript type without manual declaration.
+- **Declarative and readable.** A Zod schema for a scene document is 20 lines of `z.object()` definitions rather than 80 lines of imperative checks.
+- **Better error messages.** Zod's parse errors include the path to the failing field (e.g. `scenes.scene01.coverage[2].shotType: expected string, got undefined`). The current validator is good, but Zod would be consistently structured.
+- **Shared between client and server.** The Zod schemas live in `source/src/data/cine-schemas.ts`, imported by the client loader, the client serializer, and the server route handler (via `source/server/` imports or a copied module). One canonical definition.
+- **Easy version migration.** A migration from v2 to v3 is a Zod transform: `CineManifestSchemaV2.transform(v3upgrader)`. The output is typed.
+
+The migration path: introduce Zod schemas alongside the existing imperative validator; have the validator delegate to Zod; remove the imperative code as confidence grows. The format does not change at all — only the implementation of the validator changes.
+
+---
+
+### What To Keep As-Is
+
+The manifest-plus-documents directory structure is the right shape. It gives portability (a `.cine` package is inspectable in any text editor), natural domain separation (one file per concern), and an obvious zip-for-export path. The `.cinescript` / `.cinescenes` extension naming is clear and makes file type identification obvious in a file browser. The `CINE_PROJECT_FORMAT` / `CINE_PROJECT_VERSION` fields in the manifest are correct anchors for future format evolution. None of these need to change.
+
+The cross-file integrity validator is one of the strongest parts of the codebase. The concept — that a package is not valid unless all inter-document references are consistent — is exactly right. The implementation gap is only that it cannot currently be called from write paths. Solving that structural coupling (Option A1) makes the existing validator 10× more valuable without rewriting it.
+
+### Priority Sequence
+
+Given the current state, the recommended order for `.cine` architecture work is:
+
+1. **A1 first.** Extract the validator into a shared module callable from both client loader and server write path. This closes the biggest correctness gap and makes the foundation trustworthy.
+2. **A2 next.** Add staging-directory atomic writes to the server. This makes autosave crash-safe.
+3. **A3 opportunistically.** Add content-hash skip when implementing the incremental dirty flush (they solve the same problem together: write fewer bytes, write smarter).
+4. **D in parallel.** Introduce Zod schemas for the three highest-traffic documents (`cinescenes`, `cinecharacters`, `cinelocations`) when those documents are next touched. Let the schema coverage grow with feature work rather than as a separate migration effort.
+5. **A4 when format version bumps.** Add the migration registry the first time the manifest version needs to change. Do not add it speculatively.
+6. **B only if multi-user becomes a goal.** SQLite per-project is the right move if concurrent writers or cloud sync become requirements. It is not the right move now.
+7. **C never for the core format.** Event sourcing is worth adopting for the AI Director agent log (`agentLog` document) as that domain is naturally append-only. The screenplay, shot list, character, and scene documents should remain snapshots.
+
+---
 
 ## Extra Notes on Terminology
 

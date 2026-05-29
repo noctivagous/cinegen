@@ -9,6 +9,9 @@ export const CG_WORKSPACE_VIEW_CHANGE = 'cg-workspace-view-change';
 /** Workspace: scene detail inner tab changed (overview, master shot, …). */
 export const CG_WORKSPACE_SCENE_TAB = 'cg-workspace-scene-tab';
 
+/** Previs: shot / frame selection changed. */
+export const CG_PREVIS_SELECTION_CHANGED = 'previs-selection-changed';
+
 export interface CgTreeNodeSelectDetail {
   name: string;
   type: string;

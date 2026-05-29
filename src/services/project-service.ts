@@ -74,7 +74,7 @@ type PersistedProjectSettingsEntry = {
   updatedAt: string;
 };
 
-function buildNextUntitledName(): string {
+export function buildNextUntitledName(): string {
   const base = 'Untitled Production';
   const taken = new Set(
     projectRegistry.map((project) => String(project.name || '').trim().toLowerCase()).filter(Boolean)

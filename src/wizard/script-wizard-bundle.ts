@@ -17,7 +17,7 @@ import {
   getProductionContext,
 } from '@/services/ai/agents-service';
 import { applyProductionContext } from '@/services/agent-context-adapter';
-import { enableFeatureBranch } from '@/services/project-features-service';
+import { runWizardCompletion } from '@/wizard/wizard-completion-hook';
 
 interface ScriptWizardDeps {
   createNewProject: (name: string, opts?: { screenplay?: string; entryMode?: string }) => Promise<{ id: string; name: string } | null>;
@@ -34,8 +34,6 @@ interface ScriptWizardDeps {
   renderBreakdownTable: () => void;
   scheduleFountainRender: () => void;
   syncFountainToProject: (text: string, projectId: string) => { characters: string[]; locations: string[] };
-  requestProjectTreeRefresh: () => void;
-  markProjectDirty: (docs: string[]) => void;
 }
 
 interface WizardSlide {
@@ -93,14 +91,16 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
           state.detectedCharacters = syncResult.characters;
           state.detectedLocations = syncResult.locations;
 
-          enableFeatureBranch('production-office');
-          enableFeatureBranch('scenes');
+          runWizardCompletion({
+            projectId: created.id,
+            featureBranches: ['production-office', 'scenes'],
+            dirtyDocs: ['screenplay', 'scenes', 'breakdown', 'characters', 'locations', 'features'],
+            fountainText: state.scriptText,
+            flushSnapshot: true,
+          });
 
-          deps.requestProjectTreeRefresh();
-          deps.renderBreakdownTable?.();
-          deps.scheduleFountainRender();
           deps.renderProjectsModalList();
-          deps.markProjectDirty(['screenplay', 'scenes', 'breakdown', 'characters', 'locations', 'features']);
+          deps.scheduleFountainRender();
           deps.renderEntryWizardSlide('script-wizard-modal', 1);
         };
         return html`

@@ -154,3 +154,192 @@ export function buildBbImportPayload(): {
     },
   };
 }
+
+/**
+ * Generate a Fountain-format outline from beats, sync it to project state,
+ * and map each beat to shots with cinematography parameters.
+ */
+export function applyBeatBoardSceneKit(projectId: string): {
+  fountainText: string;
+  scenesCreated: number;
+  shotsCreated: number;
+  charactersAdded: number;
+  locationsAdded: number;
+} {
+  const s = _state;
+  const beats = s.beats;
+  const chars = s.characters;
+  const locs = s.locations;
+
+  // 1. Build Fountain outline from beats
+  const lines: string[] = [];
+  const usedLocs = new Set<string>();
+
+  for (let i = 0; i < beats.length; i++) {
+    const beat = beats[i];
+    const loc = locs[i % locs.length]?.name || 'UNKNOWN LOCATION';
+    const intExt = locs[i % locs.length]?.intExt || 'INT/EXT';
+    const time = 'DAY'; // default; could be inferred from mood later
+    usedLocs.add(loc);
+
+    lines.push('');
+    lines.push(`${intExt.toUpperCase()}. ${loc.toUpperCase()} — ${time}`);
+    lines.push('');
+    lines.push(`_${beat.title}_`);
+    lines.push('');
+    if (beat.description) {
+      lines.push(beat.description);
+      lines.push('');
+    }
+    if (beat.cameraNotes) {
+      lines.push(`/* ${beat.cameraNotes} */`);
+      lines.push('');
+    }
+  }
+
+  const fountainText = lines.join('\n').trim();
+
+  // 2. Sync to project via deterministic pipeline
+  const { syncFountainToProject } = require('@/script/script-to-project') as typeof import('@/script/script-to-project');
+  const syncResult = syncFountainToProject(fountainText, projectId);
+
+  // 3. Enrich scenes with beat-to-shot mapping
+  const { currentSceneData } = require('@/data/project-data') as typeof import('@/data/project-data');
+  const scenes = Object.values(currentSceneData as Record<string, any>);
+  let shotsCreated = syncResult.shotsCreated;
+
+  for (let i = 0; i < beats.length && i < scenes.length; i++) {
+    const beat = beats[i];
+    const scene = scenes[i];
+    if (!scene) continue;
+
+    // Add beat-derived shots based on camera notes
+    const camNotes = beat.cameraNotes?.toLowerCase() || '';
+    const extraShots: any[] = [];
+    const baseId = Date.now() + i * 100;
+
+    if (camNotes.includes('close') || camNotes.includes('detail')) {
+      extraShots.push({
+        id: baseId,
+        number: (scene.coverage?.length || 0) + 1,
+        type: 'Insert',
+        previsRole: 'coverage',
+        label: `${beat.title} — Detail`,
+        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        durationSeconds: beat.durationSeconds || 5,
+        shotType: 'CU',
+        cameraAngle: 'Eye-Level',
+        cameraMovement: 'Static',
+        lens: 'Medium (50mm)',
+        lightingTechnique: 'Practical',
+        composition: 'Depth of Field',
+        status: 'planned',
+        beatId: beat.id,
+      });
+    }
+    if (camNotes.includes('wide') || camNotes.includes('establish')) {
+      extraShots.push({
+        id: baseId + 1,
+        number: (scene.coverage?.length || 0) + 1,
+        type: 'Coverage',
+        previsRole: 'coverage',
+        label: `${beat.title} — Wide`,
+        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        durationSeconds: beat.durationSeconds || 5,
+        shotType: 'WS',
+        cameraAngle: 'High Angle',
+        cameraMovement: 'Static',
+        lens: 'Wide (14–24mm)',
+        lightingTechnique: 'Hard',
+        composition: 'Leading Lines',
+        status: 'planned',
+        beatId: beat.id,
+      });
+    }
+    if (camNotes.includes('move') || camNotes.includes('track') || camNotes.includes('dolly')) {
+      extraShots.push({
+        id: baseId + 2,
+        number: (scene.coverage?.length || 0) + 1,
+        type: 'Coverage',
+        previsRole: 'coverage',
+        label: `${beat.title} — Tracking`,
+        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        durationSeconds: beat.durationSeconds || 5,
+        shotType: 'MS',
+        cameraAngle: 'Eye-Level',
+        cameraMovement: 'Tracking',
+        lens: 'Standard (35mm)',
+        lightingTechnique: 'Mixed',
+        composition: 'Rule of Thirds',
+        status: 'planned',
+        beatId: beat.id,
+      });
+    }
+
+    if (!extraShots.length) {
+      // Default: at least one beat-specific shot
+      extraShots.push({
+        id: baseId,
+        number: (scene.coverage?.length || 0) + 1,
+        type: 'Coverage',
+        previsRole: 'coverage',
+        label: `${beat.title} — Beat ${i + 1}`,
+        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        durationSeconds: beat.durationSeconds || 5,
+        shotType: 'MS',
+        cameraAngle: 'Eye-Level',
+        cameraMovement: 'Static',
+        lens: 'Standard (35mm)',
+        lightingTechnique: 'Mixed',
+        composition: 'Rule of Thirds',
+        status: 'planned',
+        beatId: beat.id,
+      });
+    }
+
+    if (!scene.coverage) scene.coverage = [];
+    scene.coverage.push(...extraShots);
+    shotsCreated += extraShots.length;
+
+    // Tag scene with beat metadata
+    scene.beatTitle = beat.title;
+    scene.beatDuration = beat.durationSeconds;
+  }
+
+  // 4. Add characters / locations to asset library
+  const { assetLibrary: lib } = require('@/data/project-data') as typeof import('@/data/project-data');
+  if (!lib.characters) lib.characters = [];
+  if (!lib.locations) lib.locations = [];
+
+  for (const c of chars) {
+    lib.characters.push({
+      id: c.id,
+      name: c.name,
+      role: 'supporting',
+      desc: c.description || '',
+      type: 'actor',
+      usageRefs: [],
+    });
+  }
+  for (const l of locs) {
+    lib.locations.push({
+      id: l.id,
+      name: l.name,
+      tags: l.intExt,
+      desc: '',
+      usageRefs: [],
+    });
+  }
+
+  return {
+    fountainText,
+    scenesCreated: syncResult.sceneCount,
+    shotsCreated,
+    charactersAdded: chars.length,
+    locationsAdded: locs.length,
+  };
+}
+
+function formatPrevisDuration(seconds: number): string {
+  return `${seconds}s`;
+}

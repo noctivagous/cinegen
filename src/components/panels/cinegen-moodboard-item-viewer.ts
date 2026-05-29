@@ -2,6 +2,7 @@ import { html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import type { MoodBoardItem } from '@/data/project-data';
+import { styleGuide } from '@/data/project-data';
 
 @customElement('cinegen-moodboard-item-viewer')
 export class CinegenMoodboardItemViewer extends CgLightElement {
@@ -19,16 +20,41 @@ export class CinegenMoodboardItemViewer extends CgLightElement {
       return html`<div class="moodboard-item-viewer-empty">No item selected.</div>`;
     }
 
+    const isStyleRef = styleGuide.styleReference === item.source;
+
     return html`
       <div class="moodboard-item-viewer-meta">
         <span class="moodboard-item-viewer-label">${item.label}</span>
         <span class="moodboard-item-viewer-type">${item.type}</span>
         ${item.notes ? html`<span class="moodboard-item-viewer-notes">${item.notes}</span>` : nothing}
+        ${item.type === 'image'
+          ? html`
+              <button
+                type="button"
+                class="toolbar-btn text-xs"
+                style="margin-left:auto;"
+                title=${isStyleRef ? 'Unset as project style reference' : 'Use this image as the project style reference'}
+                @click=${() => this._toggleStyleReference(item)}
+              >
+                <i class="fa-solid ${isStyleRef ? 'fa-bookmark' : 'fa-bookmark-o'}"></i>
+                ${isStyleRef ? 'Style Reference (Active)' : 'Set as Style Reference'}
+              </button>
+            `
+          : nothing}
       </div>
       <div class="moodboard-item-viewer-stage">
         ${this._renderMedia(item)}
       </div>
     `;
+  }
+
+  private _toggleStyleReference(item: MoodBoardItem): void {
+    if (styleGuide.styleReference === item.source) {
+      styleGuide.styleReference = '';
+    } else {
+      styleGuide.styleReference = item.source;
+    }
+    this.requestUpdate();
   }
 
   private _renderMedia(item: MoodBoardItem) {

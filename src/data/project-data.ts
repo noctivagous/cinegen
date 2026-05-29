@@ -301,6 +301,9 @@ export function autosaveMoodBoards(): void {
     activeMoodBoardId,
     isBundledCine: Boolean(entry?.file),
   });
+  void import('@/services/project-service').then(({ markProjectDirty }) => {
+    markProjectDirty(['referenceImages']);
+  });
   if (typeof window.refreshProjectTree === 'function') {
     window.refreshProjectTree();
   }

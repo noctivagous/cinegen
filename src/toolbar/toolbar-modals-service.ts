@@ -14,6 +14,7 @@ import {
   WIZARD_ENTRY_TILES,
 } from '@/toolbar/toolbar-data';
 import {
+  buildNextUntitledName,
   createBlankProject,
   createNewProject,
 } from '@/services/project-service';
@@ -141,8 +142,6 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
     renderBreakdownTable,
     scheduleFountainRender,
     syncFountainToProject,
-    requestProjectTreeRefresh,
-    markProjectDirty,
   }),
   'visual-wizard-modal': [
     /* Slide 1 — Upload Visual Anchors */
@@ -580,6 +579,13 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
               console.warn('[vw] Scene kit save warning:', err);
             }
           }
+          const { runWizardCompletion } = await import('@/wizard/wizard-completion-hook');
+          runWizardCompletion({
+            projectId: state.projectId,
+            featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
+            dirtyDocs: ['features', 'characters', 'locations', 'style'],
+            flushSnapshot: true,
+          });
           renderEntryWizardSlide('visual-wizard-modal', 7);
         };
         return html`
@@ -1144,7 +1150,7 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
       renderFn: (host) => {
         const cw = (window as any).CineGen?.conceptWizard;
         const s = cw?.getState() ?? {};
-        const onBuildKit = () => {
+        const onBuildKit = async () => {
           const payload = cw?.buildConceptPayload();
           const { updateProductionContext } = (window as any).CineGen?.agents ?? {};
           if (updateProductionContext && payload) {
@@ -1170,6 +1176,16 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
             });
           }
           cw?.setKitBuilt();
+          const { applyConceptWizardSceneKit } = await import('@/wizard/concept-wizard-bundle');
+          const kitResult = applyConceptWizardSceneKit();
+          console.log('[concept-wizard] scene kit applied:', kitResult);
+          const { runWizardCompletion } = await import('@/wizard/wizard-completion-hook');
+          runWizardCompletion({
+            projectId: s.projectId,
+            featureBranches: ['mood-boards', 'production-office', 'scenes', 'casting', 'production-design', 'cinematography'],
+            dirtyDocs: ['features', 'style', 'characters', 'locations'],
+            flushSnapshot: true,
+          });
           host.requestUpdate();
         };
         return html`
@@ -1450,7 +1466,7 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
       renderFn: (host) => {
         const aw = (window as any).CineGen?.assetWizard;
         const s = aw?.getState() ?? {};
-        const onBuildKit = () => {
+        const onBuildKit = async () => {
           const payload = aw?.buildImportPayload();
           if (!payload || (!payload.characters?.length && !payload.locations?.length && !payload.props?.length)) {
             alertCG('No assets selected. Go back and select at least one asset to import.');
@@ -1475,6 +1491,13 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
             persistActiveProjectSettings(s.projectId);
           }
           aw?.setKitBuilt();
+          const { runWizardCompletion } = await import('@/wizard/wizard-completion-hook');
+          runWizardCompletion({
+            projectId: s.projectId,
+            featureBranches: ['production-office', 'casting', 'production-design', 'mood-boards'],
+            dirtyDocs: ['features', 'characters', 'locations', 'props'],
+            flushSnapshot: true,
+          });
           host.requestUpdate();
         };
         const counts = {
@@ -1859,14 +1882,35 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
         const beats = s.beats ?? [];
         const chars = s.characters ?? [];
         const locs = s.locations ?? [];
-        const onBuildKit = () => {
-          const payload = bb?.buildImportPayload();
-          if (!payload || (!payload.characters?.length && !payload.locations?.length)) {
-            (window as any).alertCG?.('No assets to import.');
+        const onBuildKit = async () => {
+          if (!beats.length) {
+            (window as any).alertCG?.('Add at least one beat first.');
             return;
           }
+          const { applyBeatBoardSceneKit } = await import('@/wizard/beat-board-bundle');
+          const kitResult = applyBeatBoardSceneKit(s.projectId || 'proj');
+          console.log('[beat-board] scene kit applied:', kitResult);
           bb?.setKitBuilt();
+          const { runWizardCompletion } = await import('@/wizard/wizard-completion-hook');
+          runWizardCompletion({
+            projectId: s.projectId || 'proj',
+            featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
+            dirtyDocs: ['features', 'scenes', 'characters', 'locations', 'style', 'screenplay'],
+            flushSnapshot: true,
+          });
           host.requestUpdate();
+        };
+        const onGenerateStoryboards = async () => {
+          if (!beats.length) { (window as any).alertCG?.('Add at least one beat first.'); return; }
+          try {
+            const { generateStoryboardFrames } = await import('../services/ai/agents-service');
+            await generateStoryboardFrames(s.projectId || 'proj');
+            bb?.setStoryboardsGenerated(beats.length);
+            host.requestUpdate();
+          } catch (err) {
+            console.error('[beat-board] storyboard error:', err);
+            (window as any).alertCG?.('Failed to generate storyboard frames.');
+          }
         };
         return html`
           <div class="script-wizard-form">
@@ -1880,6 +1924,13 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
             </div>
             ${s.sceneKitBuilt ? html`
               <div style="color:#4c6;margin-bottom:12px;"><i class="fa-solid fa-check-circle"></i> Scene kit built successfully!</div>
+              ${s.storyboardsGenerated ? html`
+                <div style="color:#4c6;margin-bottom:8px;"><i class="fa-solid fa-check-circle"></i> ${s.storyboardFrameCount} storyboard frame(s) generated</div>
+              ` : html`
+                <button class="toolbar-btn btn-ai" @click=${onGenerateStoryboards} style="width:100%;margin-bottom:8px;">
+                  <i class="fa-solid fa-film"></i> Generate Storyboard Frames from Beats
+                </button>
+              `}
             ` : html`
               <button class="toolbar-btn btn-ai" @click=${onBuildKit} style="width:100%;margin-bottom:8px;">
                 <i class="fa-solid fa-boxes-stacked"></i> Build Scene Kit
@@ -2196,18 +2247,17 @@ export function exportScreenplay(): void {
   window.saveFountainFile?.();
 }
 
-export function stubNewBlankProject(): void {
-  const created = createBlankProject();
+export async function stubNewBlankProject(): Promise<void> {
+  const created = await createNewProject(buildNextUntitledName());
+  if (!created) {
+    alertCG('Failed to create blank project. Check the server is running.');
+    return;
+  }
   appShellStore.setActiveProjectId(created.id);
   syncActiveProjectName(created.name);
   window.renderProjectsMenu?.();
   renderProjectsModalList();
-  const refresh = window as unknown as Record<string, (() => void) | undefined>;
-  refresh.renderFullTree?.();
-  refresh.renderBreakdownTable?.();
-  refresh.renderStoryboard?.();
-  refresh.renderTimeline?.();
-  refresh.hydrateScriptEditorFromProject?.();
+  requestProjectTreeRefresh();
   closeProjectsModal();
 }
 
@@ -2394,7 +2444,7 @@ export function wireToolbarModalDismissals(): void {
     });
   }
 
-  const projectActions: Record<string, () => void> = {
+  const projectActions: Record<string, () => void | Promise<void>> = {
     'blank-project': stubNewBlankProject,
     'script-wizard': openScriptWizardModal,
     'visual-wizard': openVisualWizardModal,
