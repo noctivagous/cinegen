@@ -7,6 +7,7 @@ import { activeProjectId, getActiveProjectRegistryEntry } from '@/data/project-d
 import { closeAllModalsExcept, closeModal, openModal } from '@/services/modal-manager';
 import {
   hydrateProjectRegistryFromPersistence,
+  loadServerProject,
   openProject as openProjectFromService,
   persistActiveProjectSettings,
   prepareActiveProjectTreeUiForSwitch,
@@ -55,9 +56,32 @@ export function renderProjectsModalList(): void {
   document.querySelector<CinegenProjectsModalList>('cinegen-projects-modal-list')?.refresh();
 }
 
-function openProjectFromProjectsHub(projectId: string): void {
+async function openProjectFromProjectsHub(projectId: string): Promise<void> {
+  if (projectId === appShellStore.activeProjectId) return;
+
+  // Try server-resident project first (new P0 tier)
+  const serverResult = await loadServerProject(projectId);
+  if (serverResult) {
+    prepareActiveProjectTreeUiForSwitch();
+    resetProjectTreeUiRestoreFlag();
+    appShellStore.setActiveProjectId(projectId);
+    syncActiveProjectName(projectData.name || serverResult.name);
+    const refresh = window as unknown as Record<string, (() => void) | undefined>;
+    refresh.renderFullTree?.();
+    refresh.renderBreakdownTable?.();
+    refresh.renderStoryboard?.();
+    refresh.renderTimeline?.();
+    refresh.hydrateScriptEditorFromProject?.();
+    window.renderProjectsMenu?.();
+    primePersistedProjectTreeUi(projectId);
+    queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
+    closeProjectsModal();
+    return;
+  }
+
+  // Fallback to existing registry entry (bundled sample or flat local)
   const proj = projectRegistry.find((p) => p.id === projectId);
-  if (!proj || projectId === appShellStore.activeProjectId) return;
+  if (!proj) return;
   prepareActiveProjectTreeUiForSwitch();
   resetProjectTreeUiRestoreFlag();
   if (proj.file) loadProjectFromCineFile(proj.file);
@@ -82,7 +106,7 @@ export function wireProjectsModalList(): void {
   list.dataset.cgProjectOpenWired = '1';
   list.addEventListener(CG_PROJECT_OPEN, (e: Event) => {
     const { projectId } = (e as CustomEvent<CgProjectOpenDetail>).detail;
-    openProjectFromProjectsHub(projectId);
+    void openProjectFromProjectsHub(projectId);
   });
 }
 

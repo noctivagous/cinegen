@@ -102,6 +102,9 @@ export class CinegenStatusBar extends CgLightElement {
       <div class="status-item">
         <span>Scenes: ${this._sceneCount} • Takes rendered: ${this._takeCount}</span>
       </div>
+      <div class="status-item" id="save-status-item" title="Autosave status for server-resident projects">
+        <span id="save-status-badge" class="save-status-badge save-status-idle"></span>
+      </div>
       <div class="flex-1"></div>
       <div class="status-item">
         <span id="current-view-label">${this._viewLabel}</span>

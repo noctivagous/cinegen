@@ -16,7 +16,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   {
     id: 'getting-started',
     title: 'Getting Started — Project & Hierarchy',
-    body: `<p>On a physical production, the producer opens a project folder: script, schedules, contacts, and department bibles. Here, <strong>Load Project</strong> restores your full AI generation history, references, and locks; <strong>Save</strong> commits the same.</p>
+    body: `<p>On a physical production, the producer opens a project folder: script, schedules, contacts, and department guides. Here, <strong>Load Project</strong> restores your full AI generation history, references, and locks; <strong>Save</strong> commits the same.</p>
 <p>The hierarchy header shows your project title. Top-level sections—Pre-Production, Production Design, Sound, Scenes, Assembly—are color-coded so you can scan the pipeline at a glance. Expand a section to open its tools; the inspector on the right shows details for whatever you select.</p>`,
     tip: 'Use the tree to switch views. Try <strong>Script + Storyboard</strong> under Pre-Production for the combined writing and boarding layout.',
   },

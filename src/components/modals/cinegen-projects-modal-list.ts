@@ -8,10 +8,19 @@ import { projectRegistry } from '@/data/project-data';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
+import { duplicateBundledProject } from '@/services/project-service';
 
 export const CG_PROJECT_OPEN = 'cg-project-open';
 
 export type CgProjectOpenDetail = { projectId: string };
+
+export type ProjectListItem = {
+  id: string;
+  name: string;
+  file?: string;
+  writable?: boolean;
+  lastModified?: string;
+};
 
 /** Recent projects list in the projects hub modal. */
 @customElement('cinegen-projects-modal-list')
@@ -19,15 +28,17 @@ export class CinegenProjectsModalList extends CgLightElement {
   @consume({ context: appShellStoreContext })
   private _shellStore?: AppShellStore;
 
-  @state() private _projects = [...projectRegistry];
+  @state() private _projects: ProjectListItem[] = [];
 
   private _shellUnsub: (() => void) | null = null;
+  private _loading = false;
 
   connectedCallback(): void {
     super.connectedCallback();
     this.classList.add('projects-modal-project-list');
     this.id = 'projects-modal-list';
     this._shellUnsub = bindAppShellToHost(this, () => this._shellStore ?? appShellStore);
+    this.refresh();
   }
 
   disconnectedCallback(): void {
@@ -36,8 +47,42 @@ export class CinegenProjectsModalList extends CgLightElement {
     this._shellUnsub = null;
   }
 
-  refresh(): void {
-    this._projects = [...projectRegistry];
+  async refresh(): Promise<void> {
+    // Registry now contains bundled samples (have .file) + any flat local projects (no .file)
+    const registryItems: ProjectListItem[] = projectRegistry.map((p) => ({
+      id: p.id,
+      name: p.name,
+      file: p.file,
+      // Writable unless it's a Vite-bundled sample file
+      writable: !p.file,
+    }));
+
+    // Fetch server-resident .cine projects (writable)
+    let server: ProjectListItem[] = [];
+    try {
+      this._loading = true;
+      const res = await fetch('/api/projects');
+      if (res.ok) {
+        const data = await res.json();
+        server = (data.projects || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          writable: true,
+          lastModified: p.lastModified,
+        }));
+      }
+    } catch {
+      // network fail — continue with registry items only
+    } finally {
+      this._loading = false;
+    }
+
+    // Merge preferring server list (authoritative for .cine dirs), then registry; de-dupe
+    const byId = new Map<string, ProjectListItem>();
+    for (const p of [...server, ...registryItems]) {
+      if (!byId.has(p.id)) byId.set(p.id, p);
+    }
+    this._projects = Array.from(byId.values());
   }
 
   render() {
@@ -48,24 +93,50 @@ export class CinegenProjectsModalList extends CgLightElement {
       (proj) => proj.id,
       (proj) => {
         const isActive = proj.id === activeId;
+        const isWritable = !!proj.writable;
+        const statusLabel = isWritable ? 'Local' : 'Sample';
         return html`
-          <button
-            type="button"
+          <div
             class=${classMap({
               'projects-modal-project-card': true,
               'is-active': isActive,
             })}
             aria-current=${isActive ? 'true' : 'false'}
-            @click=${() => this._openProject(proj.id)}
           >
-            <div class="projects-modal-thumb" aria-hidden="true"></div>
-            <div class="projects-modal-project-meta">
-              <span class="projects-modal-project-name">${proj.name}</span>
-              <span class="projects-modal-project-hint"
-                >${isActive ? 'Currently open' : 'Open this production'}</span
-              >
-            </div>
-          </button>
+            <button
+              type="button"
+              class="projects-modal-project-card-main"
+              @click=${() => this._openProject(proj.id)}
+            >
+              <div class="projects-modal-thumb" aria-hidden="true"></div>
+              <div class="projects-modal-project-meta">
+                <span class="projects-modal-project-name">${proj.name}</span>
+                <span class="projects-modal-project-hint"
+                  >${isActive ? 'Currently open' : 'Open this production'}</span
+                >
+                <span
+                  class=${classMap({
+                    'project-status-badge': true,
+                    'project-status-badge--local': isWritable,
+                    'project-status-badge--sample': !isWritable,
+                  })}
+                  title=${isWritable ? 'Writable local project' : 'Read-only bundled sample'}
+                >${statusLabel}</span>
+              </div>
+            </button>
+            ${!isWritable
+              ? html`
+                  <button
+                    type="button"
+                    class="projects-modal-project-duplicate-btn"
+                    title="Duplicate as writable local project"
+                    @click=${() => this._duplicateProject(proj.id)}
+                  >
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i> Duplicate
+                  </button>
+                `
+              : ''}
+          </div>
         `;
       }
     );
@@ -79,5 +150,22 @@ export class CinegenProjectsModalList extends CgLightElement {
         detail: { projectId },
       })
     );
+  }
+
+  private async _duplicateProject(projectId: string): Promise<void> {
+    const entry = projectRegistry.find((p) => p.id === projectId);
+    if (!entry?.file) return;
+    const newName = `${entry.name} (Copy)`;
+    const result = await duplicateBundledProject(entry.file, newName);
+    if (result) {
+      await this.refresh();
+      this.dispatchEvent(
+        new CustomEvent<CgProjectOpenDetail>(CG_PROJECT_OPEN, {
+          bubbles: true,
+          composed: true,
+          detail: { projectId: result.id },
+        })
+      );
+    }
   }
 }

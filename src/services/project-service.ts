@@ -8,6 +8,13 @@
  */
 
 import type { AppliedCineProject } from '@/data/cine-project-loader';
+import { buildBlankProjectFeaturesConfig } from '@/tree/project-feature-catalog';
+import {
+  getProjectFeaturesConfig,
+  normalizeConfigForProject,
+  resetProjectFeaturesConfigCache,
+  setProjectFeaturesConfig,
+} from '@/services/project-features-service';
 import {
   DEFAULT_PROJECT_SETTINGS,
   activeProjectId,
@@ -33,6 +40,7 @@ import {
   storyboardFrames,
   storyboardReferenceBank,
   storyboardVisibility,
+  styleGuide,
   timelineClips,
 } from '@/data/project-data';
 import {
@@ -42,6 +50,10 @@ import {
 } from '@/constants/storage-keys';
 import { storageService } from '@/services/persistence';
 import type { TreeNode } from '@/tree/tree-types';
+import { serializeAppliedProject } from '@/services/project-serializer';
+import { updateSaveStatus } from '@/services/status-bar-service';
+import { loadAndApplyCineFile } from '@/data/cine-project-loader';
+import { colorState } from '@/color/color-state';
 
 export type CreateBlankProjectResult = {
   id: string;
@@ -80,6 +92,7 @@ function generateLocalProjectId(): string {
 }
 
 function createBlankSnapshot(projectName: string): AppliedCineProject {
+  const defaultMoodBoardId = `mb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   return {
     projectScreenplay: { format: 'fountain', text: '' },
     projectData: { name: projectName, type: 'project', icon: 'fa-film', expanded: true, children: [] },
@@ -112,7 +125,27 @@ function createBlankSnapshot(projectName: string): AppliedCineProject {
     },
     breakdownData: [],
     assetDetailData: {},
-    referenceImages: { moodBoards: [], activeMoodBoardId: null },
+    referenceImages: {
+      moodBoards: [
+        {
+          id: defaultMoodBoardId,
+          name: 'Visual DNA',
+          items: [],
+          viewMode: 'grid',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+      activeMoodBoardId: defaultMoodBoardId,
+    },
+    styleGuide: {
+      colorPalette: [],
+      lightingMood: '',
+      lensStyle: '',
+      visualTone: '',
+      styleReference: '',
+    },
+    projectFeatures: buildBlankProjectFeaturesConfig(),
   };
 }
 
@@ -193,6 +226,126 @@ function openProjectLocal(projectId: string): CreateBlankProjectResult | null {
 
 export function openProject(projectId: string): CreateBlankProjectResult | null {
   return openProjectLocal(projectId);
+}
+
+/** Load a server-resident writable .cine project via the /api/projects/:id/load endpoint. */
+export async function loadServerProject(projectId: string): Promise<CreateBlankProjectResult | null> {
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/load`);
+    if (!res.ok) {
+      console.warn('CineGen: server project load failed', res.status);
+      return null;
+    }
+    const payload = await res.json();
+    const applied = payload.applied as AppliedCineProject;
+    const meta = payload.meta as { id: string; name: string; writable?: boolean };
+    if (!applied || !meta) return null;
+    applyProjectSnapshot(applied, {
+      id: meta.id,
+      name: meta.name,
+      // no 'file' → marks as server-resident (writable)
+    });
+    updateSaveStatus('idle');
+    // Prime dirty set lightly so an immediate explicit Save or first mutation will flush real docs
+    markProjectDirty(['screenplay']);
+    return { id: meta.id, name: meta.name };
+  } catch (err) {
+    console.warn('CineGen: failed to fetch server project', err);
+    updateSaveStatus('error', 'Failed to load project from server');
+    return null;
+  }
+}
+
+/** Create a new server-resident .cine project, write initial manifest + documents, and load it back. */
+export async function createNewProject(
+  name: string,
+  opts?: { screenplay?: string; entryMode?: string }
+): Promise<CreateBlankProjectResult | null> {
+  const id = `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    const res = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name,
+        screenplay: opts?.screenplay || '',
+        entryMode: opts?.entryMode || 'blank',
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('CineGen: create project failed', res.status, err);
+      updateSaveStatus('error', 'Failed to create project');
+      return null;
+    }
+    // Register in local registry so it appears in the project list immediately
+    const payload = await res.json();
+    if (!projectRegistry.find((p) => p.id === payload.id)) {
+      projectRegistry.push({
+        id: payload.id,
+        name: payload.name,
+        settings: { ...DEFAULT_PROJECT_SETTINGS },
+      });
+    }
+    // Load back through the same server-resident path
+    return await loadServerProject(payload.id);
+  } catch (err) {
+    console.warn('CineGen: failed to create new project', err);
+    updateSaveStatus('error', 'Failed to create project');
+    return null;
+  }
+}
+
+/** Duplicate a bundled read-only sample into a new writable server-resident .cine project. */
+export async function duplicateBundledProject(
+  sampleFile: string,
+  newName: string
+): Promise<CreateBlankProjectResult | null> {
+  try {
+    const applied = loadAndApplyCineFile(sampleFile);
+    const id = `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Create the server-resident project directory
+    const createRes = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name: newName, screenplay: applied.projectScreenplay?.text || '' }),
+    });
+    if (!createRes.ok) {
+      console.warn('CineGen: duplicate project create failed', createRes.status);
+      updateSaveStatus('error', 'Failed to duplicate project');
+      return null;
+    }
+
+    // Serialize the loaded sample state and write documents
+    const { documents } = serializeAppliedProject(applied, id, newName);
+    const docRes = await fetch(`/api/projects/${encodeURIComponent(id)}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents }),
+    });
+    if (!docRes.ok) {
+      console.warn('CineGen: duplicate project document write failed', docRes.status);
+      updateSaveStatus('error', 'Failed to write duplicated project documents');
+      return null;
+    }
+
+    // Register and load back
+    const payload = await createRes.json();
+    if (!projectRegistry.find((p) => p.id === payload.id)) {
+      projectRegistry.push({
+        id: payload.id,
+        name: payload.name,
+        settings: { ...DEFAULT_PROJECT_SETTINGS },
+      });
+    }
+    return await loadServerProject(payload.id);
+  } catch (err) {
+    console.warn('CineGen: failed to duplicate bundled project', err);
+    updateSaveStatus('error', 'Failed to duplicate project');
+    return null;
+  }
 }
 
 function readProjectSettingsStore(): Record<string, PersistedProjectSettingsEntry> {
@@ -297,7 +450,70 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
       moodBoards: structuredClone(moodBoards),
       activeMoodBoardId: activeMoodBoardId,
     },
+    styleGuide: {
+      ...styleGuide,
+      colorPalette: colorState.getPalette(),
+    },
+    projectFeatures: structuredClone(getProjectFeaturesConfig()),
   };
+}
+
+/* ── Dirty tracking + autosave (P0 foundation, server-resident projects only) ── */
+const DIRTY_DOCS = new Set<string>();
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function markProjectDirty(documentTypes: string[]): void {
+  if (!documentTypes?.length) return;
+  documentTypes.forEach((t) => DIRTY_DOCS.add(t));
+  scheduleAutosave();
+}
+
+function scheduleAutosave(delayMs = 1200): void {
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => { void flushDirtyDocuments(); }, delayMs);
+}
+
+export async function flushDirtyDocuments(): Promise<void> {
+  if (!DIRTY_DOCS.size || !activeProjectId) return;
+
+  const entry = projectRegistry.find((p) => p.id === activeProjectId);
+  if (entry?.file) {
+    // Bundled samples are read-only — clear and ignore
+    DIRTY_DOCS.clear();
+    return;
+  }
+
+  updateSaveStatus('saving');
+
+  try {
+    const snapshot = captureRuntimeProjectSnapshot();
+    const { documents } = serializeAppliedProject(snapshot, activeProjectId, String(entry?.name || (projectData as any)?.name || 'Untitled'));
+
+    const res = await fetch(`/api/projects/${encodeURIComponent(activeProjectId)}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Server responded ${res.status}: ${errText}`);
+    }
+
+    DIRTY_DOCS.clear();
+    updateSaveStatus('saved');
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('CineGen autosave failed:', msg);
+    updateSaveStatus('error', msg);
+  }
+}
+
+/** Public trigger for explicit Save (toolbar, keybinding, or wizard completion). */
+export async function triggerProjectSave(): Promise<void> {
+  // Force all docs dirty for a full flush
+  ['screenplay', 'storyboard', 'scenes', 'breakdown', 'characters', 'locations', 'treatment'].forEach((d) => DIRTY_DOCS.add(d));
+  await flushDirtyDocuments();
 }
 
 /** Persist the full runtime snapshot for local projects. */

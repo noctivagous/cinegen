@@ -8,9 +8,19 @@ import {
   type ScriptWizardCharacter,
   type ScriptWizardLocation,
 } from '@/wizard/script-wizard-state';
+import {
+  getAgentHealth,
+  runScriptWizardStep2,
+  buildCharacterGuides,
+  buildLocationGuides,
+  generateStoryboardFrames,
+  getProductionContext,
+} from '@/services/ai/agents-service';
+import { applyProductionContext } from '@/services/agent-context-adapter';
+import { enableFeatureBranch } from '@/services/project-features-service';
 
 interface ScriptWizardDeps {
-  createBlankProject: () => { id: string; name: string };
+  createNewProject: (name: string, opts?: { screenplay?: string; entryMode?: string }) => Promise<{ id: string; name: string } | null>;
   setActiveProjectId: (projectId: string) => void;
   syncActiveProjectName: (name: string) => void;
   setProjectFountainText: (text: string) => void;
@@ -23,6 +33,9 @@ interface ScriptWizardDeps {
   addItemsToLibrary: (bucket: string, values: string[], icon?: string, desc?: string) => void;
   renderBreakdownTable: () => void;
   scheduleFountainRender: () => void;
+  syncFountainToProject: (text: string, projectId: string) => { characters: string[]; locations: string[] };
+  requestProjectTreeRefresh: () => void;
+  markProjectDirty: (docs: string[]) => void;
 }
 
 interface WizardSlide {
@@ -56,28 +69,38 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
       title: 'Script Import & Review',
       renderFn: () => {
         const state = scriptWizardState;
-        const onCreate = () => {
+        const onCreate = async () => {
           if (!state.scriptText.trim()) {
             alertCG('Please paste or type a script first.');
             return;
           }
-          const created = deps.createBlankProject();
+          const created = await deps.createNewProject('Untitled Production', {
+            screenplay: state.scriptText,
+            entryMode: 'script',
+          });
+          if (!created) {
+            alertCG('Project creation failed. Check the server connection.');
+            return;
+          }
           deps.setActiveProjectId(created.id);
           deps.syncActiveProjectName(created.name);
           deps.setProjectFountainText(state.scriptText);
           deps.hydrateScriptEditorFromProject();
-          const refresh = window as unknown as Record<string, (() => void) | undefined>;
-          refresh.renderFullTree?.();
-          refresh.renderBreakdownTable?.();
-          refresh.renderStoryboard?.();
-          refresh.renderTimeline?.();
-          refresh.hydrateScriptEditorFromProject?.();
-          window.renderProjectsMenu?.();
-          deps.renderProjectsModalList();
-          const { characters, locations } = extractEntitiesFromText(state.scriptText);
+
+          // Run deterministic script-to-project sync (scenes, breakdown, shots, assets)
+          const syncResult = deps.syncFountainToProject(state.scriptText, created.id);
           state.projectId = created.id;
-          state.detectedCharacters = characters;
-          state.detectedLocations = locations;
+          state.detectedCharacters = syncResult.characters;
+          state.detectedLocations = syncResult.locations;
+
+          enableFeatureBranch('production-office');
+          enableFeatureBranch('scenes');
+
+          deps.requestProjectTreeRefresh();
+          deps.renderBreakdownTable?.();
+          deps.scheduleFountainRender();
+          deps.renderProjectsModalList();
+          deps.markProjectDirty(['screenplay', 'scenes', 'breakdown', 'characters', 'locations', 'features']);
           deps.renderEntryWizardSlide('script-wizard-modal', 1);
         };
         return html`
@@ -125,7 +148,7 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
             host.requestUpdate();
           }
         };
-        const onConfirm = () => {
+        const onConfirm = async () => {
           state.characters = state.detectedCharacters.map((name) => ({
             name,
             age: '',
@@ -137,6 +160,24 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
             description: '',
             isInterior: inferInteriorFromName(name, state.scriptText),
           }));
+
+          if (state.projectId) {
+            try {
+              const health = await getAgentHealth();
+              if (health.ready) {
+                await runScriptWizardStep2(state.projectId, state.scriptText);
+                const ctx = await getProductionContext(state.projectId);
+                if (ctx) applyProductionContext(ctx);
+              } else {
+                alertCG('AI Director agents not configured. Using deterministic fallback.');
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              console.warn('[script-wizard] Agent enrichment failed, using deterministic fallback:', msg);
+              alertCG(`Agent enrichment unavailable (${msg}). Proceeding with local analysis.`);
+            }
+          }
+
           deps.renderEntryWizardSlide('script-wizard-modal', 2);
         };
         return html`
@@ -181,7 +222,23 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
       title: 'Casting Setup',
       renderFn: () => {
         const state = scriptWizardState;
-        const onNext = () => {
+        const onNext = async () => {
+          if (state.projectId) {
+            try {
+              const health = await getAgentHealth();
+              if (health.ready) {
+                const chars = state.characters.map((c) => ({
+                  name: c.name,
+                  role: '',
+                  description: `${c.age || ''} · ${c.build || ''} · ${c.vibe || ''}`.replace(/^ · | · $/g, ''),
+                }));
+                await buildCharacterGuides(state.projectId, chars);
+                alertCG('Character guides sent to AI Director for review.');
+              }
+            } catch (e) {
+              console.warn('[script-wizard] buildCharacterGuides failed:', e);
+            }
+          }
           deps.renderEntryWizardSlide('script-wizard-modal', 3);
         };
         return html`
@@ -217,10 +274,28 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
       title: 'Production Design Setup',
       renderFn: () => {
         const state = scriptWizardState;
-        const onNext = () => {
+        const onNext = async () => {
           populateScriptWizardAssets(state, deps.addItemsToLibrary);
           deps.renderBreakdownTable();
           deps.scheduleFountainRender();
+
+          if (state.projectId) {
+            try {
+              const health = await getAgentHealth();
+              if (health.ready) {
+                const locs = state.locations.map((l) => ({
+                  name: l.name,
+                  intExt: l.isInterior ? 'INT' : 'EXT',
+                  description: l.description,
+                }));
+                await buildLocationGuides(state.projectId, locs);
+                alertCG('Location guides sent to AI Director for review.');
+              }
+            } catch (e) {
+              console.warn('[script-wizard] buildLocationGuides failed:', e);
+            }
+          }
+
           deps.renderEntryWizardSlide('script-wizard-modal', 4);
         };
         return html`
@@ -367,6 +442,18 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
         const state = scriptWizardState;
         const onGenerate = async () => {
           try {
+            if (state.projectId) {
+              const health = await getAgentHealth();
+              if (health.ready) {
+                await generateStoryboardFrames(state.projectId);
+                state.storyboardsGenerated = true;
+                state.storyboardFrameCount = 0; // Agent frames go to review queue
+                alertCG('Storyboard frames queued in AI Director for review.');
+                host.requestUpdate();
+                return;
+              }
+            }
+            // Fallback: legacy local generation
             const before = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;
             await deps.generateBoards();
             const after = ((window as any).storyboardFrames as unknown[] | undefined)?.length ?? 0;

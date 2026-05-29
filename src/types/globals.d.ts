@@ -9,8 +9,8 @@ import type {
   rejectReviewItem,
   getAgentHealth,
   runScriptWizardStep2,
-  buildCharacterBibles,
-  buildLocationBibles,
+  buildCharacterGuides,
+  buildLocationGuides,
   generateStoryboardFrames,
   buildGenerationPrompt,
   routeGenerationJob,
@@ -82,8 +82,8 @@ declare global {
         rejectReviewItem: typeof rejectReviewItem;
         getAgentHealth: typeof getAgentHealth;
         runScriptWizardStep2: typeof runScriptWizardStep2;
-        buildCharacterBibles: typeof buildCharacterBibles;
-        buildLocationBibles: typeof buildLocationBibles;
+        buildCharacterGuides: typeof buildCharacterGuides;
+        buildLocationGuides: typeof buildLocationGuides;
         generateStoryboardFrames: typeof generateStoryboardFrames;
         buildGenerationPrompt: typeof buildGenerationPrompt;
         routeGenerationJob: typeof routeGenerationJob;
@@ -315,6 +315,8 @@ declare global {
     modelMatchesAudioCapability?: (model: any, capability: string, providerId?: string) => boolean;
     openSectionSettingsModal?: () => void;
     closeSectionSettingsModal?: () => void;
+    openProjectFeaturesModal?: () => Promise<void>;
+    closeProjectFeaturesModal?: () => void;
     requestProjectTreeRefresh?: () => void;
     closeAiProvidersModal?: () => void;
     saveAiProvidersModal?: () => void;

@@ -3,6 +3,7 @@ import './cg-toolbar-split';
 import './cg-segmented-control';
 import './cg-segmented-split';
 import './cg-checkbox-tree';
+import './cg-feature-tree';
 import './cg-accordion';
 import './cg-split-divider';
 import './cg-panel-header';

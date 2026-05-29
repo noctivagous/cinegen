@@ -14,6 +14,8 @@ export interface TreeNode {
   desc?: string;
   detailKey?: string;
   expanded?: boolean;
+  /** Stable id from project-feature-catalog (static nodes only). */
+  featureId?: string;
   children?: TreeNode[];
   [key: string]: unknown;
 }

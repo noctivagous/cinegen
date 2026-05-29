@@ -1272,6 +1272,8 @@ export type AppliedCineProject = {
   costTracking?: Record<string, unknown>[];
   modelRoutingRules?: Record<string, unknown>;
   agentLog?: Record<string, unknown>[];
+  styleGuide?: Record<string, unknown>;
+  projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {

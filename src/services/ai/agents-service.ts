@@ -35,7 +35,7 @@ export interface StyleGuide {
   styleReference?: string;
 }
 
-export interface CharacterBibleEntry {
+export interface CharacterGuideEntry {
   id: string;
   name: string;
   role: 'protagonist' | 'antagonist' | 'supporting' | 'extra';
@@ -57,7 +57,7 @@ export interface CharacterBibleEntry {
   } | null;
 }
 
-export interface LocationBibleEntry {
+export interface LocationGuideEntry {
   id: string;
   name: string;
   intExt: 'INT' | 'EXT' | 'INT/EXT';
@@ -97,8 +97,8 @@ export interface ProductionContext {
   projectId: string;
   updatedAt: string;
   styleGuide: StyleGuide;
-  characterBible: CharacterBibleEntry[];
-  locationBible: LocationBibleEntry[];
+  characterGuide: CharacterGuideEntry[];
+  locationGuide: LocationGuideEntry[];
   shotList: Shot[];
   generationQueue: unknown[];
   reviewQueue: ReviewItem[];
@@ -390,30 +390,30 @@ export async function generateConceptImage(
 // ── Phase 2: Casting & Production Design ─────────────────────────────────────
 
 /**
- * Build character bibles for a project's characters.
+ * Build character guides for a project's characters.
  * Generates multi-angle reference images and voice casting suggestions.
  * Wizard trigger: Start-from-Script step 3, Visual-First step 3.
  */
-export async function buildCharacterBibles(
+export async function buildCharacterGuides(
   projectId: string,
   characters?: Array<{ name: string; role: string; description: string }>,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch(AGENT_STATIC_ROUTES.CASTING_BUILD_BIBLES, {
+  return agentFetch(AGENT_STATIC_ROUTES.CASTING_BUILD_GUIDES, {
     method: 'POST',
     body: JSON.stringify({ projectId, characters }),
   });
 }
 
 /**
- * Build location bibles with background plates.
+ * Build location guides with background plates.
  * Generates empty background plates for each location in the script.
  * Wizard trigger: Start-from-Script step 4, Concept/Mood step 4.
  */
-export async function buildLocationBibles(
+export async function buildLocationGuides(
   projectId: string,
   locations?: Array<{ name: string; intExt: string; description: string }>,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
-  return agentFetch(AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_BIBLES, {
+  return agentFetch(AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_GUIDES, {
     method: 'POST',
     body: JSON.stringify({ projectId, locations }),
   });

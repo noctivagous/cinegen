@@ -5,7 +5,7 @@ import { closeAllToolbarSplitMenus, closeToolbarSplitMenu } from '@/services/too
 import { appShellStore } from '@/stores/app-shell';
 import { escHtml } from '@/utils/html';
 import { alertCG } from '@/utils/alert-cg';
-import { persistActiveProjectSnapshot } from '@/services/project-service';
+import { markProjectDirty, persistActiveProjectSnapshot } from '@/services/project-service';
 import {
   AI_ASSIST_ASSISTANT_TILES,
   AI_ASSIST_TASK_TILES,
@@ -15,6 +15,7 @@ import {
 } from '@/toolbar/toolbar-data';
 import {
   createBlankProject,
+  createNewProject,
 } from '@/services/project-service';
 import { moodBoards } from '@/data/project-data';
 import {
@@ -27,12 +28,16 @@ import {
 import { buildCheckboxTreeNodes, getCurrentSectionKey } from '@/services/section-visibility-service';
 import { resetScriptWizardState } from '@/wizard/script-wizard-state';
 import { createScriptWizardSlides } from '@/wizard/script-wizard-bundle';
+import { syncFountainToProject } from '@/script/script-to-project';
+import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import {
   closeDebugModal,
   openDebugModal,
   openSetupAssistantForDebug,
 } from '@/toolbar/toolbar-debug-service';
 import { closeAiProvidersModal, openAiProvidersModal } from '@/settings/ai-api-settings-bundle';
+import { hydrateScriptEditorFromProject, scheduleFountainRender } from '@/script/fountain-bundle';
+import { renderBreakdownTable } from '@/assets/assets-bundle';
 
 export {
   clearProviderModelCacheForDebug,
@@ -96,10 +101,6 @@ const legacySetProjectFountainText = (text: string): void => {
   const fn = legacyGlobal.setProjectFountainText;
   if (typeof fn === 'function') (fn as (value: string) => void)(text);
 };
-const legacyHydrateScriptEditorFromProject = (): void => {
-  const fn = legacyGlobal.hydrateScriptEditorFromProject;
-  if (typeof fn === 'function') (fn as () => void)();
-};
 const legacyGenerateStoryboardReferences = async (): Promise<void> => {
   const fn = legacyGlobal.generateStoryboardReferences;
   if (typeof fn === 'function') {
@@ -123,30 +124,25 @@ const legacyAddItemsToLibrary = (
     (fn as (b: string, v: string[], i?: string, d?: string) => void)(bucket, values, icon, desc);
   }
 };
-const legacyRenderBreakdownTable = (): void => {
-  const fn = legacyGlobal.renderBreakdownTable;
-  if (typeof fn === 'function') (fn as () => void)();
-};
-const legacyScheduleFountainRender = (): void => {
-  const fn = legacyGlobal.scheduleFountainRender;
-  if (typeof fn === 'function') (fn as () => void)();
-};
 
 const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
   'script-wizard-modal': createScriptWizardSlides({
-    createBlankProject,
+    createNewProject,
     setActiveProjectId: (projectId: string) => appShellStore.setActiveProjectId(projectId),
     syncActiveProjectName,
     setProjectFountainText: legacySetProjectFountainText,
-    hydrateScriptEditorFromProject: legacyHydrateScriptEditorFromProject,
+    hydrateScriptEditorFromProject,
     renderProjectsModalList,
     renderEntryWizardSlide: (modalId: string, index: number) => renderEntryWizardSlide(modalId, index),
     generateStoryboardReferences: legacyGenerateStoryboardReferences,
     generateBoards: legacyGenerateBoards,
     closeScriptWizardModal,
     addItemsToLibrary: legacyAddItemsToLibrary,
-    renderBreakdownTable: legacyRenderBreakdownTable,
-    scheduleFountainRender: legacyScheduleFountainRender,
+    renderBreakdownTable,
+    scheduleFountainRender,
+    syncFountainToProject,
+    requestProjectTreeRefresh,
+    markProjectDirty,
   }),
   'visual-wizard-modal': [
     /* Slide 1 — Upload Visual Anchors */
@@ -555,7 +551,7 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
           if (agents?.updateProductionContext) {
             try {
               await agents.updateProductionContext(projectId, {
-                characterBible: (payload.characters || []).map((c: any) => ({
+                characterGuide: (payload.characters || []).map((c: any) => ({
                   id: c.id,
                   name: c.name,
                   role: c.role || 'supporting',
@@ -565,7 +561,7 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
                   references: { face: c.faceImage?.dataUrl, costume: [] },
                   voice: null,
                 })),
-                locationBible: (payload.locations || []).map((l: any) => ({
+                locationGuide: (payload.locations || []).map((l: any) => ({
                   id: l.id,
                   name: l.name,
                   intExt: l.intExt,
@@ -1906,12 +1902,9 @@ declare const currentSceneData: Record<string, { broll?: Array<{ id: number; lab
 declare function addItemsToLibrary(bucket: string, values: string[], icon?: string, desc?: string): void;
 declare function generateBoards(): Promise<void>;
 declare function generateStoryboardReferences(): Promise<void>;
-declare function hydrateScriptEditorFromProject(): void;
 declare function setProjectFountainText(text: string): void;
-declare function renderBreakdownTable(): void;
 declare function renderGlobalAssets(tabIndex?: number): void;
 declare function renderScriptInfoTables(): void;
-declare function scheduleFountainRender(): void;
 declare function renderStoryboard(): void;
 declare function refreshShotFrameTree(): void;
 declare function updateInspector(kind: string, data: unknown): void;
@@ -2228,6 +2221,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'project-settings-modal' });
   registerModal({ id: 'debug-modal', hostOverflowY: 'auto' });
   registerModal({ id: 'section-settings-modal' });
+  registerModal({ id: 'project-features-modal' });
   registerModal({ id: 'ai-provider-info-modal' });
   registerModal({ id: 'script-wizard-modal' });
   registerModal({ id: 'visual-wizard-modal' });
@@ -2249,6 +2243,20 @@ export async function openSectionSettingsModal(): Promise<void> {
 
 export function closeSectionSettingsModal(): void {
   closeModal('section-settings-modal');
+}
+
+export async function openProjectFeaturesModal(): Promise<void> {
+  closeAllToolbarSplitMenus();
+  closeAllModalsExcept('project-features-modal');
+  await openModalAsync('project-features-modal');
+  const modalBody = document.querySelector('cinegen-project-features-modal');
+  if (modalBody && 'refresh' in modalBody && typeof (modalBody as { refresh?: () => void }).refresh === 'function') {
+    (modalBody as { refresh: () => void }).refresh();
+  }
+}
+
+export function closeProjectFeaturesModal(): void {
+  closeModal('project-features-modal');
 }
 
 export async function openAiProviderInfoModal(): Promise<void> {
@@ -2283,6 +2291,8 @@ export function installToolbarModalGlobals(): void {
   window.closeDebugModal = closeDebugModal;
   window.openSectionSettingsModal = openSectionSettingsModal;
   window.closeSectionSettingsModal = closeSectionSettingsModal;
+  window.openProjectFeaturesModal = openProjectFeaturesModal;
+  window.closeProjectFeaturesModal = closeProjectFeaturesModal;
   window.openAiProviderInfoModal = openAiProviderInfoModal;
   window.closeAiProviderInfoModal = closeAiProviderInfoModal;
   window.saveProjectSettingsModal = saveProjectSettingsModal;
@@ -2312,6 +2322,12 @@ export function wireToolbarModalDismissals(): void {
   document.querySelectorAll('[data-cg-close="section-settings-modal"]').forEach((el) => {
     el.addEventListener('click', () => closeSectionSettingsModal());
   });
+  document.querySelectorAll('[data-cg-close="project-features-modal"]').forEach((el) => {
+    el.addEventListener('click', () => closeProjectFeaturesModal());
+  });
+  document.querySelector('#project-features-modal .cg-modal-backdrop')?.addEventListener('click', () =>
+    closeProjectFeaturesModal()
+  );
   document.querySelectorAll('[data-cg-close="ai-provider-info-modal"]').forEach((el) => {
     el.addEventListener('click', () => closeAiProviderInfoModal());
   });

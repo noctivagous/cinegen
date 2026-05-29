@@ -2300,6 +2300,48 @@ cg-panel-modal .cg-panel-modal-close {
     0 1px 3px rgba(0,0,0,0.5);
 }
 
+.sidebar-features-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 64px;
+  height: 46px;
+  padding: 0 10px;
+  background: linear-gradient(180deg, #2d3a2d 0%, #243024 100%);
+  border: 1px solid #3d523d;
+  border-bottom-color: #4a604a;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 3px rgba(0,0,0,0.45);
+  color: #9ec49e;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  outline: none;
+}
+
+.sidebar-features-btn span {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sidebar-features-btn:hover {
+  background: linear-gradient(180deg, #354535 0%, #2a382a 100%);
+  color: #b8dcb8;
+  border-color: #4f6a4f;
+}
+
+.sidebar-features-btn:focus-visible {
+  outline: 1px solid #7ab87a;
+  outline-offset: -1px;
+}
+
 /* Hierarchy grid view — top-level items as beveled buttons */
 .hierarchy-grid {
   display: grid;
@@ -5737,6 +5779,123 @@ cg-modal-shell cinegen-section-settings-modal {
   padding: 0 16px 12px;
 }
 
+.project-features-modal-lead {
+  padding: 12px 16px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.project-features-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+}
+
+.project-features-tree-wrap {
+  margin: 8px 16px 12px;
+  padding: 8px;
+  max-height: min(60vh, 480px);
+  overflow-y: auto;
+}
+
+cg-modal-shell cinegen-project-features-modal {
+  display: block;
+}
+
+.cg-feature-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  user-select: none;
+}
+
+.cg-feature-tree-row--dragging {
+  opacity: 0.45;
+}
+
+.cg-feature-tree-row--drop-before {
+  box-shadow: inset 0 2px 0 var(--accent-blue);
+}
+
+.cg-feature-tree-row--drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent-blue);
+}
+
+.cg-feature-tree-row--drop-inside {
+  background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+  outline: 1px dashed color-mix(in srgb, var(--accent-blue) 45%, transparent);
+}
+
+.cg-feature-tree-handle {
+  flex-shrink: 0;
+  width: 14px;
+  color: var(--text-dim);
+  cursor: grab;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.cg-feature-tree-handle:active {
+  cursor: grabbing;
+}
+
+.cg-feature-tree-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.cg-feature-tree-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cg-feature-tree-box {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #555;
+  background: #2a2a2a;
+  border-radius: 2px;
+}
+
+.cg-feature-tree-check {
+  font-size: 9px;
+  color: var(--accent-blue);
+}
+
+.cg-feature-tree-dash {
+  width: 8px;
+  height: 2px;
+  background: var(--accent-blue);
+}
+
+.cg-feature-tree-icon {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.cg-feature-tree-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Audio sub-modality rows in status menu */
 .sa-msb-submodality-row {
   display: flex;
@@ -8215,6 +8374,70 @@ textarea.cg-field {
 }
 
 .status-mode-badge--setup-incomplete {
+  background: rgba(200, 60, 30, 0.2);
+  color: #e85040;
+  border-color: rgba(200, 60, 30, 0.35);
+}
+
+/* Project list status badges (in projects modal cards) — follows status-mode-badge + styleguide chip aesthetic */
+.project-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  line-height: 14px;
+  flex-shrink: 0;
+}
+
+.project-status-badge--local {
+  background: rgba(60, 160, 90, 0.18);
+  color: #5fcf5f;
+  border-color: rgba(60, 160, 90, 0.32);
+}
+
+.project-status-badge--sample {
+  background: rgba(200, 130, 30, 0.2);
+  color: #e8a040;
+  border-color: rgba(200, 130, 30, 0.35);
+}
+
+/* Save status badge in the bottom status bar — follows .status-mode-badge + project-status-badge patterns from the styleguide */
+.save-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  line-height: 14px;
+  min-height: 14px;
+  cursor: default;
+}
+
+.save-status-idle { display: none; } /* hidden when nothing to report */
+
+.save-status-saving {
+  background: rgba(200, 130, 30, 0.2);
+  color: #e8a040;
+  border-color: rgba(200, 130, 30, 0.35);
+}
+
+.save-status-saved {
+  background: rgba(60, 160, 90, 0.18);
+  color: #5fcf5f;
+  border-color: rgba(60, 160, 90, 0.32);
+}
+
+.save-status-error {
   background: rgba(200, 60, 30, 0.2);
   color: #e85040;
   border-color: rgba(200, 60, 30, 0.35);

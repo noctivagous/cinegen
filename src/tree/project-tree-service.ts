@@ -23,6 +23,12 @@ import {
   sceneNumberFromSceneId,
 } from '@/workspace/shot-frame-bridge';
 import type { SceneShot } from '@/workspace/scene-types';
+import {
+  buildDisplayProjectTree,
+  getDisplayTreeRoot,
+  getFirstEnabledTreeNodeName,
+  setFeatureExpanded,
+} from '@/services/project-features-service';
 
 type BreakdownRow = {
   scene: string;
@@ -99,7 +105,8 @@ export function getPersistedProjectTreeSelection(projectId = activeProjectId): s
 function resolveActivatableTreeNodeName(preferredName: string): string {
   if (findProjectNodeByName(preferredName)) return preferredName;
   if (findProjectNodeByName(DEFAULT_PROJECT_TREE_SELECTION)) return DEFAULT_PROJECT_TREE_SELECTION;
-  return preferredName;
+  const fallback = getFirstEnabledTreeNodeName();
+  return fallback ?? preferredName;
 }
 
 function initialTreeSelectionName(projectId = activeProjectId): string {
@@ -151,7 +158,7 @@ export function getProjectTreeChildren(): TreeNode[] {
   ensureMoodBoardTreeNodes();
   ensureStoryboardReferenceNodes();
   ensureSceneShotListNodes();
-  return getProjectData().children ?? [];
+  return buildDisplayProjectTree();
 }
 
 function ensureMoodBoardTreeNodes(): void {
@@ -361,7 +368,7 @@ export function updateProjectTreeHeader(): void {
 
 export function findProjectNode(
   predicate: (node: TreeNode) => boolean,
-  node: TreeNode = getProjectData()
+  node: TreeNode = getDisplayTreeRoot()
 ): TreeNode | null {
   if (predicate(node)) return node;
   if (node.children) {
@@ -383,7 +390,7 @@ export function findProjectNodeBySceneId(sceneId: string): TreeNode | null {
 
 export function expandTreePathToName(
   targetName: string,
-  node: TreeNode = getProjectData(),
+  node: TreeNode = getDisplayTreeRoot(),
   ancestors: TreeNode[] = []
 ): boolean {
   if (node.name === targetName) {
@@ -391,13 +398,11 @@ export function expandTreePathToName(
     ancestors.forEach((n) => {
       if (n.children?.length && !n.expanded) {
         n.expanded = true;
+        if (n.featureId) setFeatureExpanded(n.featureId, true);
         changed = true;
       }
     });
-    if (changed) {
-      requestProjectTreeRefresh();
-      commitProjectTreeExpandedState();
-    }
+    if (changed) requestProjectTreeRefresh();
     return true;
   }
   if (node.children) {
@@ -409,19 +414,17 @@ export function expandTreePathToName(
 }
 
 export function expandProjectTreeToNode(target: TreeNode): boolean {
-  const path = findNodePath(getProjectData(), target);
+  const path = findNodePath(getDisplayTreeRoot(), target);
   if (!path || path.length < 2) return false;
   let changed = false;
   for (let i = 0; i < path.length - 1; i++) {
     if (path[i].children?.length && !path[i].expanded) {
       path[i].expanded = true;
+      if (path[i].featureId) setFeatureExpanded(path[i].featureId!, true);
       changed = true;
     }
   }
-  if (changed) {
-    requestProjectTreeRefresh();
-    commitProjectTreeExpandedState();
-  }
+  if (changed) requestProjectTreeRefresh();
   return changed;
 }
 
@@ -436,10 +439,11 @@ function findNodePath(root: TreeNode, target: TreeNode): TreeNode[] | null {
 
 export function toggleTreeNodeExpanded(node: TreeNode): boolean {
   if (!node.children?.length) return false;
-  node.expanded = !node.expanded;
+  const next = !node.expanded;
+  node.expanded = next;
+  if (node.featureId) setFeatureExpanded(node.featureId, next);
   requestProjectTreeRefresh();
   if (node.name) setSelectedTreeName(node.name);
-  commitProjectTreeExpandedState();
   return true;
 }
 
@@ -485,8 +489,7 @@ export function getTreeSectionKeyForNode(node: TreeNode): string | null {
   if (!node) return null;
   const direct = sectionKeyForTopLevelName(node.name);
   if (direct) return direct;
-  const projectData = getProjectData();
-  for (const top of projectData.children ?? []) {
+  for (const top of getProjectTreeChildren()) {
     if (top.type === 'tree-divider') continue;
     if (nodeContains(top, node)) return sectionKeyForTopLevelName(top.name);
   }

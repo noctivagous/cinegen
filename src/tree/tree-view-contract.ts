@@ -15,6 +15,7 @@ export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] 
   moodboards: {},
   'moodboard-detail': { requiredFields: ['boardId'] },
   'asset-detail': { requiredFields: ['detailKey'] },
+  'review-queue': {},
 };
 
 export const SUPPORTED_TREE_VIEWS = new Set(Object.keys(TREE_VIEW_REQUIREMENTS));

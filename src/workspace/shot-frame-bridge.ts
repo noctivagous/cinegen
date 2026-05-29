@@ -41,7 +41,7 @@ export type PrevisTimelineTracks = {
   totalRuntimeSeconds: number;
 };
 
-const DEFAULT_SHOT_DURATION_SECONDS = 8;
+export const DEFAULT_SHOT_DURATION_SECONDS = 8;
 const DEFAULT_FRAME_DURATION_SECONDS = 3;
 const MIN_DURATION_SECONDS = 1;
 

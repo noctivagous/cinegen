@@ -20,6 +20,7 @@ const KEYS_PATH = path.join(__dirname, 'keys.json');
 const ROUTING_PATH = path.join(__dirname, 'routing.json');
 const SETTINGS_PATH = path.join(__dirname, 'settings.json');
 const APP_STATE_PATH = path.join(__dirname, 'app-state.json');
+const PROJECTS_DIR = path.join(__dirname, 'projects');
 
 /* ── Runtime key store ───────────────────────────────────────────────────── */
 function loadStoredKeys() {
@@ -459,6 +460,277 @@ function handleConnections(req, res) {
   json(res, 200, { count: stateClients.size });
 }
 
+/* ── Server-resident .cine projects (P0 foundation) ────────────────────────── */
+function ensureProjectsDir() {
+  try {
+    if (!fs.existsSync(PROJECTS_DIR)) {
+      fs.mkdirSync(PROJECTS_DIR, { recursive: true });
+    }
+  } catch { /* ignore */ }
+}
+
+function listServerProjects() {
+  ensureProjectsDir();
+  const entries = [];
+  try {
+    const dirs = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true });
+    for (const dirent of dirs) {
+      if (!dirent.isDirectory() || !dirent.name.endsWith('.cine')) continue;
+      const manifestPath = path.join(PROJECTS_DIR, dirent.name, 'cine.manifest.json');
+      if (!fs.existsSync(manifestPath)) continue;
+      try {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        const stat = fs.statSync(manifestPath);
+        entries.push({
+          id: manifest.id || dirent.name.replace(/\.cine$/, ''),
+          name: manifest.name || dirent.name,
+          lastModified: stat.mtime.toISOString(),
+          writable: true,
+          dir: dirent.name,
+        });
+      } catch { /* skip corrupt manifest */ }
+    }
+  } catch { /* ignore readdir fail */ }
+  return entries;
+}
+
+function handleProjectsApi(req, res) {
+  const origin = req.headers['origin'] || '*';
+  const url = req.url || '';
+  const method = req.method || 'GET';
+
+  if (url === '/api/projects' && method === 'GET') {
+    const serverOnes = listServerProjects();
+    json(res, 200, { projects: serverOnes });
+    return;
+  }
+
+  // POST /api/projects — create a new server-resident .cine project
+  if (url === '/api/projects' && method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const name = String(payload.name || '').trim() || 'Untitled Production';
+        const id = String(payload.id || '').trim() || `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const dirName = `${id}.cine`;
+        const dirPath = path.join(PROJECTS_DIR, dirName);
+
+        if (fs.existsSync(dirPath)) {
+          json(res, 409, { error: 'Project already exists', id });
+          return;
+        }
+
+        fs.mkdirSync(dirPath, { recursive: true });
+
+        const manifest = {
+          format: 'cinegen-package',
+          version: 2,
+          id,
+          name,
+          documents: {
+            screenplay: 'screenplay.cinescript',
+            treatment: 'treatment.cinetreatment',
+            storyboard: 'storyboard.cinestoryboard',
+            scenes: 'scenes.cinescenes',
+            breakdown: 'breakdown.cinebreakdown',
+            characters: 'characters.cinecharacters',
+            locations: 'locations.cinelocations',
+            referenceImages: 'references.cinereferenceimages',
+            style: 'style.cinestyle',
+            features: 'features.cinefeatures',
+          },
+        };
+
+        const defaultMoodBoardId = `mb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const minimalDocs = {
+          'screenplay.cinescript': { format: 'fountain', text: payload.screenplay || '' },
+          'treatment.cinetreatment': {},
+          'storyboard.cinestoryboard': {
+            frames: [],
+            deletedFrames: [],
+            selectedFrameId: null,
+            visibility: { scene: true, frame: true, notes: true },
+            referenceBank: { characters: [], locations: [], interiors: [], exteriors: [] },
+            sceneReferenceOverrides: {},
+            referenceGenerationStatus: 'idle',
+          },
+          'scenes.cinescenes': {},
+          'breakdown.cinebreakdown': [],
+          'characters.cinecharacters': [],
+          'locations.cinelocations': [],
+          'references.cinereferenceimages': {
+            moodBoards: [
+              {
+                id: defaultMoodBoardId,
+                name: 'Visual DNA',
+                items: [],
+                viewMode: 'grid',
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              },
+            ],
+            activeMoodBoardId: defaultMoodBoardId,
+          },
+          'style.cinestyle': {
+            colorPalette: [],
+            lightingMood: '',
+            lensStyle: '',
+            visualTone: '',
+            styleReference: '',
+          },
+          'features.cinefeatures': {
+            version: 1,
+            enabled: { 'mood-boards': true },
+            order: ['mood-boards'],
+          },
+        };
+
+        fs.writeFileSync(path.join(dirPath, 'cine.manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
+        for (const [fname, content] of Object.entries(minimalDocs)) {
+          fs.writeFileSync(path.join(dirPath, fname), JSON.stringify(content, null, 2), 'utf-8');
+        }
+
+        json(res, 201, {
+          id,
+          name,
+          writable: true,
+          lastModified: new Date().toISOString(),
+        });
+      } catch (e) {
+        json(res, 500, { error: 'Failed to create project', detail: e.message });
+      }
+    });
+    return;
+  }
+
+  if (url.startsWith('/api/projects/') && url.endsWith('/load') && method === 'GET') {
+    const id = url.split('/')[3]; // /api/projects/:id/load
+    const proj = listServerProjects().find((p) => p.id === id);
+    if (!proj) {
+      json(res, 404, { error: 'Project not found' });
+      return;
+    }
+    // Read the manifest, then hydrate documents listed in it (real round-trip with serializer output)
+    const dirPath = path.join(PROJECTS_DIR, proj.dir);
+    let applied = null;
+    try {
+      const manifestRaw = fs.readFileSync(path.join(dirPath, 'cine.manifest.json'), 'utf-8');
+      const manifest = JSON.parse(manifestRaw);
+      const docs = manifest.documents || {};
+
+      function readDoc(relPath) {
+        if (!relPath) return null;
+        const p = path.join(dirPath, relPath);
+        if (!fs.existsSync(p)) return null;
+        try { return JSON.parse(fs.readFileSync(p, 'utf-8')); } catch { return null; }
+      }
+
+      const screenplayDoc = readDoc(docs.screenplay) || {};
+      const treatmentDoc = readDoc(docs.treatment) || {};
+      const storyboardDoc = readDoc(docs.storyboard) || {};
+      const scenesDoc = readDoc(docs.scenes) || {};
+      const breakdownDoc = readDoc(docs.breakdown) || [];
+      const charactersDoc = readDoc(docs.characters) || [];
+      const locationsDoc = readDoc(docs.locations) || [];
+      const refImagesDoc = readDoc(docs.referenceImages) || {};
+      const styleDoc = readDoc(docs.style) || {};
+      const featuresDoc = readDoc(docs.features) || null;
+
+      applied = {
+        projectScreenplay: { format: 'fountain', text: screenplayDoc.text || '' },
+        projectData: { name: manifest.name || proj.name, type: 'project', icon: 'fa-film', expanded: true, children: [] },
+        projectTreatment: treatmentDoc,
+        currentSceneData: scenesDoc,
+        storyboardFrames: storyboardDoc.frames || [],
+        deletedStoryboardFrames: storyboardDoc.deletedFrames || [],
+        selectedStoryboardFrameId: storyboardDoc.selectedFrameId ?? null,
+        storyboardVisibility: storyboardDoc.visibility || { scene: true, frame: true, notes: true },
+        storyboardReferenceBank: storyboardDoc.referenceBank || { characters: [], locations: [], interiors: [], exteriors: [] },
+        sceneReferenceOverrides: storyboardDoc.sceneReferenceOverrides || {},
+        referenceGenerationStatus: storyboardDoc.referenceGenerationStatus || 'idle',
+        previsSelectionState: storyboardDoc.previsSelection || { sceneId: null, shotId: null, frameId: null, scriptRange: null, timelineItemId: null },
+        assetLibrary: {
+          characters: Array.isArray(charactersDoc) ? charactersDoc : [],
+          locations: Array.isArray(locationsDoc) ? locationsDoc : [],
+          costumes: [], props: [], vehicles: [], effects: [], audio: [], production: [],
+        },
+        locationLibrary: Array.isArray(locationsDoc) ? locationsDoc : [],
+        generationQueue: [],
+        reviewQueue: [],
+        generationLog: [],
+        agentLog: [],
+        styleGuide: styleDoc || { colorPalette: [], lightingMood: '', lensStyle: '', visualTone: '', styleReference: '' },
+        breakdownData: Array.isArray(breakdownDoc) ? breakdownDoc : [],
+        assetDetailData: {},
+        referenceImages: {
+          moodBoards: Array.isArray(refImagesDoc.moodBoards) ? refImagesDoc.moodBoards : [],
+          activeMoodBoardId: refImagesDoc.activeMoodBoardId ?? null,
+        },
+        projectFeatures: featuresDoc && featuresDoc.version === 1 ? featuresDoc : undefined,
+      };
+    } catch (e) {
+      json(res, 500, { error: 'Failed to load project documents', detail: e.message });
+      return;
+    }
+    json(res, 200, { applied, meta: { id: proj.id, name: proj.name, writable: true } });
+    return;
+  }
+
+  // POST /api/projects/:id/documents — incremental .cine document writes (used by autosave + serializer)
+  if (url.startsWith('/api/projects/') && url.includes('/documents') && method === 'POST') {
+    const parts = url.split('/');
+    // /api/projects/:id/documents
+    const id = parts[3];
+    if (!id) {
+      json(res, 400, { error: 'Missing project id in /documents path' });
+      return;
+    }
+
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const docs = payload.documents || payload; // accept either {documents: {...}} or flat map
+        if (!docs || typeof docs !== 'object') {
+          json(res, 400, { error: 'Invalid body: expected document map' });
+          return;
+        }
+
+        const dirPath = path.join(PROJECTS_DIR, `${id}.cine`);
+        fs.mkdirSync(dirPath, { recursive: true });
+
+        const written = [];
+        for (const [fname, content] of Object.entries(docs)) {
+          // Basic sanitization: only allow alphanum . - _ and known extensions
+          if (!/^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|json)$/.test(fname)) {
+            continue;
+          }
+          const full = path.join(dirPath, fname);
+          const data = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+          fs.writeFileSync(full, data, 'utf-8');
+          written.push(fname);
+        }
+
+        // Touch a lightweight manifest stub if none exists (real manifest should come from serializer on create)
+        const manifestPath = path.join(dirPath, 'cine.manifest.json');
+        if (!fs.existsSync(manifestPath) && payload.manifest) {
+          fs.writeFileSync(manifestPath, JSON.stringify(payload.manifest, null, 2), 'utf-8');
+        }
+
+        json(res, 200, { ok: true, written, projectId: id });
+      } catch (e) {
+        json(res, 500, { error: 'Failed to write documents', detail: e.message });
+      }
+    });
+    return;
+  }
+
+  json(res, 405, { error: 'Method not allowed for projects API' });
+}
+
 /* ── WebSocket state sync ────────────────────────────────────────────────── */
 const stateClients = new Set();
 let stateWss = null;
@@ -584,8 +856,8 @@ async function handleAgentApi(req, res) {
     return;
   }
 
-  // Route: POST /api/agents/casting/build-bibles
-  if (url === AGENT_STATIC_ROUTES.CASTING_BUILD_BIBLES && req.method === 'POST') {
+  // Route: POST /api/agents/casting/build-guides
+  if (url === AGENT_STATIC_ROUTES.CASTING_BUILD_GUIDES && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, characters } = body;
@@ -598,18 +870,18 @@ async function handleAgentApi(req, res) {
         ? characters.map((c) => `- ${c.name} (${c.role}): ${c.description}`).join('\n')
         : '(read from ProductionContext)';
       const result = await agent.generate(
-        `Build character bibles for project "${projectId}".\nCharacters:\n${charList}`,
+        `Build character guides for project "${projectId}".\nCharacters:\n${charList}`,
       );
       json(res, 200, { ok: true, projectId, data: result.text });
     } catch (err) {
-      console.error('[cinegen/agents] casting/build-bibles error:', err.message);
+      console.error('[cinegen/agents] casting/build-guides error:', err.message);
       json(res, 503, { error: err.message });
     }
     return;
   }
 
-  // Route: POST /api/agents/production-design/build-bibles
-  if (url === AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_BIBLES && req.method === 'POST') {
+  // Route: POST /api/agents/production-design/build-guides
+  if (url === AGENT_STATIC_ROUTES.PRODUCTION_DESIGN_BUILD_GUIDES && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
     const { projectId, locations } = body;
@@ -622,11 +894,11 @@ async function handleAgentApi(req, res) {
         ? locations.map((l) => `- ${l.name} (${l.intExt}): ${l.description}`).join('\n')
         : '(read from ProductionContext)';
       const result = await agent.generate(
-        `Build location bibles for project "${projectId}".\nLocations:\n${locList}`,
+        `Build location guides for project "${projectId}".\nLocations:\n${locList}`,
       );
       json(res, 200, { ok: true, projectId, data: result.text });
     } catch (err) {
-      console.error('[cinegen/agents] production-design/build-bibles error:', err.message);
+      console.error('[cinegen/agents] production-design/build-guides error:', err.message);
       json(res, 503, { error: err.message });
     }
     return;
@@ -1127,6 +1399,11 @@ function handleRequest(req, res) {
     return;
   }
 
+  if (url.startsWith('/api/projects')) {
+    handleProjectsApi(req, res);
+    return;
+  }
+
   if (url.startsWith('/proxy')) {
     handleProxy(req, res);
     return;
@@ -1146,6 +1423,7 @@ export function isProxyOrApiRequest(url) {
     url.startsWith('/api/settings/routing') ||
     url.startsWith('/api/settings/store/') ||
     url.startsWith('/api/state/') ||
+    url.startsWith('/api/projects') ||
     url === '/api/health' ||
     url === '/api/connections' ||
     url === '/ws-state'

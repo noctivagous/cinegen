@@ -54,6 +54,7 @@ export type CineProjectManifest = {
     shotLibrary?: string;
     cameraPresets?: string;
     referenceImages?: string;
+    features?: string;
     motionReferences?: string;
     spatialAnnotations?: string;
     /** Sound department documents */
@@ -75,6 +76,8 @@ export type CineProjectManifest = {
     costTracking?: string;
     modelRoutingRules?: string;
     agentLog?: string;
+    /** Style guide document */
+    style?: string;
   };
   settings?: Record<string, unknown>;
   tree?: Record<string, unknown>;

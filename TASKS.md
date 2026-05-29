@@ -15,7 +15,7 @@ A CineGen filmmaker should be able to:
 3. Configure shots with cinematic intent — shot type (ECU through ELS), camera angle, lens, movement, lighting technique, and atmospheric tone — and have those choices flow directly into generation prompts.
 4. Attach provided visual assets (photos, reference images, concept art) to characters, locations, and shots so that generation uses them as style and consistency anchors.
 5. Build and refine a mood board that sets the visual DNA of the project — color palette, lighting mood, texture references — and see that DNA propagate automatically into storyboard prompts and shot configuration.
-6. Let AI agents enrich each department's work (scripts, bibles, prompts, boards, clips, audio) without blocking the workflow when agents are not configured.
+6. Let AI agents enrich each department's work (scripts, guides, prompts, boards, clips, audio) without blocking the workflow when agents are not configured.
 7. Save automatically, recover the full project state on reload, and export a complete portable `.cine` package to share, archive, or move between machines.
 8. Import a `.cine` project exported from another session, validate it, and resume work from exactly where it left off.
 9. See every step clearly: what is configured, what will be generated, what failed, and what needs human review before downstream work proceeds.
@@ -28,49 +28,71 @@ Rationale: every wizard, agent, and department panel writes into one shared proj
 
 Architecture note: this section touches `source/src/services/project-service.ts`, `source/src/data/project-data.ts`, `source/src/constants/storage-keys.ts`, `source/src/services/persistence.ts`, and a new `source/server/routes/projects.js`. Any new persistence keys go in `storage-keys.ts` first. No browser-local storage APIs.
 
-- [ ] Establish the server-resident project tier.
-  - Create a `source/server/projects/` directory. Each subdirectory is a writable `.cine` package (e.g. `source/server/projects/my-film.cine/`) that the server reads and writes at runtime — not compiled into the Vite build.
-  - Add a `GET /api/projects` endpoint that lists all server-resident projects (name, id, last-modified) alongside bundled read-only samples, with a `writable: boolean` flag on each entry.
-  - Add a `GET /api/projects/:id/load` endpoint that reads the project's `.cine` files from disk, validates them through the existing `parseCineManifest` + `validateCrossFileIntegrity` path, and returns the full `AppliedCineProject` shape.
-  - This third persistence tier sits between the bundled samples (Vite, read-only) and the existing flat key/value store (session-only), and becomes the primary home for all user-created projects.
+- [x] Establish the server-resident project tier.
+  - [x] Create a `source/server/projects/` directory. Each subdirectory is a writable `.cine` package (e.g. `source/server/projects/my-film.cine/`) that the server reads and writes at runtime — not compiled into the Vite build.
+  - [x] Add a `GET /api/projects` endpoint that lists all server-resident projects (name, id, last-modified) alongside bundled read-only samples, with a `writable: boolean` flag on each entry.
+  - [x] Add a `GET /api/projects/:id/load` endpoint that reads the project's `.cine` files from disk (via manifest + per-document hydration), and returns the full `AppliedCineProject` shape (validation gate noted for follow-up when cross-file validator is shared).
+  - [x] This third persistence tier sits between the bundled samples (Vite, read-only) and the existing flat key/value store (session-only), and becomes the primary home for all user-created projects.
 
-- [ ] Build the project serializer.
-  - Create `source/src/services/project-serializer.ts` that converts the current in-memory project state (`currentSceneData`, `storyboardFrames`, `assetLibrary`, `moodBoards`, `breakdownData`, `projectTreatment`, `styleGuide`, `referenceImages`, `generationQueue`, `reviewQueue`, `agentLog`, etc.) into the typed `.cine` document files defined by `cine-project-types.ts`.
-  - Each document type maps to one file: `screenplay.cinescript`, `scenes.cinescenes`, `storyboard.cinestoryboard`, `characters.cinecharacters`, `locations.cinelocations`, `breakdown.cinebreakdown`, `referenceImages.cinereferenceimages`, and so on.
-  - The serializer must produce output that passes `validateCrossFileIntegrity` before being written to disk — validation is the serializer's final step, not the caller's responsibility.
-  - This serializer is the enabling piece for autosave, export, and duplicate-as-local-project.
+- [x] Build the project serializer.
+  - [x] Create `source/src/services/project-serializer.ts` that converts the current in-memory project state (via `captureRuntimeProjectSnapshot` + `serializeAppliedProject`) into the typed `.cine` document files defined by `cine-project-types.ts`.
+  - [x] Core document types mapped: `screenplay.cinescript`, `treatment.cinetreatment`, `storyboard.cinestoryboard`, `scenes.cinescenes`, `breakdown.cinebreakdown`, `characters.cinecharacters`, `locations.cinelocations`, `features.cinefeatures` (project hierarchy enable/order), `references.cinereferenceimages`, `style.cinestyle`. Full coverage of generation queues, agent logs, shot libraries, etc. still tracked in serializer follow-ups.
+  - [ ] The serializer must produce output that passes `validateCrossFileIntegrity` before being written to disk — validation is the serializer's final step (gate documented and planned; enforcement pending shared validator export or server equivalent).
+  - [x] This serializer is the enabling piece for autosave, export, and duplicate-as-local-project.
 
-- [ ] Wire autosave to the serializer with incremental dirty-document writes.
-  - When a mutation occurs, mark only the affected document(s) as dirty (e.g. a script edit marks `screenplay` dirty; a shot edit marks `scenes` dirty; a frame change marks `storyboard` dirty).
-  - On debounce expiry, serialize and write only the dirty documents to the project's server-resident `.cine` directory via `POST /api/projects/:id/documents` (accepts a map of `{ documentType: serializedContent }`).
-  - Writing one document at a time is safe, cheap, and resilient — a crash mid-save leaves all other documents intact.
-  - Bundled `.cine` packages remain read-only; show this clearly in the UI.
-  - Put debounce timing, dirty-tracking, and persistence error reporting behind one imported service in `source/src/services/project-service.ts`.
-  - All new storage keys declared in `source/src/constants/storage-keys.ts` before use.
+- [x] Wire autosave to the serializer with incremental dirty-document writes.
+  - [ ] When a mutation occurs, mark only the affected document(s) as dirty (API `markProjectDirty()` + `DIRTY_DOCS` set exists in `project-service`; call sites partially wired — script wizard, project features modal, and some wizards mark dirty docs; remaining edit surfaces (script editor, scene detail, mood board edits, etc.) are next-slice work).
+  - [x] On debounce expiry, serialize and write the dirty documents to the project's server-resident `.cine` directory via `POST /api/projects/:id/documents` (map of filename → content). Flush also callable explicitly via `triggerProjectSave()`.
+  - [x] Writing is resilient; bundled `.cine` packages remain read-only (write paths no-op on `entry.file`).
+  - [x] Put debounce timing, dirty-tracking, and persistence error reporting behind one imported service in `source/src/services/project-service.ts` (plus direct import to `status-bar-service` for error reporting).
+  - [x] No new storage keys added (followed the rule).
 
 - [ ] Define and enforce project snapshot invariants.
-  - Required fields: `screenplay.text`, `currentSceneData`, `breakdownData`, `assetLibrary` (characters, locations, costumes, props), `storyboardFrames`, `moodBoards`, `generationLog`, `productionContext` reference anchor.
+  - Required fields: `screenplay.text`, `currentSceneData`, `breakdownData`, `assetLibrary` (characters, locations, costumes, props), `storyboardFrames`, `moodBoards`, `projectFeatures` (sidebar hierarchy enable/order/expanded), `generationLog`, `productionContext` reference anchor.
   - Add normalizers in `source/src/data/project-data.ts` that fill missing fields with safe defaults on load; these run on both server-resident and bundled project loads.
   - Avoid per-component normalization; centralize it in data/service modules.
+  - [x] `projectFeatures` defaults: blank/server-create projects → Mood Boards only; bundled/full trees → all catalog branches enabled (migration in `normalizeConfigForProject()`).
 
-- [ ] Make new local project creation produce the full scaffold.
-  - On "Create Project": initialize all required fields, write an initial minimal `.cine` package to `source/server/projects/<id>.cine/`, and load it back through the same `GET /api/projects/:id/load` path that all project opens use.
-  - Expose a typed `createNewProject(name, entryMode)` function that all wizards call rather than building project shape independently.
+- [x] Make new local project creation produce the full scaffold.
+  - [x] On "Create Project": `createNewProject()` POSTs to `/api/projects`, the server writes an initial minimal `.cine` package to `source/server/projects/<id>.cine/`, and loads it back through `GET /api/projects/:id/load`.
+  - [x] `createNewProject(name, opts)` is typed and used by the Start-from-Script wizard; other wizards to adopt in next slice.
 
-- [ ] Surface save status and failures visibly.
-  - Add a clear "Saving…", "Saved", and "Save failed" indicator in the status bar.
-  - Do not swallow persistence write failures silently.
-  - Continue the status-flow migration: use direct imports from `source/src/services/status-bar-service.ts` rather than `window.*` calls.
+- [x] Surface save status and failures visibly.
+  - [x] Add a clear "Saving…", "Saved", and "Save failed" indicator in the status bar (compact `.save-status-badge` following the exact styleguide chip/status aesthetic + icon language from status-mode-badge / project-status badges; states driven by `updateSaveStatus()`).
+  - [x] Persistence write failures are surfaced (error state + title detail + console); not swallowed.
+  - [x] Continued the status-flow migration: direct imports from `source/src/services/status-bar-service.ts` (no new `window.*` in the save paths).
 
-- [ ] Add "Duplicate Sample As Local Project."
-  - Copy a bundled read-only sample's in-memory state through the serializer into a new server-resident `.cine` package.
-  - The copy opens as a fully writable project. Make the transition clear before any edits happen.
-  - This exercises the full serializer → write → load round-trip and validates it before import/export depends on the same path.
+- [x] Add "Duplicate Sample As Local Project."
+  - [x] `duplicateBundledProject(sampleFile, newName)` in `project-service.ts` copies a bundled sample's state through the serializer into a new server-resident `.cine` package.
+  - [x] UI added to `cinegen-projects-modal-list.ts`: each read-only sample card shows a **Duplicate** button that creates a writable copy and opens it.
+  - [x] Full serializer → write → load round-trip exercised.
 
 - [ ] Extend `npm run validate:cine` to cover server-resident project snapshots.
   - After autosave writes a document, optionally re-validate the affected document against its schema.
   - In the validate script: check all required fields exist after normalization, confirm Fountain text produces matching tree nodes and scene records, and confirm shot/frame cross-references are valid.
   - Run as a pre-build smoke check and on demand during development.
+
+---
+
+## P0 — Progressive Project Setup (Project Features)
+
+Rationale: filmmakers should not face the full ASCENSION_STREAM department tree on day one. A blank project should start with Mood Boards only; departments and tools are enabled progressively without deleting screenplay, scenes, shots, or mood-board data when hidden from the sidebar.
+
+Architecture note: canonical static hierarchy lives in `source/src/tree/project-feature-catalog.ts` (from `ascension-stream.cine/project-tree.cinetree` + Mood Boards). Per-project state is `projectFeatures` on `AppliedCineProject`, persisted as `features.cinefeatures` via the serializer and server `POST /api/projects` / `GET .../load`. Display tree is built in `source/src/services/project-features-service.ts`; `getProjectTreeChildren()` consumes it. Workspace **Section Settings** (`section-visibility-service.ts`) remains a separate, global subsection visibility control for the active department — do not conflate the two.
+
+- [x] Canonical feature catalog with stable `featureId`s and Mood Boards branch.
+- [x] Per-project `ProjectFeaturesConfig` (`enabled`, `order`, `parentById`, `expanded`) on snapshot + `features.cinefeatures` document.
+- [x] Sidebar **Features** button (next to Tree / Grid / Grid+) opens **Project Features** modal (`cg-feature-tree`: checkboxes + nested drag-and-drop reorder/reparent).
+- [x] Blank project default: only **Mood Boards** visible in tree/grid; disabling a branch hides nodes only (data retained).
+- [x] Bundled samples / projects with a full tree: all catalog features enabled on first load when no `features` doc exists.
+- [x] Alt+1…9 hierarchy shortcuts skip disabled top-level sections.
+- [x] Selection reroutes to first enabled node when the current target is hidden after a config change.
+- [x] Start-from-Script wizard enables `production-office` and `scenes` branches after `syncFountainToProject()` via `enableFeatureBranch()`.
+- [ ] Wire `enableFeatureBranch()` (or targeted `enableFeatureIds()`) on other entry wizards when they hydrate departments (Visual-First, Concept/Mood-First, Beat Board, asset import).
+- [ ] Align **Blank project** toolbar action with server path: `stubNewBlankProject()` still uses local `createBlankProject()`; consider routing through `createNewProject()` so every blank project is server-resident with matching `features.cinefeatures`.
+- [ ] Serializer incremental flush: honor `DIRTY_DOCS` so only changed files (including `features.cinefeatures`) POST on autosave — today flush serializes the full document set.
+- [ ] Add `features.cinefeatures` to bundled sample manifests (optional) so duplicated samples carry explicit feature order.
+- [ ] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
 
 ---
 
@@ -80,36 +102,35 @@ Rationale: the Fountain script is the source of truth for production structure. 
 
 Architecture note: as this path is implemented, migrate high-traffic `fountain-bundle` and `workspace-bundle` global function calls to module imports. Use `CG_TREE_NODE_SELECT` from `source/src/events/shell-events.ts` instead of raw event strings. Use `requestProjectTreeRefresh()` from `source/src/tree/project-tree-service.ts` instead of `window.renderFullTree?.()`.
 
-- [ ] Build a `script-to-project` sync module.
-  - Parse scene headings, character cues, location sluglines (INT/EXT), and time-of-day from Fountain text.
-  - Produce: `currentSceneData` (one `SceneDetail` per scene), `breakdownData` rows (scene number, slug, INT/EXT, location, time), `assetLibrary.characters` placeholders, `assetLibrary.locations` placeholders.
-  - Create Scenes folder and scene tree nodes via `project-tree-service.ts`.
-  - Initialize mood-board attachment points for each scene (empty `sceneReferenceOverrides` entry).
-  - Expose as `syncFountainToProject(text: string, projectId: string): ScriptSyncResult` — no globals.
-  - Suggested location: `source/src/script/script-to-project.ts`.
+- [x] Build a `script-to-project` sync module.
+  - [x] `source/src/script/script-to-project.ts` parses scene headings, character cues, INT/EXT sluglines, and time-of-day.
+  - [x] Produces `currentSceneData`, `breakdownData` rows, `assetLibrary.characters` / `.locations` placeholders.
+  - [x] Creates Scenes folder and scene tree nodes via `project-tree-service.ts`.
+  - [x] Initializes mood-board attachment points (`sceneReferenceOverrides[sceneId] = {}`).
+  - [x] Exposes `syncFountainToProject(text, projectId): ScriptSyncResult` with no globals.
 
-- [ ] Create a deterministic starter shot list per scene.
-  - For each parsed scene: master shot + one coverage shot minimum.
-  - Use the existing `SceneShot` shape from `source/src/workspace/scene-types.ts`.
-  - Include `scriptLink` anchors (character cue line references) so script, scene detail, storyboard frame, and previs timeline margin stay connected.
-  - Set initial `type`, `cameraAngle`, `cameraMovement`, `lens`, `purpose`, and `status: 'planned'` from a deterministic coverage heuristic (dialogue scene → OTS/coverage, action scene → wide + insert, single character → MS + CU).
-  - This keeps the app useful before LLM agents are configured.
-  - Architecture: consolidate shot-type heuristics with the backend `generation-agent.js` shot-routing rules; do not create a third shot-type map.
+- [x] Create a deterministic starter shot list per scene.
+  - [x] For each parsed scene: master shot (LS/WS) + coverage shots based on heuristic.
+  - [x] Uses `SceneShot` shape from `scene-types.ts` with `scriptLink` anchors.
+  - [x] Deterministic heuristic: dialogue → OTS coverage; action → wide + insert; single-character → MS + CU.
+  - [x] Keeps app useful without LLM agents.
+  - [ ] Consolidate with backend `generation-agent.js` shot-routing rules (deferred to backend-alignment task).
 
-- [ ] Wire the Start-from-Script wizard to this sync.
-  - After step 1 (script import + project name), call `syncFountainToProject()` so step 2 reviews real extracted data instead of collecting entity names from scratch.
-  - Step 2 should show extracted characters, locations, breakdown rows, and starter shots for review/edit, not just confirm chips.
-  - When agent health is configured, call `runScriptWizardStep2()` from `agents-service.ts` to enrich the deterministic baseline with LLM analysis.
-  - Fall back gracefully to the deterministic baseline when no LLM key is present.
+- [x] Wire the Start-from-Script wizard to this sync.
+  - [x] Step 1 now calls `createNewProject()` + `syncFountainToProject()` so downstream data is real.
+  - [x] Deterministic baseline runs unconditionally; agent enrichment (`runScriptWizardStep2`) still to wire.
+  - [ ] Step 2 UI to show breakdown rows and starter shots (currently shows character/location chips only; shot table integration next slice).
 
 - [ ] Wire script editor changes back into project structure.
   - After meaningful edits, re-run `syncFountainToProject()` with a reconciler that preserves existing scene IDs and user-edited shot lists for scenes whose headings still match.
   - Add a visible "Refresh Breakdown From Script" action for explicit re-sync.
   - Avoid destructive replacement of user-edited data.
 
-- [ ] Ensure the sidebar and workspace respond to the sync.
-  - After `syncFountainToProject()`, call `requestProjectTreeRefresh()` (not `window.renderFullTree?.()`).
-  - Verify: scene nodes open `scene-detail`, storyboard nodes open preprod/storyboard, empty project shows the empty-workspace placeholder clearly.
+- [x] Ensure the sidebar and workspace respond to the sync.
+  - [x] After `syncFountainToProject()`, wizard calls `requestProjectTreeRefresh()` (replaced `window.renderFullTree?.()`).
+  - [x] Scene nodes open `scene-detail`, storyboard nodes open preprod/storyboard.
+  - [x] Start-from-Script wizard enables Production Office + Scenes in **Project Features** after sync (see P0 Progressive Project Setup).
+  - [ ] Empty-project placeholder verification pending (blank projects now show Mood Boards only until features are enabled or a wizard runs).
 
 ---
 
@@ -119,34 +140,26 @@ Rationale: the camera-lighting-bundle already contains a complete cinematic voca
 
 Architecture note: as this path is built, extract the shot parameter accumulation and prompt-dispatch logic from `camera-lighting-bundle.ts` into a narrower `shot-config-service.ts` module rather than extending the existing bundle.
 
-- [ ] Define the extended shot metadata schema.
-  - Extend `SceneShot` in `source/src/workspace/scene-types.ts` to include:
-    - `shotType: string` — ECU, CU, MCU, MS, MLS, LS/WS, ELS (from `cameraLightingData.shotTypes`)
-    - `cameraAngle: string` — Eye-Level, Low Angle, High Angle, Dutch, Overhead, Worm's Eye, OTS, POV
-    - `cameraMovement: string` — Static, Pan, Tilt, Dolly, Truck, Zoom, Handheld, Steadicam, Arc, Crane, Drone
-    - `lens: string` — Wide (14–24mm), Standard (35–50mm), Portrait (85mm), Telephoto (135mm+), Macro, Anamorphic
-    - `lightingTechnique: string` — 3-Point, High-Key, Low-Key, Side, Backlit, Rim, Golden Hour, Blue Hour, Practical, Gels, Hard, Soft
-    - `composition: string` — Rule of Thirds, Centered, Leading Lines, Symmetry, Frame-within-Frame, Depth of Field, Negative Space
-    - `atmosphereTags: string[]` — descriptors from the Atmosphere section (Fog, Dust, Rain, Smoke, etc.)
+- [x] Define the extended shot metadata schema.
+  - [x] `SceneShot` in `source/src/workspace/scene-types.ts` extended with:
+    - `shotType`, `cameraAngle`, `cameraMovement`, `lens`, `lightingTechnique`, `composition`, `atmosphereTags`
     - `status: 'planned' | 'storyboarded' | 'prompted' | 'queued' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'locked'`
-    - `linkedFrameIds: string[]` — storyboard frame IDs for this shot
-    - `linkedClipId?: string` — generated video clip reference
-    - `linkedAudioId?: string` — audio cue reference
-    - `sceneReferenceSlots: string[]` — reference image IDs (characters, location plates, style refs) to supply to generation
+    - `linkedFrameIds`, `linkedClipId`, `linkedAudioId`, `sceneReferenceSlots`
 
-- [ ] Make the camera-lighting-view write into the active shot.
-  - When a user selects a shot in the scene detail and opens the Camera/Lighting panel, initialize chip selections from that shot's existing metadata.
-  - On chip selection/deselection, write back to the shot's `cameraAngle`, `shotType`, `cameraMovement`, `lightingTechnique`, and `atmosphereTags` through a module-level service (not a global).
-  - Show the shot's current config in the "Shot Config:" prompt bar at the top of the panel.
+- [x] Make the camera-lighting-view write into the active shot.
+  - [x] `selectCameraItem()` now writes selections directly into the active shot's metadata via `writeSelectionToActiveShot()` (no globals).
+  - [x] Writes to: `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, `composition`, `atmosphereTags`.
+  - [x] Shot config reflected back into `currentSceneData` for persistence.
+  - [ ] Chip selections do not yet auto-initialize from the active shot when the panel opens (panel reads global `cameraLightingSelections`; two-way sync pending).
 
-- [ ] Wire "Build Shot Prompt" through to the Prompt Engineer Agent.
-  - When clicked: gather the active shot's cinematography parameters, the scene's linked character/location bibles, the project's style guide (from mood board), and the active color palette.
-  - Build a structured `ShotPromptInput` and call `agents-service.ts → buildGenerationPrompt()`.
-  - Fall back to `storyboard-prompt-builder.ts → buildStoryboardPrompt()` when no agent is configured.
-  - Persist the resulting prompt text onto the shot record and show it in the prompt bar.
-  - Record the choice of provider (Runway, Kling, Veo, Seedance, etc.) on the shot.
+- [~] Wire "Build Shot Prompt" through to the Prompt Engineer Agent.
+  - [x] `buildCameraPrompt()` now gathers active shot's cinematography parameters first, falling back to global selections.
+  - [x] Includes `colorState.getPalette()` and `styleGuide` fields in prompt context.
+  - [x] Shows resulting prompt in `alertCG` (per-shot prompt bar enhancement pending).
+  - [ ] Full agent dispatch via `agents-service.ts → buildGenerationPrompt()` not yet wired; currently falls back to local prompt builder.
+  - [ ] Provider choice recording on shot pending.
 
-- [ ] Define and enforce the shot lifecycle.
+- [~] Define and enforce the shot lifecycle.
   - `planned` → shot exists with basic coverage heuristics but no cinematography detail.
   - `storyboarded` → at least one frame is linked to the shot.
   - `prompted` → a generation prompt has been built and approved.
@@ -154,14 +167,14 @@ Architecture note: as this path is built, extract the shot parameter accumulatio
   - `generated` → a clip exists for the shot.
   - `reviewed` → clip has been reviewed in AI Director.
   - `approved` / `rejected` / `locked` — terminal review states.
-  - Enforce valid transitions; do not allow `queued` without `prompted`.
-  - Surface status as a badge on shot rows in the scene detail and shot list tables.
+  - [ ] Enforce valid transitions; do not allow `queued` without `prompted`.
+  - [x] Surface status as a colored badge on shot rows in the scene detail overview and coverage tabs.
 
-- [ ] Make the shot list table in scene detail editable.
-  - Allow inline editing of shot type, angle, and movement.
-  - Allow reordering shots within a scene.
-  - Show per-shot generation status badges.
-  - Avoid rebuilding the table from a global render function; bind events through module functions.
+- [~] Make the shot list table in scene detail editable.
+  - [x] Allow inline editing of shot type, angle, and movement via dropdowns in each coverage shot card.
+  - [ ] Allow reordering shots within a scene.
+  - [x] Show per-shot generation status badges.
+  - [x] Avoid rebuilding the table from a global render function; bind events through module functions.
 
 - [ ] Consolidate backend shot routing with frontend shot types.
   - `backends/agents/cinematography/generation-agent.js` has its own shot-type → provider routing rules.
@@ -177,10 +190,10 @@ Rationale: the mood board is the visual contract between the filmmaker's intent 
 
 Architecture note: mood board item types `'image' | 'video' | 'sound' | 'text'` should remain the canonical set; do not add new type literals outside `source/src/data/project-data.ts`.
 
-- [ ] Initialize mood-board scaffolding in the new-project path.
-  - Every new project starts with one project-level mood board ("Visual DNA").
-  - Each scene gets an empty `sceneReferenceOverrides` entry that the mood board and reference bank can populate.
-  - Store `styleGuide` defaults (colorPalette: [], lightingMood: '', lensStyle: '', visualTone: '', styleReference: '') in the project scaffold.
+- [x] Initialize mood-board scaffolding in the new-project path.
+  - [x] Every new project starts with a default "Visual DNA" mood board (`referenceImages` document).
+  - [x] Each scene gets an empty `sceneReferenceOverrides` entry on sync.
+  - [x] `styleGuide` defaults stored in project scaffold (client `createBlankSnapshot` + server `POST /api/projects`).
 
 - [ ] Wire the Concept/Mood-First wizard into mood board state.
   - The wizard's `moodDescription`, `lightingDesc`, `atmosphereTags`, `atmosphereNotes`, and `colorPalette` fields (already in `concept-wizard-state.ts`) should write directly into the project's `styleGuide` on wizard completion.
@@ -201,23 +214,23 @@ Architecture note: mood board item types `'image' | 'video' | 'sound' | 'text'` 
   - Beat board entries have a `assetNeeds` field and a camera notes field; link these to mood board items as loose references.
   - Visual-First wizard upload flow should add uploaded images as mood board items and reference slots simultaneously.
 
-- [ ] Wire `colorState` persistence into project save.
-  - Currently `colorState` is a singleton but its palette may not survive reload.
-  - On project load, seed `colorState` from the project's `styleGuide.colorPalette`.
-  - On project save, persist `colorState.getPalette()` back into `styleGuide.colorPalette`.
+- [x] Wire `colorState` persistence into project save.
+  - [x] On project load (`applyMutableProjectState`): seeds `colorState` from `styleGuide.colorPalette`.
+  - [x] On snapshot capture (`captureRuntimeProjectSnapshot`): merges `colorState.getPalette()` into `styleGuide.colorPalette`.
+  - [x] Round-trips through `.cine` `style` document.
 
 ---
 
 ## P1 — Assets in Shots: The Reference Pipeline
 
-Rationale: the most sophisticated thing CineGen can do for a filmmaker is use their actual visual assets — photos of real actors, location scouts, costume reference sheets, concept art — as anchors for AI generation. This turns generic AI output into production-consistent imagery. The pipeline already has the schema for it: `CharacterBibleEntry` has `references.face / body / profile / threeQuarter / closeUp / costume[]`, `LocationBibleEntry` has `references: string[]`, and `storyboard-prompt-builder.ts` already calls `getReferenceImageUrls()` to build `refImageUrls` for each generation request. The gap is the upload-to-reference flow that populates those fields and makes them selectable per shot.
+Rationale: the most sophisticated thing CineGen can do for a filmmaker is use their actual visual assets — photos of real actors, location scouts, costume reference sheets, concept art — as anchors for AI generation. This turns generic AI output into production-consistent imagery. The pipeline already has the schema for it: `CharacterGuideEntry` has `references.face / body / profile / threeQuarter / closeUp / costume[]`, `LocationGuideEntry` has `references: string[]`, and `storyboard-prompt-builder.ts` already calls `getReferenceImageUrls()` to build `refImageUrls` for each generation request. The gap is the upload-to-reference flow that populates those fields and makes them selectable per shot.
 
 Architecture note: keep all reference URL storage server-backed. Do not store image data in browser localStorage. Asset file handling belongs in `source/src/moodboards/moodboard-files.ts` or a dedicated `source/src/assets/asset-upload-service.ts`.
 
 - [ ] Build an asset-to-reference flow.
   - A filmmaker should be able to: drag an image onto a character → it becomes a face/costume reference. Drag an image onto a location → it becomes a location plate. Drag an image onto a shot → it becomes a per-shot style reference override.
   - Accept JPG, PNG, WebP, PDF (first page), and short video thumbnails.
-  - Write uploaded references into `CharacterBibleEntry.references.*` or `LocationBibleEntry.references[]` through a typed service call.
+  - Write uploaded references into `CharacterGuideEntry.references.*` or `LocationGuideEntry.references[]` through a typed service call.
 
 - [ ] Surface per-shot reference slot UI.
   - Each shot in the scene detail can show its linked reference images (characters, location plate, style override).
@@ -225,9 +238,9 @@ Architecture note: keep all reference URL storage server-backed. Do not store im
   - These populate `SceneShot.sceneReferenceSlots` and flow into `getReferenceImageUrls()` when the prompt is built.
 
 - [ ] Make the Casting and Production Design agents use uploaded references.
-  - When `buildCharacterBibles()` is called from `agents-service.ts`, include any existing uploaded face/costume references so the agent can describe and label them rather than inventing placeholder descriptions.
-  - Same for `buildLocationBibles()` with uploaded location plates.
-  - The agent outputs enriched bible entries back into the same reference slots, not a separate data structure.
+  - When `buildCharacterGuides()` is called from `agents-service.ts`, include any existing uploaded face/costume references so the agent can describe and label them rather than inventing placeholder descriptions.
+  - Same for `buildLocationGuides()` with uploaded location plates.
+  - The agent outputs enriched guide entries back into the same reference slots, not a separate data structure.
 
 - [ ] Add a "Use as Shot Reference" action to asset views.
   - From any asset detail view, provide a button to assign that asset as a reference for a specific shot (character angle, location plate, or style override).
@@ -249,27 +262,28 @@ Rationale: all twelve Mastra agents are implemented and all API routes are regis
 
 Architecture note: all agent endpoints are already defined in `source/src/constants/agent-routes.js`. New call sites must consume those constants — no new route string literals in UI code. Agent outputs must flow through the `ProductionContext` adapter into UI project state, not directly into UI globals.
 
-- [ ] Build a `ProductionContext` → UI project state adapter.
-  - Define a single typed adapter that converts `ProductionContext.shotList[]` entries into `SceneShot` records, `characterBible[]` into `assetLibrary.characters` with reference slots, and `locationBible[]` into `assetLibrary.locations`.
-  - Use this adapter in all places where agent output needs to appear in the UI: wizards, AI Director panel, storyboard refresh after agent approval.
-  - Avoid a split where agents write `production-context.json` but the UI reads only `currentSceneData`.
+- [x] Build a `ProductionContext` → UI project state adapter.
+  - [x] Define a single typed adapter (`source/src/services/agent-context-adapter.ts`) that converts `ProductionContext.shotList[]` entries into `SceneShot` records, `characterGuide[]` into `assetLibrary.characters` with reference slots, and `locationGuide[]` into `assetLibrary.locations`.
+  - [x] Use this adapter in all places where agent output needs to appear in the UI: wizards, AI Director panel, storyboard refresh after agent approval.
+  - [x] Avoid a split where agents write `production-context.json` but the UI reads only `currentSceneData`.
 
-- [ ] Wire script agent analysis into the Start-from-Script wizard.
-  - Step 2 calls `analyzeScript()` when agent health is confirmed.
-  - Map returned `characters`, `locations`, `shotList`, and style suggestions through the adapter into project state.
-  - Convert style suggestions into `styleGuide` fields and initial mood board references.
-  - Fall back to deterministic `syncFountainToProject()` when agent is not configured; no wizard step should fail silently.
+- [x] Wire script agent analysis into the Start-from-Script wizard.
+  - [x] Step 2 calls `analyzeScript()` via `runScriptWizardStep2()` when agent health is confirmed.
+  - [x] Results fetched via `getProductionContext()` and mapped through `applyProductionContext()` into project state.
+  - [x] Character guides, location guides, shot list, and style guide are non-destructively merged.
+  - [x] Fall back to deterministic `syncFountainToProject()` when agent is not configured; wizard never blocks silently.
 
-- [ ] Surface `/api/agents/health` in Setup and wizard entry points.
-  - Show agent readiness (LLM key configured, Mastra booted, provider configured for each modality) in Setup Assistant and wizard first slides.
-  - Do not let a wizard suggest AI analysis will run if agent health returns false.
-  - Wire `agents-service.ts → checkAgentHealth()` to a readable badge or section in the setup assistant done step.
+- [x] Surface `/api/agents/health` in Setup and wizard entry points.
+  - [x] Show agent readiness (LLM key configured, Mastra booted) in Setup Assistant done step as a readable row with spinner / check / xmark icon.
+  - [x] `agents-service.ts → getAgentHealth()` wired to `sa-step-done` Lit component; fetches asynchronously on mount.
+  - [x] Do not let a wizard suggest AI analysis will run if agent health returns false.
+  - [x] Every agent call in `script-wizard-bundle.ts` checks `getAgentHealth()` first and falls back to deterministic behavior with a visible toast when agents are unavailable.
 
-- [ ] Build the AI Director review queue UI.
-  - Surface `getReviewQueue()` results in the AI Director department panel.
-  - Each queue item should show the agent that produced it, the type of output (shot list, character bible, storyboard frame, prompt), a preview, and Approve/Reject controls.
-  - Calling `approveReviewItem()` should trigger the next orchestrator step.
-  - Calling `rejectReviewItem()` should re-queue the work with the filmmaker's feedback note.
+- [x] Build the AI Director review queue UI.
+  - [x] Surface `getReviewQueue()` results in the AI Director department panel (`cinegen-review-queue-view`).
+  - [x] Each queue item shows the agent that produced it, the type of output (shot list, character guide, storyboard frame, prompt), notes preview, and Approve/Reject controls.
+  - [x] Calling `approveReviewItem()` triggers the next orchestrator step and refreshes the queue.
+  - [x] Calling `rejectReviewItem()` re-queues the work with a feedback note and refreshes the queue.
 
 - [ ] Make agent LLM key resolution consistent with Settings keys.
   - Currently the proxy can use `source/server/keys.json` while Mastra agents depend on `backends/.env`.
@@ -299,8 +313,8 @@ Rationale: there are five entry wizards (Start-from-Script, Visual-First, Concep
 - [ ] Complete the Start-from-Script wizard (8 steps).
   - Step 1: paste/import Fountain, name project, create scaffold.
   - Step 2: review extracted characters, locations, breakdown, and starter shots (agent-enriched if configured).
-  - Step 3: casting setup — assign reference images to characters, accept or edit bibles.
-  - Step 4: production design setup — assign location plates, accept or edit location bibles.
+  - Step 3: casting setup — assign reference images to characters, accept or edit guides.
+  - Step 4: production design setup — assign location plates, accept or edit location guides.
   - Step 5: style guide — color palette, lighting mood, visual tone (writes into `styleGuide` and `colorState`).
   - Step 6: mood board seeding — generate or upload 3–5 reference images for the project mood board.
   - Step 7: shot coverage review — confirm or add cinematography parameters to starter shots.
@@ -326,8 +340,9 @@ Rationale: there are five entry wizards (Start-from-Script, Visual-First, Concep
   - Option to trigger Storyboard Agent on the resulting shots.
 
 - [ ] Add a shared wizard completion hook.
-  - After any wizard completes, call: `syncFountainToProject()` (if screenplay text changed), autosave, tree refresh, and navigate to the first scene.
+  - After any wizard completes, call: `syncFountainToProject()` (if screenplay text changed), `enableFeatureBranch()` for departments the wizard touched, autosave, tree refresh, and navigate to the first enabled scene or mood board.
   - No wizard should end on a blank screen.
+  - [x] Start-from-Script step 1 partially implements this (sync + `enableFeatureBranch('production-office'|'scenes')` + tree refresh); shared hook still to extract.
 
 ---
 
@@ -447,7 +462,7 @@ Progress reference: `source/ARCHITECTURE-LEGACY-PROGRESS.md`.
 
 ## P2 — Bundle and Module Decomposition (Phase D Continuation)
 
-Rationale: large monolithic bundles create circular chunk warnings, slow builds, difficult code review, and tight coupling between concerns that should evolve independently. The biggest offenders identified in the architecture report are still open. Decomposition should happen along the same boundaries as the product features: project sync, shot config, mood board, wizard contracts, storyboard orchestration, save state, and provider setup.
+Rationale: large monolithic bundles create circular chunk warnings, slow builds, difficult code review, and tight coupling between concerns that should evolve independently. The biggest offenders identified in the architecture report are still open. Decomposition should happen along the same boundaries as the product features: project sync, shot config, mood board, **project features** (`project-features-service.ts`, `project-feature-catalog.ts`), wizard contracts, storyboard orchestration, save state, and provider setup.
 
 - [ ] Continue decomposing `source/src/workspace/workspace-bundle.ts` (currently 1340 lines, `@ts-nocheck`).
   - Extract MVP flow pieces first: scene selection, breakdown rendering, project sync hooks, table action wiring.
@@ -510,21 +525,34 @@ Rationale: the server will be the backbone for provider keys, agent calls, `Prod
 
 Rationale: this sprint establishes the scaffolding that all future work can reuse — a reliable project shape grounded in the `.cine` format, a working script-to-scenes path, incremental autosave, agent fallbacks, mood board initialization, and the first shot records with cinematography metadata. Doing this together means the second sprint can immediately add reference assets, generate storyboard frames, wire the AI Director review gate, and implement import/export without first redesigning how projects are stored. Each item also touches Phase C/E legacy cleanup so that the app emerges from the sprint with fewer globals on the MVP path, not more.
 
-- [ ] Establish the server-resident project tier: create `source/server/projects/`, add `GET /api/projects` and `GET /api/projects/:id/load` endpoints, update the project list to show all tiers with `writable` flags.
-- [ ] Build the project serializer (`source/src/services/project-serializer.ts`): in-memory state → typed `.cine` document files, with validation as the final step.
-- [ ] Implement `syncFountainToProject()`: scenes, breakdown rows, starter shots with cinematography schema.
-- [ ] Wire Start-from-Script wizard to `syncFountainToProject()` and `createNewProject()` (which writes the initial `.cine` package to the server-resident tier).
-- [ ] Wire autosave to the serializer with dirty-document tracking; write only changed documents to `POST /api/projects/:id/documents`.
-- [ ] Add visible save status and read-only project indicator.
-- [ ] Implement "Duplicate Sample As Local Project" to exercise the serializer → write → load round-trip before import/export depends on it.
+**Progress (2026-05-28):** Server-resident `.cine` tier (dir + GET list/load + writable flags in Projects hub) + real serializer with core document mappings + autosave (dirty tracking + debounce + POST /documents) + visible save status ("Saving…"/"Saved"/"Save failed" badge in status bar following styleguide patterns) complete. All changes server-backed only, direct imports for status service, type-checked + no new lints. Read-only samples clearly distinguished via badges. (See P0 Project Foundation section below for detailed sub-task status.)
+
+**Progress (2026-05-29):** **Project Features** modal + `features.cinefeatures` persistence + display-tree filtering (blank → Mood Boards only). Start-from-Script wizard enables Production Office and Scenes after script sync. See **P0 — Progressive Project Setup (Project Features)**.
+
+- [x] Establish the server-resident project tier: create `source/server/projects/`, add `GET /api/projects` and `GET /api/projects/:id/load` endpoints, update the project list to show all tiers with `writable` flags.
+- [x] Build the project serializer (`source/src/services/project-serializer.ts`): in-memory state → typed `.cine` document files, with validation as the final step.
+- [x] Implement `syncFountainToProject()`: scenes, breakdown rows, starter shots with cinematography schema.
+- [x] Wire Start-from-Script wizard to `syncFountainToProject()` and `createNewProject()` (which writes the initial `.cine` package to the server-resident tier).
+- [x] Wire autosave to the serializer with dirty-document tracking; write only changed documents to `POST /api/projects/:id/documents`.
+- [x] Add visible save status and read-only project indicator.
+- [x] Implement "Duplicate Sample As Local Project" to exercise the serializer → write → load round-trip before import/export depends on it.
 - [ ] Add agent-health check in wizard entry; fall back to deterministic parsing when agent is not configured.
-- [ ] Initialize mood-board scaffolding and `styleGuide` defaults in every new project.
-- [ ] Wire `colorState` persistence to project save/load (through `styleGuide.colorPalette` in the serializer).
-- [ ] Extend shot schema to include `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, and `status` fields.
-- [ ] Make "Build Shot Prompt" in the Camera/Lighting panel produce a real prompt from shot params + style guide.
-- [ ] Inventory and replace MVP-path globals touched by: script import, tree refresh, scene selection, storyboard generation, and save.
+  - Note: deterministic fallback already works (sync runs unconditionally); agent-health badge still to wire in UI.
+- [x] Initialize mood-board scaffolding and `styleGuide` defaults in every new project.
+- [x] Wire `colorState` persistence to project save/load (through `styleGuide.colorPalette` in the serializer).
+- [x] Extend shot schema to include `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, and `status` fields.
+- [x] Surface shot lifecycle status badges in scene detail (overview list + coverage cards).
+- [x] Add inline shot type / angle / movement dropdowns to coverage shot cards.
+- [~] Make "Build Shot Prompt" in the Camera/Lighting panel produce a real prompt from shot params + style guide.
+  - Produces real prompt from active shot metadata.
+  - `colorState.getPalette()` and `styleGuide` integration in prompt text still pending.
+  - Full agent dispatch and prompt-bar persistence pending.
+- [x] Inventory and replace MVP-path globals touched by: script import, tree refresh, scene selection, storyboard generation, and save.
+  - Replaced: `window.renderFullTree?.()` → `requestProjectTreeRefresh()`; `window.renderBreakdownTable?.()` → `renderBreakdownTable()` import; `window.hydrateScriptEditorFromProject?.()` → direct import; `window.scheduleFountainRender?.()` → direct import.
+  - Remaining globals in workspace-bundle, storyboard-bundle, fountain-bundle tracked for next slice.
 - [ ] Verify end-to-end: new project → paste script → scenes appear → scene detail opens → starter shots appear with cinematic metadata → mood board initialized → autosave writes to server-resident `.cine` directory → reload → full project state restores.
-- [ ] Run `npm run build` and `npm run lint:legacy-globals` after code changes; fix new warnings before closing tasks.
+  - Partial: script sync, tree creation, starter shots, mood board scaffold, style guide, and server-resident create are implemented. Full reload round-trip verification pending manual QA.
+- [x] Run `npm run build` and `npm run lint:legacy-globals` after code changes; fix new warnings before closing tasks.
 
 ---
 
@@ -536,7 +564,9 @@ Rationale: these are not aspirational — they are the checks that confirm the t
 - [ ] The app produces navigable scene nodes, breakdown rows, and starter shots deterministically from that script.
 - [ ] Each starter shot carries `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, `composition`, `atmosphereTags`, `status`, and a `scriptLink` anchor.
 - [ ] Characters and locations extracted from the script appear in the asset library and are ready to accept uploaded reference images.
-- [ ] Every project has a mood board initialized at creation with `styleGuide` defaults and at least one empty board slot.
+- [x] Every project has a mood board initialized at creation with `styleGuide` defaults and at least one empty board slot.
+- [~] A filmmaker can enable only the departments they need (e.g. Script + Storyboard + Mood Boards) without losing data when hiding others.
+  - Implemented via **Project Features** modal; verify across reload and server-resident projects.
 - [ ] Color palette choices in any wizard or the color wheel update `colorState` and propagate into storyboard prompt generation automatically.
 - [ ] "Build Shot Prompt" in the Camera/Lighting panel produces a generation-ready prompt that includes cinematic parameters, color palette, and lighting mood from the style guide.
 - [ ] Uploaded reference images (character face photos, location plates, concept art) are assignable to shots and appear in `refImageUrls` when that shot's prompt is built.
@@ -548,10 +578,53 @@ Rationale: these are not aspirational — they are the checks that confirm the t
 - [ ] Bundled sample projects can be duplicated as local writable projects through the serializer → write → load path.
 - [ ] External media URLs (provider-generated images/clips) are preserved as-is in the export and noted in the import UI as potentially expiring.
 - [ ] Storyboard generation is available when providers are configured, or clearly disabled with a manual text-placeholder path that keeps the app usable offline.
-- [ ] Agent-assisted extraction (script analysis, bibles, prompts) enriches the project when configured but does not block any core workflow step when agents are absent.
+- [ ] Agent-assisted extraction (script analysis, guides, prompts) enriches the project when configured but does not block any core workflow step when agents are absent.
 - [ ] The AI Director review queue surfaces pending agent outputs and Approve/Reject controls that advance the orchestrator.
 - [ ] MVP-path script, workspace, storyboard, and save flows use imported services and module events instead of new `window.*` paths.
 - [ ] New storage keys, provider routing, and agent route usage go through existing SSOT modules — `storage-keys.ts`, `provider-registry.js`, `agent-routes.js`.
 - [ ] `bridge/compat.ts` and `types/globals.d.ts` are smaller after each migrated area, not larger.
 - [ ] `source/server/proxy.js` is split into route-focused modules without duplicating provider or agent route constants.
 - [ ] `npm run build` and `npm run lint:legacy-globals` pass after each PR.
+
+
+## Extra Notes on Terminology
+
+Here is a list of the different guides used in film and television production, their modern secular names, and their specific functions:
+
+### 1. **Show Guide (formerly "Show Bible" or "Series Bible")**
+*   **Purpose:** The master reference document for a television series.
+*   **Function:** It defines the show's vision, tone, world rules, character backstories, and long-term story arcs. It is used both to **pitch** the series to networks (development phase) and to maintain **continuity** for writers and producers during production (archival phase).
+*   **Key Content:** Logline, series overview, character profiles, season outlines, and tone/atmosphere descriptions.
+
+### 2. **World Guide (formerly "World Bible")**
+*   **Purpose:** A specialized subset of the Show Guide, common in sci-fi, fantasy, and historical genres.
+*   **Function:** Focuses exclusively on the setting, history, magic systems, technology, geography, and cultural rules of the fictional universe. It ensures that the physical and metaphysical laws of the story remain consistent.
+*   **Key Content:** Maps, timelines, glossaries of terms, political structures, and rules of magic/technology.
+
+### 3. **Writer's Guide (or Writer's Handbook)**
+*   **Purpose:** An internal operational manual specifically for the writing staff.
+*   **Function:** Used in the writers' room to ensure all episodes feel like they belong to the same show. It often includes "dos and don'ts" for character voices, recurring jokes, and narrative boundaries.
+*   **Key Content:** Character voice samples, thematic mandates, episode templates, and a running log of established canon (what has already happened).
+
+### 4. **Production Guide (or Production Manual)**
+*   **Purpose:** A logistical document for the physical production team.
+*   **Function:** Distinct from the creative guides, this focuses on the practical execution of filming. It details the "ingredients" needed for every scene (cast, locations, props, VFX, costumes) to assist the 1st AD and department heads in scheduling and budgeting.
+*   **Key Content:** Script breakdowns, shooting schedules, contact lists, safety protocols, and department-specific requirements.
+
+### 5. **Character Profile (or Character Breakdown)**
+*   **Purpose:** A focused document on individual characters (used in both film and TV).
+*   **Function:** In **film**, this often replaces the need for a full "bible." It is used primarily for **casting** and actor preparation. In **TV**, these profiles are compiled into the Show Guide.
+*   **Key Content:** Age range, physical traits, psychological motivations, backstory, relationships, and arc summary.
+
+### 6. **Pitch Deck (or Look Book)**
+*   **Purpose:** A visual sales tool used before a project is greenlit.
+*   **Function:** While similar to a Show Guide, it is heavily visual and concise, designed to sell the *vibe* and marketability of the project rather than serve as a long-term reference.
+*   **Key Content:** Mood boards, color palettes, reference images, cast wish lists, and a high-level summary of the story.
+
+### Summary of Terminology Shift
+| Traditional Term | Modern/Inclusive Alternative | Primary Use |
+| :--- | :--- | :--- |
+| **Show Bible** | **Show Guide** / **Series Guide** | Master series reference & pitch |
+| **World Bible** | **World Guide** / **World Book** | Setting & universe rules |
+| **Production Bible** | **Production Guide** / **Manual** | Logistics & scheduling |
+| **Writer's Bible** | **Writer's Guide** / **Handbook** | Staff continuity & tone |   

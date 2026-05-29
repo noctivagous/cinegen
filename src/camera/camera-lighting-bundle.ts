@@ -1,5 +1,8 @@
 import { alertCG } from '@/utils/alert-cg';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import { previsSelectionState, currentSceneData, styleGuide } from '@/data/project-data';
+import { colorState } from '@/color/color-state';
+import { getShotById } from '@/workspace/shot-frame-bridge';
 
 /** Camera, lighting and atmosphere option data */
 
@@ -139,6 +142,43 @@ export let cameraLightingSelections: Record<string, string | null> = {
   composition: null, movements: null, atmosphere: null
 };
 
+const SECTION_TO_SHOT_FIELD: Record<string, keyof typeof cameraLightingData | 'atmosphereTags'> = {
+  shotTypes: 'shotType',
+  angles: 'cameraAngle',
+  lighting: 'lightingTechnique',
+  composition: 'composition',
+  movements: 'cameraMovement',
+  atmosphere: 'atmosphereTags',
+};
+
+function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): void {
+  const sceneId = previsSelectionState.sceneId;
+  const shotId = previsSelectionState.shotId;
+  if (!sceneId || shotId == null) return;
+  const shot = getShotById(sceneId, shotId);
+  if (!shot) return;
+
+  const field = SECTION_TO_SHOT_FIELD[sectionKey];
+  if (!field) return;
+
+  if (field === 'atmosphereTags') {
+    if (abbr) {
+      shot.atmosphereTags = [abbr];
+    } else {
+      shot.atmosphereTags = [];
+    }
+  } else {
+    (shot as Record<string, unknown>)[field] = abbr ?? undefined;
+  }
+
+  // Mirror back into currentSceneData so the change is persisted
+  const scene = currentSceneData[sceneId];
+  if (scene && Array.isArray(scene.coverage)) {
+    const idx = scene.coverage.findIndex((s: { id: number }) => s.id === shotId);
+    if (idx >= 0) scene.coverage[idx] = shot;
+  }
+}
+
 /** Camera / lighting / atmosphere panel */
 
 // ==================== CAMERA / LIGHTING / ATMOSPHERE VIEW ====================
@@ -199,26 +239,77 @@ export function _updateCameraPromptBar() {
 }
 
 export function selectCameraItem(sectionKey: string, abbr: string): void {
-  if (cameraLightingSelections[sectionKey] === abbr) {
-    cameraLightingSelections[sectionKey] = null;
-  } else {
-    cameraLightingSelections[sectionKey] = abbr;
-  }
+  const next = cameraLightingSelections[sectionKey] === abbr ? null : abbr;
+  cameraLightingSelections[sectionKey] = next;
+  writeSelectionToActiveShot(sectionKey, next);
   renderCameraLighting();
   updateInspector('camera-lighting', cameraLightingSelections);
 }
 
-export function buildCameraPrompt(): void {
-  const parts = Object.entries(cameraLightingSelections)
-    .filter(([, v]) => v !== null)
+function buildPromptPartsFromSelections(selections: Record<string, string | null>): string[] {
+  return Object.entries(selections)
+    .filter((entry): entry is [string, string] => entry[1] !== null)
     .map(([k, abbr]) => {
       const item = cameraLightingData[k]?.items.find((i: CameraItem) => i.abbr === abbr);
       return item ? item.name : abbr;
     });
+}
+
+export function buildCameraPrompt(): void {
+  const sceneId = previsSelectionState.sceneId;
+  const shotId = previsSelectionState.shotId;
+  let parts: string[] = [];
+
+  // Prefer active shot's stored cinematography metadata
+  if (sceneId && shotId != null) {
+    const shot = getShotById(sceneId, shotId);
+    if (shot) {
+      const fieldToSection: Record<string, string> = {
+        shotType: 'shotTypes',
+        cameraAngle: 'angles',
+        lightingTechnique: 'lighting',
+        composition: 'composition',
+        cameraMovement: 'movements',
+      };
+      const shotSelections: Record<string, string | null> = {};
+      for (const [field, section] of Object.entries(fieldToSection)) {
+        const val = (shot as Record<string, unknown>)[field];
+        shotSelections[section] = typeof val === 'string' ? val : null;
+      }
+      if (Array.isArray(shot.atmosphereTags) && shot.atmosphereTags.length) {
+        shotSelections['atmosphere'] = shot.atmosphereTags[0];
+      } else {
+        shotSelections['atmosphere'] = null;
+      }
+      parts = buildPromptPartsFromSelections(shotSelections);
+    }
+  }
+
+  // Fall back to global selections if no active shot metadata
+  if (!parts.length) {
+    parts = buildPromptPartsFromSelections(cameraLightingSelections);
+  }
+
   if (!parts.length) {
     alertCG('Select at least one option from the panels below to build a shot prompt.');
     return;
   }
+
+  // Inject style guide context
+  const palette = colorState.getPalette();
+  if (palette.length) {
+    parts.push(`color palette: ${palette.join(', ')}`);
+  }
+  if (styleGuide.lightingMood) {
+    parts.push(`lighting mood: ${styleGuide.lightingMood}`);
+  }
+  if (styleGuide.visualTone) {
+    parts.push(`visual tone: ${styleGuide.visualTone}`);
+  }
+  if (styleGuide.lensStyle) {
+    parts.push(`lens style: ${styleGuide.lensStyle}`);
+  }
+
   const prompt = parts.join(', ') + ', cinematic, 4K';
   alertCG(`Shot Prompt:\n\n"${prompt}"\n\nCopy this into the shot\'s prompt field or AI generation input.`);
 }

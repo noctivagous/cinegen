@@ -1116,6 +1116,29 @@ export function updateSetupIncompleteStatus(): void {
   container.hidden = !incomplete;
 }
 
+/* ── Save status indicator (P0 — server-backed autosave) ───────────────────── */
+/** Updates the compact save-status badge in the status bar.
+ *  States follow the visual language of status-mode-badge / project-status-badge in the styleguide.
+ */
+export function updateSaveStatus(state: 'idle' | 'saving' | 'saved' | 'error', detail = ''): void {
+  const badge = document.getElementById('save-status-badge');
+  if (!badge) return;
+
+  badge.className = `save-status-badge save-status-${state}`;
+  let html = '';
+  if (state === 'saving') {
+    html = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:3px"></i>Saving…';
+  } else if (state === 'saved') {
+    html = '<i class="fa-solid fa-check" style="margin-right:3px"></i>Saved';
+  } else if (state === 'error') {
+    html = '<i class="fa-solid fa-exclamation-triangle" style="margin-right:3px"></i>Save failed';
+  } else {
+    html = '';
+  }
+  badge.innerHTML = html;
+  badge.title = detail || (state === 'saved' ? 'All changes written to server-resident project' : state === 'error' ? 'See console for details' : '');
+}
+
 export function initModelStatusBar(): void {
   const mainReady = MODEL_STATUS_MODALITIES.every((mod) => {
     return (
@@ -1159,6 +1182,7 @@ export function initModelStatusBar(): void {
   updateModelStatusIndicators();
   updateAudioSubmodalityIndicators();
   updateSetupIncompleteStatus();
+  updateSaveStatus('idle');
   console.log('CineGen: model status bar initialized');
 }
 

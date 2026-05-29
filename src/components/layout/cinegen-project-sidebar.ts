@@ -81,6 +81,10 @@ export class CinegenProjectSidebar extends CgLightElement {
     if (this._viewMode !== mode) this._viewMode = mode;
   }
 
+  private _openFeaturesModal(): void {
+    void (window as Window & { openProjectFeaturesModal?: () => Promise<void> }).openProjectFeaturesModal?.();
+  }
+
   private _setView(mode: CineGenPreferences['projectHierarchyViewMode']) {
     if (this._viewMode === mode) return;
     this._viewMode = mode;
@@ -211,6 +215,16 @@ export class CinegenProjectSidebar extends CgLightElement {
               `
             )}
           </div>
+          <button
+            type="button"
+            class="sidebar-features-btn"
+            title="Project features"
+            aria-label="Project features"
+            @click=${() => this._openFeaturesModal()}
+          >
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+            <span>Features</span>
+          </button>
         </div>
         ${this._viewMode === 'tree'
           ? html`<cinegen-project-tree></cinegen-project-tree>`

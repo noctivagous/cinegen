@@ -11,6 +11,7 @@ import { storyboardFrameEditorTemplate } from '@/components/modals/templates/sto
 import { wizardsModalTemplate } from '@/components/modals/templates/wizards-modal.template';
 import { entryWizardModalsTemplate } from '@/components/modals/templates/entry-wizard-modals.template';
 import { sectionSettingsModalTemplate } from '@/components/modals/templates/section-settings-modal.template';
+import { projectFeaturesModalTemplate } from '@/components/modals/templates/project-features-modal.template';
 import { aiProviderInfoModalTemplate } from '@/components/modals/templates/ai-provider-info-modal.template';
 
 /** Toolbar / settings modals (markup only; open/close logic in toolbar-modals-service). */
@@ -26,6 +27,7 @@ export class CinegenAppModals extends CgLightElement {
       ${aiProvidersModalTemplate}
       ${storyboardFrameEditorTemplate}
       ${sectionSettingsModalTemplate}
+      ${projectFeaturesModalTemplate}
       ${aiProviderInfoModalTemplate}
       ${wizardsModalTemplate}
       ${entryWizardModalsTemplate}

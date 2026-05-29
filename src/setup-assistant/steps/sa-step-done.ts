@@ -1,7 +1,8 @@
 import { html, nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { customElement } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
+import { getAgentHealth } from '@/services/ai/agents-service';
 import {
   MODALITY_META,
   REQUIRED_ROUTING_MODALITIES,
@@ -13,6 +14,25 @@ import { escHtml } from '@/utils/html';
 
 @customElement('sa-step-done')
 export class SaStepDone extends CgLightElement {
+  @state() private _agentHealth: { ready: boolean; provider: string; configured: boolean } | null = null;
+  @state() private _agentHealthLoading = true;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this._fetchAgentHealth();
+  }
+
+  private async _fetchAgentHealth(): Promise<void> {
+    try {
+      const health = await getAgentHealth();
+      this._agentHealth = health;
+    } catch {
+      this._agentHealth = { ready: false, provider: '', configured: false };
+    } finally {
+      this._agentHealthLoading = false;
+    }
+  }
+
   render() {
     const state = getSaWizardState();
     if (!state) return nothing;
@@ -91,6 +111,18 @@ export class SaStepDone extends CgLightElement {
             `
           : nothing}
         <div class="sa-done-list">${rows}</div>
+        <div class="sa-done-row sa-done-agent-health">
+          <i class="fa-solid fa-robot" aria-hidden="true"></i>
+          <div>
+            <span class="sa-badge sa-badge--required">AGENTS</span>
+            <strong>AI Director Agents</strong>
+            ${this._agentHealthLoading
+              ? html`<span class="sa-done-label"><i class="fa-solid fa-circle-notch fa-spin"></i> Checking…</span>`
+              : this._agentHealth?.ready
+                ? html`<span class="sa-done-label sa-done-ok"><i class="fa-solid fa-circle-check"></i> Ready — ${escHtml(this._agentHealth.provider)}</span>`
+                : html`<span class="sa-done-label sa-done-empty"><i class="fa-solid fa-circle-xmark"></i> Not configured — add an LLM API key in Settings</span>`}
+          </div>
+        </div>
         <div class="sa-done-actions">
           <button
             type="button"

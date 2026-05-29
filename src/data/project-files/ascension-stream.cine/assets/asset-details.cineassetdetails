@@ -391,7 +391,7 @@
   "visual-style": {
     "layout": "grid",
     "icon": "fa-eye",
-    "desc": "Look bible, visual rules, and style descriptors",
+    "desc": "Look guide, visual rules, and style descriptors",
     "addLabel": "Add Visual Style Entry",
     "items": [
       {

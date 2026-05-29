@@ -228,6 +228,22 @@ export let breakdownData: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let assetDetailData: any = {};
 
+export type StyleGuide = {
+  colorPalette: string[];
+  lightingMood: string;
+  lensStyle: string;
+  visualTone: string;
+  styleReference: string;
+};
+
+export let styleGuide: StyleGuide = {
+  colorPalette: [],
+  lightingMood: '',
+  lensStyle: '',
+  visualTone: '',
+  styleReference: '',
+};
+
 export type MoodBoardItemType = 'video' | 'image' | 'sound' | 'text';
 
 export interface MoodBoardItem {
@@ -456,6 +472,34 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
     typeof (ref as Record<string, unknown>).activeMoodBoardId === 'string'
       ? String((ref as Record<string, unknown>).activeMoodBoardId)
       : null;
+
+  // Style guide
+  const rawStyleGuide = applied.styleGuide;
+  if (rawStyleGuide && typeof rawStyleGuide === 'object') {
+    const sg = rawStyleGuide as Record<string, unknown>;
+    styleGuide = {
+      colorPalette: Array.isArray(sg.colorPalette) ? (sg.colorPalette as string[]) : [],
+      lightingMood: typeof sg.lightingMood === 'string' ? sg.lightingMood : '',
+      lensStyle: typeof sg.lensStyle === 'string' ? sg.lensStyle : '',
+      visualTone: typeof sg.visualTone === 'string' ? sg.visualTone : '',
+      styleReference: typeof sg.styleReference === 'string' ? sg.styleReference : '',
+    };
+  } else {
+    styleGuide = { colorPalette: [], lightingMood: '', lensStyle: '', visualTone: '', styleReference: '' };
+  }
+
+  // Sync loaded color palette into the live color state
+  if (typeof window !== 'undefined') {
+    import('@/color/color-state').then(({ colorState }) => {
+      colorState.setPalette(styleGuide.colorPalette);
+    }).catch(() => { /* ignore */ });
+  }
+
+  void import('@/services/project-features-service').then((svc) => {
+    svc.resetProjectFeaturesConfigCache();
+    svc.setProjectFeaturesConfig(svc.normalizeConfigForProject(applied), { persist: false });
+  });
+
   syncProjectShotFrameLinks({ migrateOrphans: false });
   notifyStoryboardFramesChanged();
   notifyStoryboardReferencesChanged();

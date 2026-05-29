@@ -105,7 +105,7 @@
           "icon": "fa-image",
           "view": "asset-detail",
           "detailKey": "reference-images",
-          "desc": "Character bibles, location refs, and moodboard for visual consistency"
+          "desc": "Character guides, location refs, and moodboard for visual consistency"
         },
         {
           "name": "Motion References",
@@ -537,8 +537,7 @@
           "name": "Review Dashboard",
           "type": "ai-review",
           "icon": "fa-check-double",
-          "view": "asset-detail",
-          "detailKey": "review-queue",
+          "view": "review-queue",
           "desc": "Items awaiting human approval, flagged issues, audit findings"
         },
         {

@@ -3,9 +3,11 @@ import { html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import { emitWorkspaceSceneTab } from '@/events/shell-events';
-import type { SceneDetail } from '@/workspace/scene-types';
+import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import { workspaceState } from '@/workspace/workspace-state';
 import { escHtml } from '@/utils/html';
+import { currentSceneData } from '@/data/project-data';
+import { cameraLightingData } from '@/camera/camera-lighting-bundle';
 import {
   formatShotDisplayLabel,
   getFramesForShot,
@@ -52,6 +54,29 @@ export class CinegenSceneTabs extends CgLightElement {
     return this._tabIndex;
   }
 
+  private _statusBadgeClass(status: string | undefined): string {
+    switch (status) {
+      case 'approved': return 'text-emerald-400';
+      case 'generated': return 'text-yellow-400';
+      case 'reviewed': return 'text-cyan-400';
+      case 'queued': return 'text-orange-400';
+      case 'prompted': return 'text-purple-400';
+      case 'storyboarded': return 'text-blue-400';
+      case 'rejected': return 'text-red-400';
+      case 'locked': return 'text-gray-500';
+      default: return 'text-gray-400';
+    }
+  }
+
+  private _updateShotField(sceneId: string, shotId: number, field: keyof SceneShot, value: string): void {
+    const scene = currentSceneData[sceneId];
+    if (!scene || !Array.isArray(scene.coverage)) return;
+    const shot = scene.coverage.find((s: SceneShot) => s.id === shotId);
+    if (!shot) return;
+    (shot as Record<string, unknown>)[field] = value;
+    this.requestUpdate();
+  }
+
   private _overviewHtml(scene: SceneDetail) {
     const master = scene.master;
     const coverageRows = scene.coverage.length
@@ -62,7 +87,9 @@ export class CinegenSceneTabs extends CgLightElement {
               <span class="scene-overview-list-meta"
                 >${escHtml(shot.label)} · ${escHtml(shot.duration)}${shot.bestTake
                   ? ' · ★ best'
-                  : ''}</span
+                  : ''}${shot.status
+                    ? html` · <span class="${this._statusBadgeClass(shot.status)}">${escHtml(shot.status)}</span>`
+                    : ''}</span
               >
             </li>
           `
@@ -204,6 +231,15 @@ export class CinegenSceneTabs extends CgLightElement {
                 shot.number != null && sceneId
                   ? formatShotDisplayLabel(sceneNumberFromSceneId(sceneId), shot.number)
                   : '';
+              const shotTypeOptions = cameraLightingData.shotTypes.items.map(
+                (i) => html`<option value=${i.abbr} ?selected=${shot.shotType === i.abbr}>${escHtml(i.abbr)} — ${escHtml(i.name)}</option>`
+              );
+              const angleOptions = cameraLightingData.angles.items.map(
+                (i) => html`<option value=${i.abbr} ?selected=${shot.cameraAngle === i.abbr}>${escHtml(i.abbr)} — ${escHtml(i.name)}</option>`
+              );
+              const movementOptions = cameraLightingData.movements.items.map(
+                (i) => html`<option value=${i.abbr} ?selected=${shot.cameraMovement === i.abbr}>${escHtml(i.abbr)} — ${escHtml(i.name)}</option>`
+              );
               return html`
                 <div data-ws-inspect-shot=${String(shot.id)} class="storyboard-frame p-2">
                   <div class="frame-image"><i class="fa-solid fa-camera"></i></div>
@@ -213,9 +249,47 @@ export class CinegenSceneTabs extends CgLightElement {
                       : nothing}
                     <div class="scene-ref">${escHtml(shot.type ?? '')}</div>
                     <div>${escHtml(shot.label)} • ${escHtml(shot.duration)}</div>
+                    ${shot.status
+                      ? html`<span class="text-[10px] uppercase tracking-wider ${this._statusBadgeClass(shot.status)}">${escHtml(shot.status)}</span>`
+                      : nothing}
                     ${shot.bestTake
                       ? html`<span class="text-emerald-400 text-[10px]">★ BEST TAKE</span>`
                       : nothing}
+                    <div class="mt-2 space-y-1">
+                      <select
+                        class="bg-[#1f1f1f] text-[10px] text-[var(--text-dim)] border border-[var(--border)] rounded px-1 py-0.5 w-full"
+                        title="Shot type"
+                        @change=${(e: Event) => {
+                          const val = (e.target as HTMLSelectElement).value;
+                          this._updateShotField(sceneId, shot.id, 'shotType', val);
+                        }}
+                      >
+                        <option value="">Type…</option>
+                        ${shotTypeOptions}
+                      </select>
+                      <select
+                        class="bg-[#1f1f1f] text-[10px] text-[var(--text-dim)] border border-[var(--border)] rounded px-1 py-0.5 w-full"
+                        title="Camera angle"
+                        @change=${(e: Event) => {
+                          const val = (e.target as HTMLSelectElement).value;
+                          this._updateShotField(sceneId, shot.id, 'cameraAngle', val);
+                        }}
+                      >
+                        <option value="">Angle…</option>
+                        ${angleOptions}
+                      </select>
+                      <select
+                        class="bg-[#1f1f1f] text-[10px] text-[var(--text-dim)] border border-[var(--border)] rounded px-1 py-0.5 w-full"
+                        title="Camera movement"
+                        @change=${(e: Event) => {
+                          const val = (e.target as HTMLSelectElement).value;
+                          this._updateShotField(sceneId, shot.id, 'cameraMovement', val);
+                        }}
+                      >
+                        <option value="">Movement…</option>
+                        ${movementOptions}
+                      </select>
+                    </div>
                     ${frames.length
                       ? html`<ul class="scene-shot-frame-list mt-2 space-y-1">
                           ${frames.map(

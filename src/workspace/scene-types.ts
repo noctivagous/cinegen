@@ -16,6 +16,26 @@ export type SceneShot = {
   scriptLink?: string;
   /** Ordered storyboard frame ids belonging to this shot. */
   frameIds?: number[];
+
+  /** Cinematography metadata (P0 Shot Architecture) */
+  shotType?: string; // ECU, CU, MCU, MS, MLS, LS/WS, ELS
+  cameraAngle?: string; // Eye-Level, Low Angle, High Angle, Dutch, Overhead, Worm's Eye, OTS, POV
+  cameraMovement?: string; // Static, Pan, Tilt, Dolly, Truck, Zoom, Handheld, Steadicam, Arc, Crane, Drone
+  lens?: string; // Wide (14–24mm), Standard (35–50mm), Portrait (85mm), Telephoto (135mm+), Macro, Anamorphic
+  lightingTechnique?: string; // 3-Point, High-Key, Low-Key, Side, Backlit, Rim, Golden Hour, Blue Hour, Practical, Gels, Hard, Soft
+  composition?: string; // Rule of Thirds, Centered, Leading Lines, Symmetry, Frame-within-Frame, Depth of Field, Negative Space
+  atmosphereTags?: string[];
+
+  /** Shot lifecycle status */
+  status?: 'planned' | 'storyboarded' | 'prompted' | 'queued' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'locked';
+
+  /** Linked downstream artifacts */
+  linkedFrameIds?: string[];
+  linkedClipId?: string;
+  linkedAudioId?: string;
+
+  /** Reference image IDs (characters, location plates, style refs) for generation */
+  sceneReferenceSlots?: string[];
 };
 
 export type SceneBroll = {

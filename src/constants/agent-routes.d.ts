@@ -6,8 +6,8 @@ export declare const AGENT_STATIC_ROUTES: {
   readonly SCRIPT_GENERATE_OUTLINE: '/api/agents/script/generate-outline';
   readonly CONCEPT_GENERATE_CONCEPTS: '/api/agents/concept/generate-concepts';
   readonly CONCEPT_GENERATE_IMAGE: '/api/agents/concept/generate-image';
-  readonly CASTING_BUILD_BIBLES: '/api/agents/casting/build-bibles';
-  readonly PRODUCTION_DESIGN_BUILD_BIBLES: '/api/agents/production-design/build-bibles';
+  readonly CASTING_BUILD_GUIDES: '/api/agents/casting/build-guides';
+  readonly PRODUCTION_DESIGN_BUILD_GUIDES: '/api/agents/production-design/build-guides';
   readonly STORYBOARD_GENERATE: '/api/agents/storyboard/generate';
   readonly BEAT_BOARD_GENERATE_OUTLINE: '/api/agents/beat-board/generate-outline';
   readonly CINEMATOGRAPHY_BUILD_PROMPT: '/api/agents/cinematography/build-prompt';
