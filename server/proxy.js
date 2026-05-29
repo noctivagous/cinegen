@@ -460,6 +460,87 @@ function handleConnections(req, res) {
   json(res, 200, { count: stateClients.size });
 }
 
+/* ── Atomic directory writes for .cine packages ───────────────────────────── */
+const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|json)$/;
+
+/**
+ * Write a batch of documents atomically into a .cine directory.
+ *
+ * 1. Clean up any stale staging/backup artifacts from an interrupted prior write.
+ * 2. Seed a staging directory with copies of all existing files (so untouched
+ *    documents survive the swap).
+ * 3. Write the new/updated documents into staging.
+ * 4. Rename the current directory → backup, staging → current, then remove backup.
+ * 5. On swap failure, attempt to restore from backup so the project stays readable.
+ *
+ * Returns the list of filenames that were newly written.
+ */
+function writeDocumentsAtomic(dirPath, docs, manifest) {
+  const stagingPath = `${dirPath}.staging`;
+  const backupPath = `${dirPath}.backup`;
+
+  // Recover from a previous interrupted write
+  if (fs.existsSync(backupPath)) {
+    if (!fs.existsSync(dirPath)) {
+      try { fs.renameSync(backupPath, dirPath); } catch { /* best-effort */ }
+    } else {
+      try { fs.rmSync(backupPath, { recursive: true, force: true }); } catch { /* best-effort */ }
+    }
+  }
+  if (fs.existsSync(stagingPath)) {
+    try { fs.rmSync(stagingPath, { recursive: true, force: true }); } catch { /* best-effort */ }
+  }
+
+  // Build staging directory
+  fs.mkdirSync(stagingPath, { recursive: true });
+
+  // Seed staging with existing files so untouched docs survive
+  if (fs.existsSync(dirPath)) {
+    const existing = fs.readdirSync(dirPath);
+    for (const fname of existing) {
+      const src = path.join(dirPath, fname);
+      const dst = path.join(stagingPath, fname);
+      try {
+        fs.copyFileSync(src, dst);
+      } catch { /* skip unreadable files */ }
+    }
+  }
+
+  const written = [];
+  for (const [fname, content] of Object.entries(docs)) {
+    if (!CINE_DOC_RE.test(fname)) continue;
+    const data = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+    fs.writeFileSync(path.join(stagingPath, fname), data, 'utf-8');
+    written.push(fname);
+  }
+
+  if (manifest) {
+    fs.writeFileSync(
+      path.join(stagingPath, 'cine.manifest.json'),
+      JSON.stringify(manifest, null, 2),
+      'utf-8'
+    );
+  }
+
+  // Atomic swap: current → backup, staging → current
+  try {
+    if (fs.existsSync(dirPath)) fs.renameSync(dirPath, backupPath);
+    fs.renameSync(stagingPath, dirPath);
+    // Swap succeeded — clean up backup
+    if (fs.existsSync(backupPath)) {
+      fs.rmSync(backupPath, { recursive: true, force: true });
+    }
+  } catch (swapErr) {
+    // Rollback: if current is missing but backup exists, restore backup
+    if (!fs.existsSync(dirPath) && fs.existsSync(backupPath)) {
+      try { fs.renameSync(backupPath, dirPath); } catch { /* leave for next write's recovery */ }
+    }
+    throw swapErr;
+  }
+
+  return written;
+}
+
 /* ── Server-resident .cine projects (P0 foundation) ────────────────────────── */
 function ensureProjectsDir() {
   try {
@@ -587,10 +668,7 @@ function handleProjectsApi(req, res) {
           },
         };
 
-        fs.writeFileSync(path.join(dirPath, 'cine.manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
-        for (const [fname, content] of Object.entries(minimalDocs)) {
-          fs.writeFileSync(path.join(dirPath, fname), JSON.stringify(content, null, 2), 'utf-8');
-        }
+        writeDocumentsAtomic(dirPath, minimalDocs, manifest);
 
         json(res, 201, {
           id,
@@ -702,23 +780,7 @@ function handleProjectsApi(req, res) {
         const dirPath = path.join(PROJECTS_DIR, `${id}.cine`);
         fs.mkdirSync(dirPath, { recursive: true });
 
-        const written = [];
-        for (const [fname, content] of Object.entries(docs)) {
-          // Basic sanitization: only allow alphanum . - _ and known extensions
-          if (!/^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|json)$/.test(fname)) {
-            continue;
-          }
-          const full = path.join(dirPath, fname);
-          const data = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
-          fs.writeFileSync(full, data, 'utf-8');
-          written.push(fname);
-        }
-
-        // Touch a lightweight manifest stub if none exists (real manifest should come from serializer on create)
-        const manifestPath = path.join(dirPath, 'cine.manifest.json');
-        if (!fs.existsSync(manifestPath) && payload.manifest) {
-          fs.writeFileSync(manifestPath, JSON.stringify(payload.manifest, null, 2), 'utf-8');
-        }
+        const written = writeDocumentsAtomic(dirPath, docs, payload.manifest);
 
         json(res, 200, { ok: true, written, projectId: id });
       } catch (e) {

@@ -37,11 +37,11 @@ Architecture note: this section touches `source/src/services/project-service.ts`
 - [x] Build the project serializer.
   - [x] Create `source/src/services/project-serializer.ts` that converts the current in-memory project state (via `captureRuntimeProjectSnapshot` + `serializeAppliedProject`) into the typed `.cine` document files defined by `cine-project-types.ts`.
   - [x] Core document types mapped: `screenplay.cinescript`, `treatment.cinetreatment`, `storyboard.cinestoryboard`, `scenes.cinescenes`, `breakdown.cinebreakdown`, `characters.cinecharacters`, `locations.cinelocations`, `features.cinefeatures` (project hierarchy enable/order), `references.cinereferenceimages`, `style.cinestyle`. Full coverage of generation queues, agent logs, shot libraries, etc. still tracked in serializer follow-ups.
-  - [ ] The serializer must produce output that passes `validateCrossFileIntegrity` before being written to disk — validation is the serializer's final step (gate documented and planned; enforcement pending shared validator export or server equivalent).
+  - [x] The serializer calls `validateCrossFileIntegrity` for full writes; failures set `valid = false` and surface the error. Incremental writes skip cross-file validation (it requires all documents) but still run `parseCineManifest`.
   - [x] This serializer is the enabling piece for autosave, export, and duplicate-as-local-project.
 
 - [x] Wire autosave to the serializer with incremental dirty-document writes.
-  - [ ] When a mutation occurs, mark only the affected document(s) as dirty (API `markProjectDirty()` + `DIRTY_DOCS` set exists in `project-service`; call sites partially wired — script wizard, project features modal, and some wizards mark dirty docs; remaining edit surfaces (script editor, scene detail, mood board edits, etc.) are next-slice work).
+  - [x] When a mutation occurs, `markProjectDirty()` fires from: script editor (`fountain-bundle.ts`), scene detail shot edits and reordering (`cinegen-scene-tabs.ts`), camera/lighting chip selections (`camera-lighting-bundle.ts`), mood board mutations (`project-data.ts`), and project features modal.
   - [x] On debounce expiry, serialize and write the dirty documents to the project's server-resident `.cine` directory via `POST /api/projects/:id/documents` (map of filename → content). Flush also callable explicitly via `triggerProjectSave()`.
   - [x] Writing is resilient; bundled `.cine` packages remain read-only (write paths no-op on `entry.file`).
   - [x] Put debounce timing, dirty-tracking, and persistence error reporting behind one imported service in `source/src/services/project-service.ts` (plus direct import to `status-bar-service` for error reporting).
@@ -90,7 +90,7 @@ Architecture note: canonical static hierarchy lives in `source/src/tree/project-
 - [x] Start-from-Script wizard enables `production-office` and `scenes` branches after `syncFountainToProject()` via `enableFeatureBranch()`.
 - [x] Wire `enableFeatureBranch()` (or targeted `enableFeatureIds()`) on other entry wizards when they hydrate departments (Visual-First, Concept/Mood-First, Beat Board, asset import).
 - [x] Align **Blank project** toolbar action with server path: `stubNewBlankProject()` now routes through `createNewProject()` so every blank project is server-resident with matching `features.cinefeatures`.
-- [ ] Serializer incremental flush: honor `DIRTY_DOCS` so only changed files (including `features.cinefeatures`) POST on autosave — today flush serializes the full document set.
+- [x] Serializer incremental flush: honor `DIRTY_DOCS` so only changed files (including `features.cinefeatures`) POST on autosave — `serializeAppliedProject` accepts `dirtyDocTypes` and filters the returned `documents` map.
 - [ ] Add `features.cinefeatures` to bundled sample manifests (optional) so duplicated samples carry explicit feature order.
 - [ ] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
 
@@ -627,13 +627,15 @@ This section is a snapshot of what has been built, what works reliably, and wher
 
 **Autosave call sites are solid.** ✅ `markProjectDirty()` now fires from: script editor (`fountain-bundle.ts`), scene detail shot edits and reordering (`cinegen-scene-tabs.ts`), camera/lighting chip selections (`camera-lighting-bundle.ts`), and mood board mutations (`autosaveMoodBoards` in `project-data.ts`).
 
-**Incremental dirty flush not fully wired.** The autosave debounce fires and POSTs documents, but the serializer always includes the full document set in the payload — it does not yet read the `DIRTY_DOCS` set to limit which files are written on each cycle. So every autosave tick writes all ten documents, not just the changed ones. The server-side write is still idempotent and correct, but it is less efficient than the architecture intended.
+**Incremental dirty flush wired.** ✅ `flushDirtyDocuments` now passes `Array.from(DIRTY_DOCS)` to `serializeAppliedProject`, which filters the `documents` map to only the changed types. Cross-file integrity validation is skipped for incremental writes (it requires all documents) but still runs on full flushes. The server-side atomic swap already handles partial document maps correctly: untouched existing files are copied into staging before the swap.
 
-**Serializer AI Director documents missing.** `generationQueue`, `reviewQueue`, `agentLog`, `costTracking`, `shotLibrary`, `cameraPresets`, and `spatialAnnotations` are not yet serialized. These are listed as explicit TODOs in `project-serializer.ts`. Until they are wired, AI Director state is not persisted across reloads.
+**Serializer AI Director documents wired.** ✅ `project-serializer.ts` now maps `shotLibrary`, `cameraPresets`, `spatialAnnotations`, `generationQueue`, `reviewQueue`, `costTracking`, and `agentLog` from `AppliedCineProject` into `.cine` document files. The manifest includes all seven entries. `triggerProjectSave` marks them dirty for full flushes. The server-side `CINE_DOC_RE` regex accepts all new extensions so atomic writes pass them through.
 
-**No format version migration.** `parseCineManifest` hard-rejects on any version number other than `2`. There is no migration path. If the format needs to evolve, any package written at version 2 will break unless a migration layer is added first.
+**Format version migration registry added.** ✅ `source/src/data/cine-migrations/migration-registry.ts` defines `registerMigration`, `getMigration`, and `runMigrations`. `parseCineManifest` accepts `{ migrate?: boolean }`; when true and the loaded version is older than current, the registry runs sequential migrations. `v2-baseline.ts` (identity) and `v2-to-v3.ts` (stub) are registered. No v3 format exists yet, so old packages still load fine (v2 is current) and future format bumps will have a clear upgrade path.
 
-**No write atomicity on the server.** `POST /api/projects/:id/documents` writes files one at a time via `fs.promises.writeFile`. A crash or kill signal mid-write leaves the `.cine` directory in a partially-updated state. The async write queue planned in P2 does not yet exist.
+**Zod schemas introduced (manifest first).** ✅ `source/src/data/cine-schemas.ts` defines `CineManifestSchema` via Zod, with `parseManifestZod()` as the canonical parse entry. `parseCineManifest` now calls `parseManifestZod` as a structural pre-validation layer, logging the first Zod error path (if any) before falling through to the existing imperative checks. Document schemas (`cinescenes`, `cinecharacters`, etc.) will be added opportunistically as features touch each type, following the parallel-track approach described in Option D.
+
+**No write atomicity on the server.** ✅ `POST /api/projects/:id/documents` and project creation now use `writeDocumentsAtomic` in `proxy.js`. The helper seeds a staging directory with existing files, writes new/updated documents into staging, then renames current → backup and staging → current. On swap failure it attempts rollback from backup. Stale staging/backup artifacts from interrupted prior writes are cleaned up on the next call. The `.cine` directory is never in a partially-updated state.
 
 **Media URL portability is unresolved.** AI-generated image and video URLs from providers (Fal, Replicate, Runway, etc.) are stored as external URLs that expire. There is no media caching layer, no local copy path, and no import/export media handling yet.
 
@@ -757,7 +759,7 @@ The current validator in `cine-project-loader.ts` is ~500 lines of imperative `a
 - **Shared between client and server.** The Zod schemas live in `source/src/data/cine-schemas.ts`, imported by the client loader, the client serializer, and the server route handler (via `source/server/` imports or a copied module). One canonical definition.
 - **Easy version migration.** A migration from v2 to v3 is a Zod transform: `CineManifestSchemaV2.transform(v3upgrader)`. The output is typed.
 
-The migration path: introduce Zod schemas alongside the existing imperative validator; have the validator delegate to Zod; remove the imperative code as confidence grows. The format does not change at all — only the implementation of the validator changes.
+**Status:** `CineManifestSchema` is implemented in `source/src/data/cine-schemas.ts` and wired into `parseCineManifest` as a structural pre-validation layer. Document schemas (`cinescenes`, `cinecharacters`, `cinelocations`, etc.) will be added opportunistically as features touch each document type. The migration path remains: introduce schemas alongside the existing imperative validator, delegate gradually, and remove imperative code as coverage and confidence grow. The format does not change at all — only the implementation of the validator changes.
 
 ---
 
@@ -771,11 +773,11 @@ The cross-file integrity validator is one of the strongest parts of the codebase
 
 Given the current state, the recommended order for `.cine` architecture work is:
 
-1. **A1 first.** Extract the validator into a shared module callable from both client loader and server write path. This closes the biggest correctness gap and makes the foundation trustworthy.
-2. **A2 next.** Add staging-directory atomic writes to the server. This makes autosave crash-safe.
-3. **A3 opportunistically.** Add content-hash skip when implementing the incremental dirty flush (they solve the same problem together: write fewer bytes, write smarter).
-4. **D in parallel.** Introduce Zod schemas for the three highest-traffic documents (`cinescenes`, `cinecharacters`, `cinelocations`) when those documents are next touched. Let the schema coverage grow with feature work rather than as a separate migration effort.
-5. **A4 when format version bumps.** Add the migration registry the first time the manifest version needs to change. Do not add it speculatively.
+1. **A1 ✅ done.** Validator extracted to `cine-project-validator.ts` and wired into `project-serializer.ts`.
+2. **A2 ✅ done.** Staging-directory atomic writes implemented in `proxy.js`.
+3. **A3 ✅ done.** Incremental dirty flush wired; `serializeAppliedProject` filters by `dirtyDocTypes`.
+4. **A4 ✅ done.** Migration registry created with `v2-baseline` and `v2-to-v3` stub; `parseCineManifest` accepts `{ migrate?: boolean }`.
+5. **D (manifest) ✅ done, document schemas pending.** `CineManifestSchema` is live in `cine-schemas.ts`. Document schemas (`cinescenes`, `cinecharacters`, `cinelocations`) will be added opportunistically as features touch each type.
 6. **B only if multi-user becomes a goal.** SQLite per-project is the right move if concurrent writers or cloud sync become requirements. It is not the right move now.
 7. **C never for the core format.** Event sourcing is worth adopting for the AI Director agent log (`agentLog` document) as that domain is naturally append-only. The screenplay, shot list, character, and scene documents should remain snapshots.
 

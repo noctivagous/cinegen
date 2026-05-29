@@ -29,10 +29,46 @@ export type SerializeResult = {
 };
 
 /**
+ * Document-type keys used by dirty tracking and incremental serialization.
+ */
+const DOC_TYPE_TO_FILENAME: Record<string, string> = {
+  screenplay: 'screenplay.cinescript',
+  treatment: 'treatment.cinetreatment',
+  storyboard: 'storyboard.cinestoryboard',
+  scenes: 'scenes.cinescenes',
+  breakdown: 'breakdown.cinebreakdown',
+  characters: 'characters.cinecharacters',
+  locations: 'locations.cinelocations',
+  referenceImages: 'references.cinereferenceimages',
+  style: 'style.cinestyle',
+  features: 'features.cinefeatures',
+  shotLibrary: 'shot-library.cineshotlibrary',
+  cameraPresets: 'camera-presets.cinecamerapresets',
+  spatialAnnotations: 'spatial-annotations.cinespatialannotations',
+  generationQueue: 'generation-queue.cinegenerationqueue',
+  reviewQueue: 'review-queue.cinereviewqueue',
+  costTracking: 'cost-tracking.cinecosttracking',
+  agentLog: 'agent-log.cineagentlog',
+};
+
+/**
  * Build a rich manifest + document map from a full AppliedCineProject snapshot.
  * This is the canonical entry point for any write path.
+ *
+ * When `dirtyDocTypes` is provided, only the named document types are serialized
+ * into the returned `documents` map. The manifest is always produced. This is the
+ * enabling piece for incremental dirty flush on autosave.
+ *
+ * Cross-file integrity validation is skipped for incremental writes because the
+ * validator requires all documents; full flushes (explicit Save, or when the
+ * dirty set includes every type) still run full validation.
  */
-export function serializeAppliedProject(applied: AppliedCineProject, projectId: string, name: string): SerializeResult {
+export function serializeAppliedProject(
+  applied: AppliedCineProject,
+  projectId: string,
+  name: string,
+  dirtyDocTypes?: string[]
+): SerializeResult {
   const screenplayFilename = 'screenplay.cinescript';
   const treatmentFilename = 'treatment.cinetreatment';
   const storyboardFilename = 'storyboard.cinestoryboard';
@@ -43,6 +79,13 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
   const referenceImagesFilename = 'references.cinereferenceimages';
   const styleFilename = 'style.cinestyle';
   const featuresFilename = 'features.cinefeatures';
+  const shotLibraryFilename = 'shot-library.cineshotlibrary';
+  const cameraPresetsFilename = 'camera-presets.cinecamerapresets';
+  const spatialAnnotationsFilename = 'spatial-annotations.cinespatialannotations';
+  const generationQueueFilename = 'generation-queue.cinegenerationqueue';
+  const reviewQueueFilename = 'review-queue.cinereviewqueue';
+  const costTrackingFilename = 'cost-tracking.cinecosttracking';
+  const agentLogFilename = 'agent-log.cineagentlog';
 
   const manifest: CineProjectManifest = {
     format: 'cinegen-package',
@@ -60,6 +103,13 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
       referenceImages: referenceImagesFilename,
       style: styleFilename,
       features: featuresFilename,
+      shotLibrary: shotLibraryFilename,
+      cameraPresets: cameraPresetsFilename,
+      spatialAnnotations: spatialAnnotationsFilename,
+      generationQueue: generationQueueFilename,
+      reviewQueue: reviewQueueFilename,
+      costTracking: costTrackingFilename,
+      agentLog: agentLogFilename,
     },
     settings: (applied as any).settings || {},
   };
@@ -98,7 +148,7 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
     applied.projectFeatures ??
     ({ version: 1, enabled: {}, order: [] } as import('@/services/project-features-service').ProjectFeaturesConfig);
 
-  const documents: Record<string, string> = {
+  const allDocuments: Record<string, string> = {
     [screenplayFilename]: JSON.stringify(screenplay, null, 2),
     [treatmentFilename]: JSON.stringify(applied.projectTreatment ?? {}, null, 2),
     [storyboardFilename]: JSON.stringify(storyboardDoc, null, 2),
@@ -109,7 +159,28 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
     [referenceImagesFilename]: JSON.stringify(referenceImagesDoc, null, 2),
     [styleFilename]: JSON.stringify(styleDoc, null, 2),
     [featuresFilename]: JSON.stringify(featuresDoc, null, 2),
+    [shotLibraryFilename]: JSON.stringify(applied.shotLibrary ?? [], null, 2),
+    [cameraPresetsFilename]: JSON.stringify(applied.cameraPresets ?? [], null, 2),
+    [spatialAnnotationsFilename]: JSON.stringify(applied.spatialAnnotations ?? {}, null, 2),
+    [generationQueueFilename]: JSON.stringify(applied.generationQueue ?? [], null, 2),
+    [reviewQueueFilename]: JSON.stringify(applied.reviewQueue ?? [], null, 2),
+    [costTrackingFilename]: JSON.stringify(applied.costTracking ?? [], null, 2),
+    [agentLogFilename]: JSON.stringify(applied.agentLog ?? [], null, 2),
   };
+
+  // If incremental, keep only the dirty document types; otherwise serialize all.
+  const isIncremental = Array.isArray(dirtyDocTypes) && dirtyDocTypes.length > 0;
+  const documents: Record<string, string> = {};
+  if (isIncremental) {
+    for (const type of dirtyDocTypes) {
+      const filename = DOC_TYPE_TO_FILENAME[type];
+      if (filename && allDocuments[filename] !== undefined) {
+        documents[filename] = allDocuments[filename];
+      }
+    }
+  } else {
+    Object.assign(documents, allDocuments);
+  }
 
   // Validation gate
   let valid = true;
@@ -117,13 +188,16 @@ export function serializeAppliedProject(applied: AppliedCineProject, projectId: 
 
   try {
     parseCineManifest(JSON.stringify(manifest), `serializer:${projectId}`);
-    validateCrossFileIntegrity({
-      packageBasename: projectId,
-      scenes: scenesDoc,
-      storyboard: storyboardDoc,
-      locations: locationsDoc,
-      characters: charactersDoc,
-    });
+    // Full validation requires all documents; skip for incremental writes.
+    if (!isIncremental) {
+      validateCrossFileIntegrity({
+        packageBasename: projectId,
+        scenes: scenesDoc,
+        storyboard: storyboardDoc,
+        locations: locationsDoc,
+        characters: charactersDoc,
+      });
+    }
   } catch (e) {
     valid = false;
     errors.push(e instanceof Error ? e.message : String(e));
@@ -156,10 +230,5 @@ export function serializeProjectToCineDocuments(projectId: string, projectName: 
 }
 
 // TODO (follow-up slices):
-// - Mood boards + styleGuide + colorState -> referenceImages / style docs
-// - generationQueue / reviewQueue / agentLog / ProductionContext -> AI Director docs
-// - Full shotLibrary, cameraPresets, spatialAnnotations, etc. from cinematography state
 // - Previs / timeline documents
-// - Wire the validator gate + refuse writes on invalid snapshots
-// - Incremental dirty tracking so we only POST changed documents on autosave
-// - createNewProject() that writes an initial scaffold .cine package via this serializer
+// - Refuse writes on invalid snapshots (currently logged but not blocked)

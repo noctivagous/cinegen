@@ -16,6 +16,11 @@ import {
   validateArrayOfRecords,
   validateCrossFileIntegrity as _validateCrossFileIntegrity,
 } from '@/data/cine-project-validator';
+import { runMigrations } from '@/data/cine-migrations/migration-registry';
+// Import side-effect: registers migrations in the global registry
+import '@/data/cine-migrations/v2-baseline';
+import '@/data/cine-migrations/v2-to-v3';
+import { parseManifestZod } from '@/data/cine-schemas';
 
 /** Raw `.cine/` package files — loaded on demand (not at app boot). */
 const packageFileLoaders = import.meta.glob('./project-files/**/*', {
@@ -74,7 +79,27 @@ function packageBasenameFromManifestPath(path: string): string | null {
   return parts[idx - 1] || null;
 }
 
-export function parseCineManifest(raw: string, sourceLabel = 'project'): CineProjectManifest {
+export function parseCineManifest(
+  raw: string,
+  sourceLabel = 'project',
+  opts?: { migrate?: boolean }
+): CineProjectManifest {
+  // Zod structural pre-validation: gives path-aware error messages
+  // (e.g. "manifest.documents: expected object, got undefined").
+  // Swallow Zod errors here and let the imperative checks below produce
+  // the final thrown error, but log the structured path for debugging.
+  try {
+    parseManifestZod(raw);
+  } catch (zodErr: unknown) {
+    if (zodErr && typeof zodErr === 'object' && 'errors' in zodErr) {
+      const issues = (zodErr as { errors?: Array<{ path: (string | number)[]; message: string }> }).errors;
+      if (issues?.length) {
+        const pathStr = issues[0].path.join('.');
+        console.warn(`[parseCineManifest] Zod validation note for ${sourceLabel}: ${pathStr}: ${issues[0].message}`);
+      }
+    }
+  }
+
   const doc = assertObject(parseJsonValue(raw, sourceLabel), sourceLabel, '.manifest root');
   const file = doc as CineProjectManifest;
   if (file.format !== CINE_PROJECT_FORMAT) {
@@ -82,7 +107,19 @@ export function parseCineManifest(raw: string, sourceLabel = 'project'): CinePro
       `Invalid .cine package (${sourceLabel}): expected format "${CINE_PROJECT_FORMAT}", got "${String((file as { format?: unknown }).format)}"`
     );
   }
-  if (file.version !== CINE_PROJECT_VERSION) {
+  const version = Number(file.version);
+  if (version !== CINE_PROJECT_VERSION) {
+    if (opts?.migrate && version < CINE_PROJECT_VERSION) {
+      // Migration path: future implementation would call runMigrations here
+      // with the full document map. For now, the registry has no forward
+      // migrations defined (only the v2 baseline), so this will throw
+      // with a clear message.
+      throw new Error(
+        `.cine package version migration not yet implemented for ${sourceLabel}: ` +
+        `loaded version ${version}, current is ${CINE_PROJECT_VERSION}. ` +
+        `Migration registry exists but no forward migrations are registered yet.`
+      );
+    }
     throw new Error(
       `Unsupported .cine package version in ${sourceLabel}: ${String(file.version)} (expected ${CINE_PROJECT_VERSION})`
     );

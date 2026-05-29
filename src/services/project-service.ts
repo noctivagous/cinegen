@@ -487,7 +487,13 @@ export async function flushDirtyDocuments(): Promise<void> {
 
   try {
     const snapshot = captureRuntimeProjectSnapshot();
-    const { documents } = serializeAppliedProject(snapshot, activeProjectId, String(entry?.name || (projectData as any)?.name || 'Untitled'));
+    const dirtyDocTypes = Array.from(DIRTY_DOCS);
+    const { documents } = serializeAppliedProject(
+      snapshot,
+      activeProjectId,
+      String(entry?.name || (projectData as any)?.name || 'Untitled'),
+      dirtyDocTypes
+    );
 
     const res = await fetch(`/api/projects/${encodeURIComponent(activeProjectId)}/documents`, {
       method: 'POST',
@@ -512,7 +518,11 @@ export async function flushDirtyDocuments(): Promise<void> {
 /** Public trigger for explicit Save (toolbar, keybinding, or wizard completion). */
 export async function triggerProjectSave(): Promise<void> {
   // Force all docs dirty for a full flush
-  ['screenplay', 'storyboard', 'scenes', 'breakdown', 'characters', 'locations', 'treatment'].forEach((d) => DIRTY_DOCS.add(d));
+  [
+    'screenplay', 'storyboard', 'scenes', 'breakdown', 'characters', 'locations', 'treatment',
+    'shotLibrary', 'cameraPresets', 'spatialAnnotations',
+    'generationQueue', 'reviewQueue', 'costTracking', 'agentLog',
+  ].forEach((d) => DIRTY_DOCS.add(d));
   await flushDirtyDocuments();
 }
 
