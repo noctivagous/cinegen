@@ -1,6 +1,6 @@
 # Cinegen Architecture Progressive Fix Tracker
 
-Last verified: 2026-05-25
+Last verified: 2026-05-29
 Source baseline: `planning/architecture-audit-report-2026-05-25.md`
 
 This is a living reference for incremental cleanup until legacy bundles and global bridges are removed.
@@ -201,3 +201,109 @@ Progress note (2026-05-26):
 - New storage keys must be added in `source/src/constants/storage-keys.ts` before use.
 - New provider/routing logic should be added to shared SSOT modules first, then consumed by UI/services.
 - Avoid adding new `window.*` globals unless there is a temporary migration reason with a removal ticket.
+
+---
+
+## P0 Condition Assessment (as of 2026-05-29)
+
+### What Is Solid
+
+**Project foundation.** The three-tier project model is working. Bundled read-only samples load through Vite's `import.meta.glob`. Server-resident writable projects exist in `source/server/projects/` and are created, loaded, and incrementally written via `GET /api/projects`, `GET /api/projects/:id/load`, `POST /api/projects`, and `POST /api/projects/:id/documents` in `proxy.js`. The Duplicate Sample As Local Project path exercises the full serializer → write → load round-trip and has been verified to work.
+
+**Serializer.** `project-serializer.ts` maps `AppliedCineProject` snapshots to the ten core `.cine` document files plus seven AI Director documents: `shotLibrary.cineshotlibrary`, `cameraPresets.cinecamerapresets`, `spatialAnnotations.cinespatial`, `generationQueue.cinegenerationqueue`, `reviewQueue.cinereviewqueue`, `costTracking.cinecosttracking`, and `agentLog.cineagentlog`. These cover the full MVP filmmaker loop.
+
+**Autosave.** Dirty-document tracking with debounce is in place via `markProjectDirty()` and `triggerProjectSave()` in `project-service.ts`. Write failures surface as a visible "Save failed" badge with console detail. Read-only bundled projects correctly no-op on write paths.
+
+**Atomic writes.** `POST /api/projects/:id/documents` uses `writeDocumentsAtomic` in `proxy.js`. Seeds a staging directory with existing files, writes new/updated documents into staging, then renames current → backup and staging → current. On swap failure it attempts rollback from backup. The `.cine` directory is never in a partially-updated state.
+
+**Validator.** `validateCrossFileIntegrity` in `cine-project-validator.ts` (extracted from `cine-project-loader.ts`) is thorough: validates referential integrity across scenes, characters, locations, shots, frames, tree nodes, asset detail keys, media paths, and output path status. Called by the serializer on full writes. Accepts `Record<string, string>` document payloads so it runs on both client and server.
+
+**Zod + migration.** `CineManifestSchema` in `cine-schemas.ts` wired into `parseCineManifest` as a structural pre-validation layer. Migration registry in `source/src/data/cine-migrations/migration-registry.ts` with `v2-baseline` and `v2-to-v3` stub. `parseCineManifest` accepts `{ migrate?: boolean }`.
+
+**Script → project sync.** `syncFountainToProject()` in `source/src/script/script-to-project.ts` deterministically produces scenes, breakdown rows, starter shots (ECU through ELS), character and location placeholders, and mood-board attachment points from a Fountain script with no LLM dependency. The Start-from-Script wizard triggers this on step 1 and enables the right feature branches after sync.
+
+**Shot architecture.** `SceneShot` in `scene-types.ts` carries `shotType`, `cameraAngle`, `cameraMovement`, `lens`, `lightingTechnique`, `composition`, `atmosphereTags`, `status`, `linkedFrameIds`, `linkedClipId`, `linkedAudioId`, and `sceneReferenceSlots`. Coverage shot cards show status badges; inline dropdowns allow editing. Reorder up/down is wired.
+
+**Project Features.** Progressive disclosure (blank project → Mood Boards only; wizard completion → enable departments) is working end-to-end with `features.cinefeatures` persistence, the modal UI, `Alt+1…9` section jumping respecting disabled sections, and selection rerouting on config change.
+
+**Legacy bridge retirement.** Phase A (SSOT), Phase B (bundle decomposition), and Phase C (provider/settings/status migration) are complete. Lint guards (`check-window-cinegen-writes.mjs`, `check-raw-custom-event-strings.mjs`) enforce no new unguarded globals on committed MVP paths.
+
+**Agent layer.** All twelve Mastra agent routes are registered. `agent-context-adapter.ts` maps `ProductionContext` outputs into UI project state. AI Director review queue UI (`cinegen-review-queue-view`) surfaces `getReviewQueue()` with Approve/Reject controls. Agent health check wired in Setup Assistant done step.
+
+### Known Open Gaps
+
+- **Media URL portability unresolved.** AI-generated image and video URLs from providers expire. No media caching layer, no local copy path, no import/export media handling yet.
+- **Import/export not built.** `GET /api/projects/:id/export` and `POST /api/projects/import` do not exist. The format and serializer are ready; server-side zip handling and client UI are P1 work.
+- **Snapshot invariant enforcement.** Normalizers in `project-data.ts` for missing fields need to be written; the required-fields contract is documented but not yet enforced on load.
+- **Agent LLM key consistency.** Proxy reads `source/server/keys.json`; Mastra reads `backends/.env`. These two stores are not yet unified.
+- **Shot lifecycle transitions not enforced.** Status badges display correctly but invalid transitions (e.g. `queued` without `prompted`) are not blocked in the mutation path.
+
+---
+
+## `.cine` Package Architecture: Format Evaluation
+
+### The Current Design
+
+The `.cine` package is a directory of JSON text files, each with a domain-specific extension (`.cinescript`, `.cinescenes`, `.cinecharacters`, etc.), anchored by a `cine.manifest.json` that names each document by key.
+
+**Strengths:**
+- Human-readable and git-diffable — each document is a pretty-printed JSON file.
+- Domain isolation by file — partial saves write one file and leave all others intact.
+- Extension-based type safety — the `.cinescript` / `.cinescenes` naming gives the validator unambiguous type expectations.
+- Cross-file integrity validation — `validateCrossFileIntegrity` checks referential integrity before any package is applied to in-memory state.
+- Portable zip format — because the package is a flat directory of text files, zipping for export is a `tar` or `archiver` call away.
+- Document-per-concern scales naturally — adding a new department is a manifest key addition plus a loader function.
+
+**Addressed weaknesses (as of 2026-05-29):**
+- Validator was module-private and not called on writes → extracted to `cine-project-validator.ts`, wired into serializer. ✅
+- No write atomicity → staging-directory atomic writes in `proxy.js`. ✅
+- No version migration → migration registry created, `parseCineManifest` accepts `{ migrate? }`. ✅
+- `unknown[]` / `Record<string, unknown>` types too loose → Zod `CineManifestSchema` live; document schemas added opportunistically. ✅ (manifest only; document schemas in progress)
+- Vite glob coupling → validator now accepts `Record<string, string>` payloads usable from both client and server. ✅
+- No content-addressed change detection → incremental dirty-document flush (`serializeAppliedProject` filters by `dirtyDocTypes`). ✅
+
+**Remaining weakness:**
+- Media URL portability — generated image/video URLs from providers are stored as external URLs that may expire. No media caching or local copy path. Tracked in P1 Import/Export.
+
+### Alternative Architecture Notes
+
+**SQLite per project** — worth reconsidering if CineGen gains multi-user or cloud sync requirements. Atomic write guarantees and concurrent read safety are strong advantages. Loses direct git-diffability; bundled samples become a different format. Not the right move for the current local-dev, single-filmmaker context.
+
+**Event-sourced log** — do not adopt for the core project format. Adopt the *pattern* selectively for the AI Director department: `agentLog` is already append-only and can grow into a lightweight event stream for the agent layer without touching screenplay, shot, or character documents.
+
+**Zod schemas as SSOT** — the right long-term direction. `CineManifestSchema` is live. Document schemas (`cinescenes`, `cinecharacters`, `cinelocations`, etc.) will be added opportunistically as features touch each document type. Each Zod schema replaces ~80 lines of imperative `assertObject` calls with ~20 lines of `z.object()` definitions and gives TypeScript inferred types automatically.
+
+### Priority Sequence (completed items)
+
+1. **A1 ✅** Validator extracted to `cine-project-validator.ts` and wired into `project-serializer.ts`.
+2. **A2 ✅** Staging-directory atomic writes implemented in `proxy.js`.
+3. **A3 ✅** Incremental dirty flush wired; `serializeAppliedProject` filters by `dirtyDocTypes`.
+4. **A4 ✅** Migration registry created with `v2-baseline` and `v2-to-v3` stub.
+5. **D (manifest) ✅** `CineManifestSchema` live in `cine-schemas.ts`. Document schemas pending (opportunistic).
+6. **B** — Only if multi-user becomes a goal.
+7. **C** — Never for the core format; selectively for `agentLog`.
+
+---
+
+## Production Terminology Reference
+
+Industry-standard guide names (modern secular alternatives to "bible" terminology):
+
+| Traditional Term | Modern Alternative | Primary Use |
+| :--- | :--- | :--- |
+| Show Bible | Show Guide / Series Guide | Master series reference & pitch |
+| World Bible | World Guide / World Book | Setting & universe rules |
+| Production Bible | Production Guide / Manual | Logistics & scheduling |
+| Writer's Bible | Writer's Guide / Handbook | Staff continuity & tone |
+
+**Show Guide** — master reference for a TV series; defines vision, tone, world rules, character backstories, long-term arcs. Used for pitch (development) and continuity (production).
+
+**World Guide** — setting-focused subset common in sci-fi/fantasy/historical; covers maps, timelines, glossaries, magic/technology rules.
+
+**Writer's Guide** — internal operational manual for writing staff; includes character voice samples, thematic mandates, episode templates, running canon log.
+
+**Production Guide** — logistical document for the physical production team; script breakdowns, shooting schedules, contact lists, safety protocols, department requirements.
+
+**Character Profile / Breakdown** — focused document on individual characters; used for casting and actor preparation in film; compiled into the Show Guide for TV.
+
+**Pitch Deck / Look Book** — visual sales tool; heavily visual and concise, designed to sell the vibe rather than serve as a long-term reference; includes mood boards, color palettes, reference images, cast wish lists.
