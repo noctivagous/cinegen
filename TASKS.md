@@ -16,45 +16,61 @@ A CineGen filmmaker should be able to:
 4. Attach provided visual assets (photos, reference images, concept art) to characters, locations, and shots so that generation uses them as style and consistency anchors.
 5. Build and refine a mood board that sets the visual DNA of the project — color palette, lighting mood, texture references — and see that DNA propagate automatically into storyboard prompts and shot configuration.
 6. Let AI agents enrich each department's work (scripts, bibles, prompts, boards, clips, audio) without blocking the workflow when agents are not configured.
-7. Save automatically and recover the full project state — script, scenes, shots, boards, references, mood boards, agent outputs — on reload.
-8. See every step clearly: what is configured, what will be generated, what failed, and what needs human review before downstream work proceeds.
+7. Save automatically, recover the full project state on reload, and export a complete portable `.cine` package to share, archive, or move between machines.
+8. Import a `.cine` project exported from another session, validate it, and resume work from exactly where it left off.
+9. See every step clearly: what is configured, what will be generated, what failed, and what needs human review before downstream work proceeds.
 
 ---
 
 ## P0 — Project Foundation: Create, Save, and Recover
 
-Rationale: every wizard, agent, and department panel writes into one shared project structure. Before anything else, that structure needs to exist, be writable for new projects, be persistable on every meaningful mutation, and be fully recoverable on reload. The current sample project (`ASCENSION_STREAM`) demonstrates the shape; the gap is that user-created projects do not yet arrive at the same reliable state automatically.
+Rationale: every wizard, agent, and department panel writes into one shared project structure. Before anything else, that structure needs to exist, be writable for new projects, be persistable on every meaningful mutation, and be fully recoverable on reload. The current sample project (`ASCENSION_STREAM`) demonstrates the right shape, but there is a foundational gap: user-created projects and `.cine` packages are two disconnected things. User projects exist as flat key/value blobs in the server store. The rich multi-file `.cine` directory format — with separate documents for screenplay, scenes, storyboard, characters, locations, shots, references, sound, and AI queues — is used only by bundled read-only samples compiled into the Vite build via `import.meta.glob`. There is no serializer that goes from current in-memory project state to a `.cine` directory, and no path for the server to read a user-provided `.cine` from disk. Everything in this section works toward closing that gap. Import and export flow from this same foundation.
 
-Architecture note: this section touches `source/src/services/project-service.ts`, `source/src/data/project-data.ts`, `source/src/constants/storage-keys.ts`, and `source/src/services/persistence.ts`. Any new persistence keys go in `storage-keys.ts` first. No browser-local storage APIs.
+Architecture note: this section touches `source/src/services/project-service.ts`, `source/src/data/project-data.ts`, `source/src/constants/storage-keys.ts`, `source/src/services/persistence.ts`, and a new `source/server/routes/projects.js`. Any new persistence keys go in `storage-keys.ts` first. No browser-local storage APIs.
+
+- [ ] Establish the server-resident project tier.
+  - Create a `source/server/projects/` directory. Each subdirectory is a writable `.cine` package (e.g. `source/server/projects/my-film.cine/`) that the server reads and writes at runtime — not compiled into the Vite build.
+  - Add a `GET /api/projects` endpoint that lists all server-resident projects (name, id, last-modified) alongside bundled read-only samples, with a `writable: boolean` flag on each entry.
+  - Add a `GET /api/projects/:id/load` endpoint that reads the project's `.cine` files from disk, validates them through the existing `parseCineManifest` + `validateCrossFileIntegrity` path, and returns the full `AppliedCineProject` shape.
+  - This third persistence tier sits between the bundled samples (Vite, read-only) and the existing flat key/value store (session-only), and becomes the primary home for all user-created projects.
+
+- [ ] Build the project serializer.
+  - Create `source/src/services/project-serializer.ts` that converts the current in-memory project state (`currentSceneData`, `storyboardFrames`, `assetLibrary`, `moodBoards`, `breakdownData`, `projectTreatment`, `styleGuide`, `referenceImages`, `generationQueue`, `reviewQueue`, `agentLog`, etc.) into the typed `.cine` document files defined by `cine-project-types.ts`.
+  - Each document type maps to one file: `screenplay.cinescript`, `scenes.cinescenes`, `storyboard.cinestoryboard`, `characters.cinecharacters`, `locations.cinelocations`, `breakdown.cinebreakdown`, `referenceImages.cinereferenceimages`, and so on.
+  - The serializer must produce output that passes `validateCrossFileIntegrity` before being written to disk — validation is the serializer's final step, not the caller's responsibility.
+  - This serializer is the enabling piece for autosave, export, and duplicate-as-local-project.
+
+- [ ] Wire autosave to the serializer with incremental dirty-document writes.
+  - When a mutation occurs, mark only the affected document(s) as dirty (e.g. a script edit marks `screenplay` dirty; a shot edit marks `scenes` dirty; a frame change marks `storyboard` dirty).
+  - On debounce expiry, serialize and write only the dirty documents to the project's server-resident `.cine` directory via `POST /api/projects/:id/documents` (accepts a map of `{ documentType: serializedContent }`).
+  - Writing one document at a time is safe, cheap, and resilient — a crash mid-save leaves all other documents intact.
+  - Bundled `.cine` packages remain read-only; show this clearly in the UI.
+  - Put debounce timing, dirty-tracking, and persistence error reporting behind one imported service in `source/src/services/project-service.ts`.
+  - All new storage keys declared in `source/src/constants/storage-keys.ts` before use.
 
 - [ ] Define and enforce project snapshot invariants.
   - Required fields: `screenplay.text`, `currentSceneData`, `breakdownData`, `assetLibrary` (characters, locations, costumes, props), `storyboardFrames`, `moodBoards`, `generationLog`, `productionContext` reference anchor.
-  - Add normalizers in `source/src/data/project-data.ts` that fill missing fields with safe defaults on load.
+  - Add normalizers in `source/src/data/project-data.ts` that fill missing fields with safe defaults on load; these run on both server-resident and bundled project loads.
   - Avoid per-component normalization; centralize it in data/service modules.
 
 - [ ] Make new local project creation produce the full scaffold.
-  - On "Create Project," initialize all required fields including an empty mood board, an empty character/location library, empty shot list hooks, and default project settings (aspect ratio, frame rate, color space).
+  - On "Create Project": initialize all required fields, write an initial minimal `.cine` package to `source/server/projects/<id>.cine/`, and load it back through the same `GET /api/projects/:id/load` path that all project opens use.
   - Expose a typed `createNewProject(name, entryMode)` function that all wizards call rather than building project shape independently.
 
-- [ ] Add debounced autosave for local projects.
-  - Trigger after: script edits, wizard completion, breakdown edits, shot edits, storyboard frame changes, reference changes, mood board changes, project settings changes.
-  - Bundled `.cine` packages remain read-only; show this clearly in the UI.
-  - Put debounce timing, dirty-state tracking, and persistence error reporting behind one imported service in `source/src/services/project-service.ts`.
-  - All new persistence keys declared in `source/src/constants/storage-keys.ts` before use.
-
 - [ ] Surface save status and failures visibly.
-  - Add a clear "Saving…", "Saved", and "Save failed" status indicator.
+  - Add a clear "Saving…", "Saved", and "Save failed" indicator in the status bar.
   - Do not swallow persistence write failures silently.
   - Continue the status-flow migration: use direct imports from `source/src/services/status-bar-service.ts` rather than `window.*` calls.
 
 - [ ] Add "Duplicate Sample As Local Project."
-  - Let users start from `ASCENSION_STREAM` with a one-click copy into a local, writable project.
-  - Make the distinction between read-only sample and writable local project clear before any edits happen.
+  - Copy a bundled read-only sample's in-memory state through the serializer into a new server-resident `.cine` package.
+  - The copy opens as a fully writable project. Make the transition clear before any edits happen.
+  - This exercises the full serializer → write → load round-trip and validates it before import/export depends on the same path.
 
-- [ ] Extend `npm run validate:cine` to cover local project snapshots.
-  - Check all required fields exist after normalization.
-  - Check that Fountain text produces matching tree nodes and scene records.
-  - Run in CI or as a pre-build smoke check.
+- [ ] Extend `npm run validate:cine` to cover server-resident project snapshots.
+  - After autosave writes a document, optionally re-validate the affected document against its schema.
+  - In the validate script: check all required fields exist after normalization, confirm Fountain text produces matching tree nodes and scene records, and confirm shot/frame cross-references are valid.
+  - Run as a pre-build smoke check and on demand during development.
 
 ---
 
@@ -349,6 +365,52 @@ Architecture note: as generation logic is touched, extract it from the 1510-line
 
 ---
 
+## P1 — Project Import and Export
+
+Rationale: because the project serializer and server-resident project tier are built in P0, import and export are natural extensions — not separate features requiring new persistence designs. Export zips the server-resident `.cine` directory and offers it as a download. Import accepts that zip, extracts it server-side, validates it, and registers it as a new server-resident project. The `.cine` format's document-per-concern design means the zip contains readable text files: a filmmaker can inspect, version-control, or manually edit the Fountain script or JSON documents before re-importing. Binary media (generated images, video clips) is referenced by URL rather than embedded, so the zip stays small — typically a few hundred KB of JSON for a short film, regardless of how many frames have been generated.
+
+Architecture note: zip handling belongs on the server (Node's built-in `zlib` plus `tar` or a lightweight zip library). The client only needs a file picker for import and an anchor-download trigger for export. Do not handle zip bytes in the browser. Validate through `parseCineManifest` + `validateCrossFileIntegrity` before any imported project appears in the project list.
+
+- [ ] Add `GET /api/projects/:id/export` — export as `.cine` zip.
+  - Before zipping, run the serializer to flush any dirty in-memory state to the server-resident package directory, ensuring the export reflects the current session.
+  - Zip the entire `.cine` directory (preserving the directory structure: `cine.manifest.json` at root, one file per document).
+  - Stream the zip back as `Content-Disposition: attachment; filename="<project-name>.cine.zip"`.
+  - Expose as a "Download Project" action in the toolbar Projects menu and the project settings modal.
+  - The zip is self-contained: another CineGen instance can import it directly without any additional server state.
+
+- [ ] Add `POST /api/projects/import` — import a `.cine` zip.
+  - Accept a multipart file upload of a `.cine.zip`.
+  - Extract to a temporary directory, then validate: run `parseCineManifest` on `cine.manifest.json`, run `validateCrossFileIntegrity` across all referenced document files.
+  - On validation success: copy to `source/server/projects/<id>.cine/` (using the project ID from the manifest, disambiguating if it already exists).
+  - On validation failure: return a structured JSON error listing every schema violation; do not install the project.
+  - Return the new project's entry (id, name, writable: true) on success.
+  - Expose as "Import Project…" in the toolbar Projects menu with a file picker that accepts `.cine.zip`.
+
+- [ ] Add import/export to the Projects modal UI.
+  - In `cinegen-projects-modal-list.ts`: add an "Import Project…" button at the top of the list.
+  - On each writable project row: add a "Download" icon that triggers the export endpoint.
+  - On each read-only (bundled) sample row: add a "Duplicate as Local Project" option that creates a writable copy (uses the serializer path from P0).
+  - Show a progress indicator during import (upload + server-side extraction can take a moment for large projects).
+  - Show validation errors inline if import fails, with specific file and field references from the validator.
+
+- [ ] Handle media URL portability in export and import.
+  - Generated images and video clips are stored as absolute provider URLs or local server paths. On export, record all `refImageUrls`, `mediaRefs`, and `generatedRefs` that point to local server paths.
+  - Add a `media/` folder to the zip for any referenced local files that exist in `source/server/projects/<id>.cine/media/` (uploaded reference images, locally-stored storyboard thumbnails).
+  - On import, rewrite local path references to point to the newly installed project's media directory.
+  - Provider-generated URLs (Fal, Replicate, Runway, etc.) remain as external URLs and are noted in the import UI as "external references — may expire."
+
+- [ ] Add a `GET /api/projects/:id/export/manifest` — lightweight export preview.
+  - Return a JSON summary: project name, scene count, shot count, storyboard frame count, asset counts, agent log entry count, and a list of any external media URLs included.
+  - Surface this in the export confirmation dialog so the filmmaker knows what is included before downloading.
+
+- [ ] Version the `.cine` format explicitly.
+  - `CINE_PROJECT_VERSION` is already declared in `cine-project-types.ts` as `2`.
+  - On import, if the version is older, run a migration function that upgrades the document structure before validation.
+  - On import, if the version is newer than the current app supports, reject with a clear message: "This project was created with a newer version of CineGen."
+  - Add a `migrations/` module in `source/src/data/` that maps version numbers to upgrade functions; keep migrations additive and non-destructive.
+
+---
+
 ## P2 — Legacy Bridge Retirement (Phase C/E Continuation)
 
 Rationale: Phases A and B are complete (SSOT, provider registry, agent routes, setup decomposition, script wizard extraction, toolbar concern split, setup-assistant-bundle decomposition). Phase C provider/settings/status migration is complete. The remaining legacy surface is workspace/storyboard/toolbar/chip/fountain flows — the highest-traffic paths in the filmmaker loop. Retiring these globals in the same tasks as the P0/P1 features above is the most efficient approach: touch the code once, clean it up in the same PR.
@@ -446,19 +508,22 @@ Rationale: the server will be the backbone for provider keys, agent calls, `Prod
 
 ## Recommended First Sprint
 
-Rationale: this sprint establishes the scaffolding that all future work can reuse — a reliable project shape, a working script-to-scenes path, autosave, agent fallbacks, mood board initialization, and the first shot records with cinematography metadata. Doing all of this together means the second sprint can immediately add reference assets, generate storyboard frames, and wire the AI Director review gate without first fixing a broken foundation. Each item also touches Phase C/E legacy cleanup so that the app emerges from the sprint with fewer globals on the MVP path, not more.
+Rationale: this sprint establishes the scaffolding that all future work can reuse — a reliable project shape grounded in the `.cine` format, a working script-to-scenes path, incremental autosave, agent fallbacks, mood board initialization, and the first shot records with cinematography metadata. Doing this together means the second sprint can immediately add reference assets, generate storyboard frames, wire the AI Director review gate, and implement import/export without first redesigning how projects are stored. Each item also touches Phase C/E legacy cleanup so that the app emerges from the sprint with fewer globals on the MVP path, not more.
 
+- [ ] Establish the server-resident project tier: create `source/server/projects/`, add `GET /api/projects` and `GET /api/projects/:id/load` endpoints, update the project list to show all tiers with `writable` flags.
+- [ ] Build the project serializer (`source/src/services/project-serializer.ts`): in-memory state → typed `.cine` document files, with validation as the final step.
 - [ ] Implement `syncFountainToProject()`: scenes, breakdown rows, starter shots with cinematography schema.
-- [ ] Wire Start-from-Script wizard to `syncFountainToProject()` and `createNewProject()`.
-- [ ] Add local-project autosave after script, wizard, and breakdown mutations.
+- [ ] Wire Start-from-Script wizard to `syncFountainToProject()` and `createNewProject()` (which writes the initial `.cine` package to the server-resident tier).
+- [ ] Wire autosave to the serializer with dirty-document tracking; write only changed documents to `POST /api/projects/:id/documents`.
 - [ ] Add visible save status and read-only project indicator.
+- [ ] Implement "Duplicate Sample As Local Project" to exercise the serializer → write → load round-trip before import/export depends on it.
 - [ ] Add agent-health check in wizard entry; fall back to deterministic parsing when agent is not configured.
 - [ ] Initialize mood-board scaffolding and `styleGuide` defaults in every new project.
-- [ ] Wire `colorState` persistence to project save/load.
+- [ ] Wire `colorState` persistence to project save/load (through `styleGuide.colorPalette` in the serializer).
 - [ ] Extend shot schema to include `shotType`, `cameraAngle`, `cameraMovement`, `lightingTechnique`, and `status` fields.
 - [ ] Make "Build Shot Prompt" in the Camera/Lighting panel produce a real prompt from shot params + style guide.
 - [ ] Inventory and replace MVP-path globals touched by: script import, tree refresh, scene selection, storyboard generation, and save.
-- [ ] Verify end-to-end: new project → paste script → scenes appear → scene detail opens → starter shots appear with cinematic metadata → mood board initialized → save → reload → full project state restores.
+- [ ] Verify end-to-end: new project → paste script → scenes appear → scene detail opens → starter shots appear with cinematic metadata → mood board initialized → autosave writes to server-resident `.cine` directory → reload → full project state restores.
 - [ ] Run `npm run build` and `npm run lint:legacy-globals` after code changes; fix new warnings before closing tasks.
 
 ---
@@ -475,7 +540,13 @@ Rationale: these are not aspirational — they are the checks that confirm the t
 - [ ] Color palette choices in any wizard or the color wheel update `colorState` and propagate into storyboard prompt generation automatically.
 - [ ] "Build Shot Prompt" in the Camera/Lighting panel produces a generation-ready prompt that includes cinematic parameters, color palette, and lighting mood from the style guide.
 - [ ] Uploaded reference images (character face photos, location plates, concept art) are assignable to shots and appear in `refImageUrls` when that shot's prompt is built.
-- [ ] The project autosaves locally and reloads with the same script, scenes, assets, shots, references, mood board state, and `colorState`.
+- [ ] User-created projects live in `source/server/projects/` as proper `.cine` directories, not flat key/value blobs.
+- [ ] Autosave writes only dirty documents to the project's server-resident `.cine` directory; a crash mid-save leaves all other documents intact.
+- [ ] A project can be exported as a `.cine.zip` download that contains all Fountain text, JSON documents, and locally-stored media files.
+- [ ] A `.cine.zip` can be imported, validated against the full `validateCrossFileIntegrity` schema, and opened as a writable server-resident project.
+- [ ] Import validation surfaces specific file and field errors when the package is malformed, rather than a generic failure.
+- [ ] Bundled sample projects can be duplicated as local writable projects through the serializer → write → load path.
+- [ ] External media URLs (provider-generated images/clips) are preserved as-is in the export and noted in the import UI as potentially expiring.
 - [ ] Storyboard generation is available when providers are configured, or clearly disabled with a manual text-placeholder path that keeps the app usable offline.
 - [ ] Agent-assisted extraction (script analysis, bibles, prompts) enriches the project when configured but does not block any core workflow step when agents are absent.
 - [ ] The AI Director review queue surfaces pending agent outputs and Approve/Reject controls that advance the orchestrator.
