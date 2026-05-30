@@ -81,6 +81,12 @@ body {
   opacity: 0.9;
 }
 
+cinegen-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 /* Main header bar — darker shell and controls than panel toolbars */
 cinegen-toolbar.bevel-raised {
   background: var(--chrome-toolbar-shell-bg);
@@ -4523,7 +4529,7 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
   position: fixed;
   left: 0;
   right: 0;
-  top: 34px;
+  top: var(--toolbar-bottom, 34px);
   bottom: var(--previs-status-bar-height);
   z-index: 999;
   max-height: none;
@@ -4669,6 +4675,7 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen {
 .previs-drawer-unit.is-open:not(.is-fullscreen) .previs-drawer-overlay {
   overflow-x: hidden;
   overflow-y: visible;
+  height: auto;
 }
 
 .previs-drawer-overlay.is-height-capped {

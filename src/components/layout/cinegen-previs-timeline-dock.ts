@@ -19,6 +19,9 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
   @state() private _timelineSectionOpen = true;
   @state() private _playbackTab: 'storyboard' | 'rendered' = 'storyboard';
 
+  private _stackObserver: MutationObserver | null = null;
+  private _toolbarObserver: ResizeObserver | null = null;
+
   connectedCallback(): void {
     super.connectedCallback();
     this.id = 'previs-timeline-dock';
@@ -30,10 +33,35 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('previs-timeline-dock-toggle', this._onToggle);
+    this._stackObserver?.disconnect();
+    this._stackObserver = null;
+    this._toolbarObserver?.disconnect();
+    this._toolbarObserver = null;
   }
 
   firstUpdated(): void {
     syncPrevisDrawerHeightFromPreferences();
+
+    const stack = document.getElementById('previs-drawer-stack');
+    if (stack) {
+      this._stackObserver = new MutationObserver(() => {
+        if (!this._fullscreen) {
+          syncPrevisDrawerHeightToAccordion();
+        }
+      });
+      this._stackObserver.observe(stack, { childList: true, subtree: true });
+    }
+
+    const toolbar = document.querySelector('cinegen-toolbar');
+    if (toolbar) {
+      this._toolbarObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const bottom = entry.contentRect.bottom;
+          document.documentElement.style.setProperty('--toolbar-bottom', `${bottom}px`);
+        }
+      });
+      this._toolbarObserver.observe(toolbar);
+    }
   }
 
   private _onToggle = (event: Event): void => {
