@@ -1,11 +1,16 @@
 import { classifyFountainDocument } from '@/script/fountain-bundle';
 import {
+  activeProjectId,
   assetLibrary,
   breakdownData,
   currentSceneData,
+  getProjectFountainText,
   projectData,
   sceneReferenceOverrides,
 } from '@/data/project-data';
+import { alertCG } from '@/utils/alert-cg';
+import { markProjectDirty } from '@/services/project-service';
+import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { formatPrevisDuration, DEFAULT_SHOT_DURATION_SECONDS } from '@/workspace/shot-frame-bridge';
 import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import type { TreeNode } from '@/tree/tree-types';
@@ -379,4 +384,22 @@ export function syncFountainToProject(text: string, _projectId?: string): Script
     locations: uniqueByName(allLocations),
     shotsCreated,
   };
+}
+
+/** Re-sync scenes, breakdown, and starter shots from the current Fountain text (non-destructive where possible). */
+export function refreshBreakdownFromScript(): ScriptSyncResult | null {
+  const text = getProjectFountainText();
+  if (!text.trim()) {
+    alertCG('Paste or import screenplay text before refreshing the breakdown.');
+    return null;
+  }
+  const result = syncFountainToProject(text, activeProjectId || undefined);
+  markProjectDirty(['screenplay', 'scenes', 'breakdown', 'characters', 'locations']);
+  requestProjectTreeRefresh();
+  const renderBreakdown = (window as unknown as { renderBreakdownTable?: () => void }).renderBreakdownTable;
+  if (typeof renderBreakdown === 'function') renderBreakdown();
+  alertCG(
+    `Breakdown refreshed: ${result.sceneCount} scene(s), ${result.shotsCreated} shot(s) in sync. Existing shot lists were kept where scenes already had coverage.`
+  );
+  return result;
 }

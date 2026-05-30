@@ -1,10 +1,11 @@
 import { alertCG } from '@/utils/alert-cg';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
-import { previsSelectionState, currentSceneData, styleGuide } from '@/data/project-data';
+import { previsSelectionState, currentSceneData, styleGuide, activeProjectId } from '@/data/project-data';
 import { colorState } from '@/color/color-state';
 import { getShotById } from '@/workspace/shot-frame-bridge';
 import { CG_PREVIS_SELECTION_CHANGED } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
+import { getAgentHealth, buildGenerationPrompt } from '@/services/ai/agents-service';
 
 /** Camera, lighting and atmosphere option data */
 
@@ -298,7 +299,7 @@ function buildPromptPartsFromSelections(selections: Record<string, string | null
     });
 }
 
-export function buildCameraPrompt(): void {
+function buildLocalCameraPrompt(): string | null {
   const sceneId = previsSelectionState.sceneId;
   const shotId = previsSelectionState.shotId;
   let parts: string[] = [];
@@ -334,8 +335,7 @@ export function buildCameraPrompt(): void {
   }
 
   if (!parts.length) {
-    alertCG('Select at least one option from the panels below to build a shot prompt.');
-    return;
+    return null;
   }
 
   // Inject style guide context
@@ -353,8 +353,40 @@ export function buildCameraPrompt(): void {
     parts.push(`lens style: ${styleGuide.lensStyle}`);
   }
 
-  const prompt = parts.join(', ') + ', cinematic, 4K';
-  alertCG(`Shot Prompt:\n\n"${prompt}"\n\nCopy this into the shot\'s prompt field or AI generation input.`);
+  return parts.join(', ') + ', cinematic, 4K';
+}
+
+export async function buildCameraPrompt(): Promise<void> {
+  const sceneId = previsSelectionState.sceneId;
+  const shotId = previsSelectionState.shotId;
+
+  // Try agent dispatch when we have an active project and shot
+  if (activeProjectId && sceneId && shotId != null) {
+    try {
+      const health = await getAgentHealth();
+      if (health.ready) {
+        const result = await buildGenerationPrompt(
+          activeProjectId,
+          String(shotId),
+        );
+        if (result.ok && result.data) {
+          alertCG(`Shot Prompt (Agent):\n\n"${result.data}"\n\nCopy this into the shot's prompt field or AI generation input.`);
+          return;
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[buildCameraPrompt] Agent dispatch failed, falling back to local builder:', msg);
+    }
+  }
+
+  // Local fallback
+  const prompt = buildLocalCameraPrompt();
+  if (!prompt) {
+    alertCG('Select at least one option from the panels below to build a shot prompt.');
+    return;
+  }
+  alertCG(`Shot Prompt:\n\n"${prompt}"\n\nCopy this into the shot's prompt field or AI generation input.`);
 }
 
 export function clearCameraSelections(): void {

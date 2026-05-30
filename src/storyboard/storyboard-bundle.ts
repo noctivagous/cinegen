@@ -16,6 +16,7 @@ import {
   storyboardReferenceBank,
   sceneReferenceOverrides,
   referenceGenerationStatus,
+  previsSelectionState,
 } from '@/data/project-data';
 import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinations';
 import {
@@ -33,6 +34,7 @@ import { updateInspector } from '@/components/panels/cinegen-inspector';
 import {
   assignFrameToShot,
   createCoverageShotForFrame,
+  getShotById,
   getShotForFrame,
   removeFrameFromAllShots,
   reorderShotFrameIds,
@@ -48,6 +50,8 @@ import { ImageGenerationService } from '@/services/ai/image-generation-service';
 import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
 import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
 import { CG_TREE_NODE_SELECT } from '@/events/shell-events';
+import { markProjectDirty } from '@/services/project-service';
+import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 import {
   STORYBOARD_GENERATION_MODE_STORAGE_KEY,
   STORYBOARD_REFERENCE_STORAGE_KEY,
@@ -658,6 +662,103 @@ export async function addStoryboardFrame(): Promise<void> {
   if (autogenBoardsEnabled) {
     await regenerateThumbnail(frame);
   }
+  markProjectDirty(['storyboard', 'scenes']);
+}
+
+/** Text-only slate frame (no provider required). */
+export async function addStoryboardSlateFrame(): Promise<void> {
+  const scene = currentSceneNumber();
+  const sceneId = previsSelectionState.sceneId ?? sceneIdFromStoryboardFrame({ scene });
+  const shotId = previsSelectionState.shotId;
+  const shot =
+    sceneId && shotId != null ? getShotById(sceneId, shotId) : null;
+  const slateLines: string[] = ['Manual storyboard slate'];
+  if (shot) {
+    if (shot.shotType) slateLines.push(`Type: ${shot.shotType}`);
+    if (shot.cameraAngle) slateLines.push(`Angle: ${shot.cameraAngle}`);
+    if (shot.cameraMovement) slateLines.push(`Movement: ${shot.cameraMovement}`);
+    if (shot.lightingTechnique) slateLines.push(`Light: ${shot.lightingTechnique}`);
+  }
+  const frame: StoryboardFrame = {
+    id: Date.now(),
+    scene,
+    durationSeconds: 3,
+    label: shot?.label ? `Slate — ${shot.label}` : `Slate ${storyboardFrames.length + 1}`,
+    notes: slateLines.join('\n'),
+    generatingStatus: 'slate',
+  };
+  storyboardFrames.push(frame);
+  inheritShotIdForNewFrame(frame);
+  if (shot) maybeAdvanceShotToStoryboarded(shot);
+  window.selectedStoryboardFrameId = frame.id;
+  renderStoryboard();
+  updateInspector('storyboard-frame', frame);
+  window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
+  markProjectDirty(['storyboard', 'scenes']);
+  alertCG('Text slate frame added. Assign to a shot or upload an image when ready.');
+}
+
+/** Upload a still image onto the selected frame (or create a new frame). */
+export function uploadStoryboardFrameImage(): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/jpeg,image/png,image/webp,image/gif';
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onerror = () => alertCG('Could not read image file.');
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (!dataUrl) {
+        alertCG('Could not read image file.');
+        return;
+      }
+      void applyStoryboardImageUpload(dataUrl, file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+async function applyStoryboardImageUpload(dataUrl: string, fileName: string): Promise<void> {
+  let frame = getSelectedStoryboardFrame();
+  if (!frame) {
+    const scene = currentSceneNumber();
+    frame = {
+      id: Date.now(),
+      scene,
+      durationSeconds: 3,
+      label: fileName.replace(/\.[^.]+$/, '') || 'Uploaded frame',
+      imageUrl: dataUrl,
+      notes: 'Uploaded reference still.',
+    };
+    storyboardFrames.push(frame);
+    inheritShotIdForNewFrame(frame);
+    const sceneId = previsSelectionState.sceneId ?? sceneIdFromStoryboardFrame(frame);
+    const shotId = previsSelectionState.shotId;
+    if (sceneId && shotId != null) {
+      assignFrameToShot(sceneId, frame.id, shotId);
+      const shot = getShotById(sceneId, shotId);
+      if (shot) maybeAdvanceShotToStoryboarded(shot);
+    }
+  } else {
+    frame.imageUrl = dataUrl;
+    frame.generatingStatus = undefined;
+    const sceneId = sceneIdFromStoryboardFrame(frame);
+    if (frame.shotId != null) {
+      const shot = getShotById(sceneId, frame.shotId);
+      if (shot) maybeAdvanceShotToStoryboarded(shot);
+    }
+  }
+  window.selectedStoryboardFrameId = frame.id;
+  renderStoryboard();
+  updateInspector('storyboard-frame', frame);
+  window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
+  refreshShotFrameTree();
+  markProjectDirty(['storyboard', 'scenes']);
+  alertCG('Storyboard image applied.');
 }
 
 export function linkSelectedFrameToScript(): void {
@@ -1463,6 +1564,8 @@ export function installStoryboardBundleGlobals(): void {
   w.getSelectedStoryboardFrame = getSelectedStoryboardFrame;
   w.getScriptSelectionOrCurrentLine = getScriptSelectionOrCurrentLine;
   w.addStoryboardFrame = addStoryboardFrame;
+  w.addStoryboardSlateFrame = addStoryboardSlateFrame;
+  w.uploadStoryboardFrameImage = uploadStoryboardFrameImage;
   w.linkSelectedFrameToScript = linkSelectedFrameToScript;
   w.deleteSelectedFrame = deleteSelectedFrame;
   w.duplicateSelectedFrame = duplicateSelectedFrame;

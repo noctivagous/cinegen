@@ -98,6 +98,12 @@ export class CinegenStoryboardPane extends CgLightElement {
           <button class="toolbar-btn" data-ws-action="addStoryboardFrame">
             <i class="fa-solid fa-plus"></i> Add Frame
           </button>
+          <button class="toolbar-btn" data-ws-action="addStoryboardSlate" title="Text slate without AI">
+            <i class="fa-solid fa-clapperboard"></i> Slate
+          </button>
+          <button class="toolbar-btn" data-ws-action="uploadStoryboardImage" title="Upload image to selected frame">
+            <i class="fa-solid fa-image"></i> Upload
+          </button>
           <button class="toolbar-btn" data-ws-action="duplicateSelectedFrame">
             <i class="fa-regular fa-copy"></i> Duplicate
           </button>

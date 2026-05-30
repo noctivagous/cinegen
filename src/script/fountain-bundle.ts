@@ -615,4 +615,7 @@ export function installFountainBundleGlobals(): void {
   w.saveFountainFile = saveFountainFile;
   w.exportPDF = exportPDF;
   w.exportTimeline = exportTimeline;
+  void import('@/script/script-to-project').then((mod) => {
+    w.refreshBreakdownFromScript = mod.refreshBreakdownFromScript;
+  });
 }

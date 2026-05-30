@@ -14,6 +14,12 @@ import {
   getFramesForShot,
   sceneNumberFromSceneId,
 } from '@/workspace/shot-frame-bridge';
+import {
+  allowedNextShotStatuses,
+  normalizeShotStatus,
+  setShotStatus,
+  type ShotLifecycleStatus,
+} from '@/workspace/shot-lifecycle';
 
 const SCENE_TAB_LABELS = [
   'OVERVIEW',
@@ -77,6 +83,18 @@ export class CinegenSceneTabs extends CgLightElement {
     (shot as Record<string, unknown>)[field] = value;
     markProjectDirty(['scenes']);
     this.requestUpdate();
+  }
+
+  private _updateShotStatus(sceneId: string, shotId: number, next: ShotLifecycleStatus): void {
+    const scene = currentSceneData[sceneId];
+    if (!scene || !Array.isArray(scene.coverage)) return;
+    const shot = scene.coverage.find((s: SceneShot) => s.id === shotId);
+    if (!shot) return;
+    const result = setShotStatus(shot, next);
+    if (result.ok) {
+      markProjectDirty(['scenes']);
+      this.requestUpdate();
+    }
   }
 
   private _renumberShots(sceneId: string): void {
@@ -338,6 +356,18 @@ export class CinegenSceneTabs extends CgLightElement {
                       >
                         <option value="">Movement…</option>
                         ${movementOptions}
+                      </select>
+                      <select
+                        class="bg-[#1f1f1f] text-[10px] text-[var(--text-dim)] border border-[var(--border)] rounded px-1 py-0.5 w-full"
+                        title="Production status"
+                        @change=${(e: Event) => {
+                          const val = (e.target as HTMLSelectElement).value as ShotLifecycleStatus;
+                          this._updateShotStatus(sceneId, shot.id, val);
+                        }}
+                      >
+                        ${allowedNextShotStatuses(shot.status).map(
+                          (st) => html`<option value=${st} ?selected=${normalizeShotStatus(shot.status) === st}>${escHtml(st)}</option>`
+                        )}
                       </select>
                     </div>
                     ${frames.length

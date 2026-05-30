@@ -101,10 +101,9 @@ async function openProjectFromProjectsHub(projectId: string): Promise<void> {
 }
 
 export function wireProjectsModalList(): void {
-  const list = document.querySelector<CinegenProjectsModalList>('cinegen-projects-modal-list');
-  if (!list || list.dataset.cgProjectOpenWired === '1') return;
-  list.dataset.cgProjectOpenWired = '1';
-  list.addEventListener(CG_PROJECT_OPEN, (e: Event) => {
+  if ((window as any).__cgProjectOpenWired) return;
+  (window as any).__cgProjectOpenWired = true;
+  document.addEventListener(CG_PROJECT_OPEN, (e: Event) => {
     const { projectId } = (e as CustomEvent<CgProjectOpenDetail>).detail;
     void openProjectFromProjectsHub(projectId);
   });

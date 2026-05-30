@@ -73,7 +73,13 @@ export function normalizeProjectFeaturesConfig(raw: ProjectFeaturesConfig): Proj
   for (const id of allIds) {
     enabled[id] = raw.enabled?.[id] !== false;
   }
-  return { version: 1, enabled, order };
+  return {
+    version: 1,
+    enabled,
+    order,
+    expanded: raw.expanded ? { ...raw.expanded } : undefined,
+    parentById: raw.parentById ? { ...raw.parentById } : undefined,
+  };
 }
 
 function inferConfigFromProjectTree(): ProjectFeaturesConfig {
@@ -321,7 +327,15 @@ export function normalizeConfigForProject(applied: {
   projectFeatures?: ProjectFeaturesConfig;
 }): ProjectFeaturesConfig {
   if (applied.projectFeatures?.version === 1) {
-    return normalizeProjectFeaturesConfig(applied.projectFeatures);
+    const config = normalizeProjectFeaturesConfig(applied.projectFeatures);
+    // If the saved config is the blank default but the project has actual tree
+    // children, infer enabled features from the tree so existing content is visible.
+    const isBlankDefault = Object.entries(config.enabled).every(
+      ([id, v]) => v === (id === 'mood-boards')
+    );
+    const hasTreeChildren = ((applied.projectData?.children ?? []) as TreeNode[]).length > 0;
+    if (!isBlankDefault || !hasTreeChildren) return config;
+    // Fall through to tree inference
   }
   const children = (applied.projectData?.children ?? []) as TreeNode[];
   if (!children.length) return buildBlankProjectFeaturesConfig();

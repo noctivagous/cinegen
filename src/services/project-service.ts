@@ -522,6 +522,7 @@ export async function triggerProjectSave(): Promise<void> {
     'screenplay', 'storyboard', 'scenes', 'breakdown', 'characters', 'locations', 'treatment',
     'shotLibrary', 'cameraPresets', 'spatialAnnotations',
     'generationQueue', 'reviewQueue', 'costTracking', 'agentLog',
+    'features',
   ].forEach((d) => DIRTY_DOCS.add(d));
   await flushDirtyDocuments();
 }

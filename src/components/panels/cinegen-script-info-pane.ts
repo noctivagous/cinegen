@@ -19,7 +19,15 @@ export class CinegenScriptInfoPane extends CgLightElement {
           style="padding: 2px 8px; font-size: 10px;"
           data-ws-action="refreshScriptInfoFromScript"
         >
-          <i class="fa-solid fa-rotate"></i> Refresh from Script
+          <i class="fa-solid fa-rotate"></i> Entities
+        </button>
+        <button
+          class="toolbar-btn"
+          style="padding: 2px 8px; font-size: 10px;"
+          data-ws-action="refresh-breakdown-from-script"
+          title="Re-sync scenes, breakdown rows, and starter shots from screenplay"
+        >
+          <i class="fa-solid fa-table-list"></i> Breakdown
         </button>
       </div>
       <div id="script-info-content" class="script-info-content"></div>

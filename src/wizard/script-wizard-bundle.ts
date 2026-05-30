@@ -18,6 +18,7 @@ import {
 } from '@/services/ai/agents-service';
 import { applyProductionContext } from '@/services/agent-context-adapter';
 import { runWizardCompletion } from '@/wizard/wizard-completion-hook';
+import { renderScriptWizardAnalysisSummary } from '@/wizard/script-wizard-analysis-summary';
 
 interface ScriptWizardDeps {
   createNewProject: (name: string, opts?: { screenplay?: string; entryMode?: string }) => Promise<{ id: string; name: string } | null>;
@@ -183,6 +184,7 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
         return html`
           <div class="script-wizard-form">
             <p>Review the characters and locations detected from your script. Remove false positives or add missing ones.</p>
+            ${renderScriptWizardAnalysisSummary()}
             <div class="script-wizard-section">
               <h4>Characters (${state.detectedCharacters.length})</h4>
               <div class="script-wizard-chip-list">

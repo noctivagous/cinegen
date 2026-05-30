@@ -2,6 +2,7 @@ import { currentSceneData, projectScreenplay, storyboardFrames, timelineClips } 
 import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 
 export type ShotListRowKind = 'coverage' | 'master' | 'broll' | 'pickup';
 
@@ -235,6 +236,7 @@ export function assignFrameToShot(
   frame.shotId = shotId;
   if (!shot.frameIds) shot.frameIds = [];
   if (!shot.frameIds.includes(frameId)) shot.frameIds.push(frameId);
+  maybeAdvanceShotToStoryboarded(shot);
 }
 
 /** Repair drift between shot.frameIds and frame.shotId. */

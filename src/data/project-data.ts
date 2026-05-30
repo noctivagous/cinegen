@@ -15,6 +15,7 @@ import type {
 } from '@/storyboard/storyboard-types';
 import { loadMoodBoardsOverlay, persistMoodBoardsAutosave } from '@/moodboards/moodboard-persistence';
 import { syncProjectShotFrameLinks } from '@/workspace/shot-frame-bridge';
+import { normalizeAppliedCineProject } from '@/data/project-snapshot-normalize';
 
 /** Screenplay storage — plain Fountain text plus format tag for future rich/structured exports */
 export type ProjectScreenplay = {
@@ -435,6 +436,7 @@ function normalizeAssetLibrary(raw: unknown): Record<string, unknown> {
 }
 
 function applyMutableProjectState(applied: AppliedCineProject): void {
+  applied = normalizeAppliedCineProject(applied);
   projectScreenplay = applied.projectScreenplay;
   projectData = applied.projectData;
   projectTreatment = applied.projectTreatment;
@@ -498,17 +500,17 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
     }).catch(() => { /* ignore */ });
   }
 
-  void import('@/services/project-features-service').then((svc) => {
-    svc.resetProjectFeaturesConfigCache();
-    svc.setProjectFeaturesConfig(svc.normalizeConfigForProject(applied), { persist: false });
-  });
-
   syncProjectShotFrameLinks({ migrateOrphans: false });
   notifyStoryboardFramesChanged();
   notifyStoryboardReferencesChanged();
-  if (typeof window.refreshProjectTree === 'function') {
-    window.refreshProjectTree();
-  }
+
+  void import('@/services/project-features-service').then((svc) => {
+    svc.resetProjectFeaturesConfigCache();
+    svc.setProjectFeaturesConfig(svc.normalizeConfigForProject(applied), { persist: false });
+    if (typeof window.refreshProjectTree === 'function') {
+      window.refreshProjectTree();
+    }
+  });
 }
 
 function upsertRegistryEntry(

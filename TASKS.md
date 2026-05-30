@@ -23,23 +23,20 @@ A CineGen filmmaker should be able to:
 
 ---
 
-## P0 — Project Foundation [COMPLETE — 2026-05-28]
+## P0 — Project Foundation [MOSTLY COMPLETE — 2026-05-28]
 
 Server-resident `.cine` tier (`source/server/projects/`), GET/POST project endpoints, project serializer covering all ten core document types plus AI Director documents, incremental autosave with dirty-document tracking, atomic staging writes, cross-file validator extracted to `cine-project-validator.ts`, Zod manifest schema, format migration registry, visible save status badge, and Duplicate Sample As Local Project are all working. Full details in `ARCHITECTURE-LEGACY-PROGRESS.md`.
 
-- [ ] Define and enforce project snapshot invariants.
-  - Required fields: `screenplay.text`, `currentSceneData`, `breakdownData`, `assetLibrary`, `storyboardFrames`, `moodBoards`, `projectFeatures`, `generationLog`, `productionContext` reference anchor.
-  - Add normalizers in `source/src/data/project-data.ts` that fill missing fields with safe defaults on load; these run on both server-resident and bundled project loads.
-  - Avoid per-component normalization; centralize in data/service modules.
+- [x] Define and enforce project snapshot invariants.
+  - `normalizeAppliedCineProject()` in `source/src/data/project-snapshot-normalize.ts` runs on every load via `applyMutableProjectState()`.
 
-- [ ] Extend `npm run validate:cine` to cover server-resident project snapshots.
-  - After autosave writes a document, optionally re-validate the affected document against its schema.
-  - Check all required fields exist after normalization, confirm Fountain text produces matching tree nodes and scene records, and confirm shot/frame cross-references are valid.
-  - Run as a pre-build smoke check and on demand during development.
+- [x] Extend `npm run validate:cine` to cover server-resident project snapshots.
+  - Scans `source/server/projects/*.cine` alongside the bundled sample; incomplete server scaffolds warn-and-skip.
+  - Optional `npm run validate:cine -- --cross-file` runs cross-file integrity on complete packages.
 
 ---
 
-## P0 — Progressive Project Setup [COMPLETE — 2026-05-29]
+## P0 — Progressive Project Setup [MOSTLY COMPLETE — 2026-05-29]
 
 Feature catalog with stable `featureId`s, per-project `ProjectFeaturesConfig` persisted as `features.cinefeatures`, Project Features modal with checkbox tree and drag-reorder, blank-project default (Mood Boards only), `Alt+1…9` skips disabled sections, selection rerouting on config change, Start-from-Script wizard enables Production Office and Scenes after sync, blank project toolbar action routes through `createNewProject()`. Full details in `ARCHITECTURE-LEGACY-PROGRESS.md`.
 
@@ -54,13 +51,13 @@ Feature catalog with stable `featureId`s, per-project `ProjectFeaturesConfig` pe
 
 Architecture note: as remaining work lands, migrate high-traffic `fountain-bundle` and `workspace-bundle` global function calls to module imports. Use `CG_TREE_NODE_SELECT` from `shell-events.ts`; use `requestProjectTreeRefresh()` from `project-tree-service.ts`.
 
-- [ ] Step 2 UI in Start-from-Script wizard to show breakdown rows and starter shots.
-  - Currently shows character/location chips only; shot table integration next slice.
+- [x] Step 2 UI in Start-from-Script wizard to show breakdown rows and starter shots.
+  - Core Elements slide shows breakdown table + per-scene starter shot list via `script-wizard-analysis-summary.ts`.
 
-- [ ] Wire script editor changes back into project structure.
-  - After meaningful edits, re-run `syncFountainToProject()` with a reconciler that preserves existing scene IDs and user-edited shot lists for scenes whose headings still match.
-  - Add a visible "Refresh Breakdown From Script" action for explicit re-sync.
-  - Avoid destructive replacement of user-edited data.
+- [~] Wire script editor changes back into project structure.
+  - [x] "Refresh Breakdown From Script" in Script Info toolbar (`refreshBreakdownFromScript()`).
+  - [ ] Automatic re-sync after meaningful editor edits (debounced) still pending.
+  - Reconciler preserves scene IDs and existing coverage when headings match (`syncFountainToProject`).
 
 - [ ] Verify empty-project placeholder (blank projects show Mood Boards only until features are enabled or a wizard runs).
 
@@ -72,14 +69,14 @@ Architecture note: as remaining work lands, migrate high-traffic `fountain-bundl
 
 Architecture note: extract shot parameter accumulation and prompt-dispatch logic from `camera-lighting-bundle.ts` into a narrower `shot-config-service.ts` module rather than extending the existing bundle.
 
-- [ ] Complete "Build Shot Prompt" through to the Prompt Engineer Agent.
-  - Full agent dispatch via `agents-service.ts → buildGenerationPrompt()` not yet wired; currently falls back to local prompt builder.
+- [x] Complete "Build Shot Prompt" through to the Prompt Engineer Agent.
+  - `buildCameraPrompt()` in `camera-lighting-bundle.ts` now checks `getAgentHealth()`; when agents are ready it calls `buildGenerationPrompt(activeProjectId, shotId)` and displays the agent-optimized prompt. Falls back to the local `buildLocalCameraPrompt()` builder when agents are unavailable or the call errors.
   - Provider choice recording on shot pending.
   - Per-shot prompt bar (show prompt text inline on shot card) pending.
 
-- [ ] Enforce valid shot lifecycle transitions.
-  - Do not allow `queued` without `prompted`; surface invalid transition attempts as visible UI errors.
-  - Enforce in the shot mutation path, not only in display.
+- [x] Enforce valid shot lifecycle transitions.
+  - `shot-lifecycle.ts` transition rules; status dropdown on coverage cards; auto `storyboarded` when frames link.
+  - [ ] Wire generation queue paths to use `setShotStatus()` for `queued` / `generated` transitions.
 
 - [ ] Consolidate backend shot routing with frontend shot types.
   - `backends/agents/cinematography/generation-agent.js` has its own shot-type → provider routing rules.
@@ -385,11 +382,11 @@ P0 is substantially complete. The active front is P1 work: storyboard generation
 
 Recommended next steps in order:
 
-1. Wire "Build Shot Prompt" to agent dispatch (closes P0 shot architecture).
-2. Add simple manual storyboard frame upload (unlocks storyboard path when providers not configured).
-3. Step 2 UI in Start-from-Script wizard showing breakdown rows and starter shots.
-4. Define wizard output contract (`WizardOutput` interface) before starting Visual-First wizard.
-5. Extend `npm run validate:cine` to server-resident projects.
+1. "Draft Storyboards" batch path from shot list (P1 storyboard).
+2. Define wizard output contract (`WizardOutput` interface) before Visual-First wizard completion.
+3. Asset-to-reference upload flow (P1 reference pipeline).
+4. Project import/export endpoints (P1).
+5. Drafts panel scaffold (`drafts.cinedrafts` + feature catalog entry).
 
 ---
 
@@ -402,7 +399,7 @@ Recommended next steps in order:
 - [x] Every project has a mood board initialized at creation with `styleGuide` defaults and at least one empty board slot.
 - [ ] A filmmaker can enable only the departments they need without losing data when hiding others.
 - [ ] Color palette choices in any wizard or the color wheel update `colorState` and propagate into storyboard prompt generation automatically.
-- [ ] "Build Shot Prompt" in the Camera/Lighting panel produces a generation-ready prompt including cinematic parameters, color palette, and lighting mood from the style guide.
+- [x] "Build Shot Prompt" in the Camera/Lighting panel produces a generation-ready prompt including cinematic parameters, color palette, and lighting mood from the style guide. Agent-optimized prompt when agents are configured; local builder fallback when they are not.
 - [ ] Uploaded reference images (character face photos, location plates, concept art) are assignable to shots and appear in `refImageUrls` when that shot's prompt is built.
 - [ ] User-created projects live in `source/server/projects/` as proper `.cine` directories, not flat key/value blobs.
 - [ ] Autosave writes only dirty documents to the server-resident `.cine` directory; a crash mid-save leaves all other documents intact.
