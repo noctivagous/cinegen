@@ -7,6 +7,7 @@ import { guideModalTemplate } from '@/components/modals/templates/guide-modal.te
 import { projectSettingsModalTemplate } from '@/components/modals/templates/project-settings-modal.template';
 import { projectsModalTemplate } from '@/components/modals/templates/projects-modal.template';
 import { settingsModalTemplate } from '@/components/modals/templates/settings-modal.template';
+import { soundEditorModalTemplate } from '@/components/modals/templates/sound-editor-modal.template';
 import { storyboardFrameEditorTemplate } from '@/components/modals/templates/storyboard-frame-editor.template';
 import { wizardsModalTemplate } from '@/components/modals/templates/wizards-modal.template';
 import { entryWizardModalsTemplate } from '@/components/modals/templates/entry-wizard-modals.template';
@@ -29,6 +30,7 @@ export class CinegenAppModals extends CgLightElement {
       ${sectionSettingsModalTemplate}
       ${projectFeaturesModalTemplate}
       ${aiProviderInfoModalTemplate}
+      ${soundEditorModalTemplate}
       ${wizardsModalTemplate}
       ${entryWizardModalsTemplate}
       <cinegen-provider-catalog-sync></cinegen-provider-catalog-sync>

@@ -39,6 +39,7 @@ export type PrevisTimelineTracks = {
   storyboard: PrevisTimelineItem[];
   sfx: PrevisTimelineItem[];
   music: PrevisTimelineItem[];
+  custom: PrevisTimelineItem[];
   totalRuntimeSeconds: number;
 };
 
@@ -600,6 +601,7 @@ export function buildPrevisTimelineTracks(): PrevisTimelineTracks {
     storyboard,
     sfx,
     music,
+    custom: [],
     totalRuntimeSeconds,
   };
   timelineClips.length = 0;

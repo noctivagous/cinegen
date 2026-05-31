@@ -2273,6 +2273,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'section-settings-modal' });
   registerModal({ id: 'project-features-modal' });
   registerModal({ id: 'ai-provider-info-modal' });
+  registerModal({ id: 'sound-editor-modal', hostOverflowY: 'hidden' });
   registerModal({ id: 'script-wizard-modal' });
   registerModal({ id: 'visual-wizard-modal' });
   registerModal({ id: 'concept-wizard-modal' });

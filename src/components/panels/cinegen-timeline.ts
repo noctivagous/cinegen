@@ -3,6 +3,7 @@ import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import { previsSelectionState, setPrevisSelectionState, timelineClips } from '@/data/project-data';
+import { openModal } from '@/services/modal-manager';
 import { escHtml } from '@/utils/html';
 import { buildPrevisTimelineTracks, formatPrevisDuration, type PrevisTimelineItem } from '@/workspace/shot-frame-bridge';
 
@@ -17,16 +18,37 @@ export type TimelineClip = {
   track?: string;
 };
 
+export type CustomTrackDef = {
+  key: string;
+  title: string;
+  icon: string;
+};
+
 const BASE_PX_PER_SECOND = 18;
+
+const CUSTOM_TRACK_TYPES: CustomTrackDef[] = [
+  { key: 'vfx', title: 'VFX', icon: 'fa-wand-magic-sparkles' },
+  { key: 'adr', title: 'ADR', icon: 'fa-microphone' },
+  { key: 'foley', title: 'Foley', icon: 'fa-shoe-prints' },
+  { key: 'notes', title: 'Notes', icon: 'fa-note-sticky' },
+  { key: 'custom', title: 'Custom', icon: 'fa-plus' },
+];
+
+let _customTracks: CustomTrackDef[] = [];
 
 @customElement('cinegen-timeline')
 export class CinegenTimeline extends CgLightElement {
   @state() private _dragging = false;
+  @state() private _isPlaying = false;
+  @state() private _showAddTrackMenu = false;
 
   private _zoom = 1;
   private _pxPerSecond = BASE_PX_PER_SECOND;
   private _currentTimeSeconds = 0;
   private _previewTimeSeconds: number | null = null;
+  private _playbackStartTime = 0;
+  private _playbackStartSeconds = 0;
+  private _playbackRaf = 0;
 
   connectedCallback(): void {
     if (!this.id) this.id = 'timeline-track';
@@ -212,13 +234,22 @@ export class CinegenTimeline extends CgLightElement {
   }
 
   private _scrubToTime(timeSeconds: number): void {
-    const item = this._frameAtTime(timeSeconds);
-    if (!item) return;
-    this._currentTimeSeconds = item.startSeconds;
-    const players = document.querySelectorAll('cinegen-storyboard-animatic-player');
-    players.forEach((p) => {
-      (p as any).scrubToFrame?.(item.frameId);
-    });
+    const tracks = buildPrevisTimelineTracks();
+    const clamped = Math.max(0, Math.min(tracks.totalRuntimeSeconds || 1, timeSeconds));
+    this._currentTimeSeconds = clamped;
+
+    const item = this._frameAtTime(clamped);
+    if (item?.frameId != null) {
+      const players = document.querySelectorAll('cinegen-storyboard-animatic-player');
+      players.forEach((p) => {
+        (p as any).scrubToFrame?.(item.frameId);
+      });
+    }
+
+    window.dispatchEvent(new CustomEvent('previs-time-updated', {
+      detail: { timeSeconds: clamped },
+    }));
+
     this._updatePlayheadPosition();
   }
 
@@ -286,6 +317,65 @@ export class CinegenTimeline extends CgLightElement {
     window.removeEventListener('mouseup', this._onMouseUp);
   };
 
+  togglePlayback(): void {
+    if (this._isPlaying) {
+      this._pause();
+    } else {
+      this._play();
+    }
+  }
+
+  private _play(): void {
+    this._isPlaying = true;
+    this._playbackStartTime = performance.now();
+    this._playbackStartSeconds = this._currentTimeSeconds;
+    this._advancePlayback();
+  }
+
+  private _pause(): void {
+    this._isPlaying = false;
+    if (this._playbackRaf) {
+      cancelAnimationFrame(this._playbackRaf);
+      this._playbackRaf = 0;
+    }
+  }
+
+  private _advancePlayback = (): void => {
+    if (!this._isPlaying) return;
+    const elapsed = (performance.now() - this._playbackStartTime) / 1000;
+    const tracks = buildPrevisTimelineTracks();
+    const total = tracks.totalRuntimeSeconds || 1;
+    const next = this._playbackStartSeconds + elapsed;
+    if (next >= total) {
+      this._currentTimeSeconds = total;
+      this._isPlaying = false;
+    } else {
+      this._currentTimeSeconds = next;
+      this._playbackRaf = requestAnimationFrame(this._advancePlayback);
+    }
+    this._scrubToTime(this._currentTimeSeconds);
+  };
+
+  stepForward(): void {
+    this._pause();
+    this._scrubToTime(this._currentTimeSeconds + 1);
+  }
+
+  stepBackward(): void {
+    this._pause();
+    this._scrubToTime(this._currentTimeSeconds - 1);
+  }
+
+  getCurrentTimeSeconds(): number {
+    return this._currentTimeSeconds;
+  }
+
+  private _addCustomTrack(def: CustomTrackDef): void {
+    _customTracks.push(def);
+    this._showAddTrackMenu = false;
+    this.requestUpdate();
+  }
+
   render() {
     void timelineClips;
     const tracks = buildPrevisTimelineTracks();
@@ -294,13 +384,45 @@ export class CinegenTimeline extends CgLightElement {
       ${this._renderTrackRow('script', 'Script Track', 'fa-file-lines', tracks.script)}
       ${this._renderTrackRow('dialogue', 'Dialogue Track', 'fa-comments', tracks.dialogue)}
       ${this._renderTrackRow('storyboard', 'Storyboard Frame Track', 'fa-film', tracks.storyboard)}
-      ${this._renderTrackRow('sfx', 'Sound Design / SFX', 'fa-volume-high', tracks.sfx)}
-      ${this._renderTrackRow('music', 'Music / Atmos', 'fa-music', tracks.music)}
+      <div class="timeline-sound-group" @dblclick=${this._openSoundEditor}>
+        <div class="timeline-sound-group-label">Sound</div>
+        <div class="timeline-sound-group-tracks">
+          ${this._renderTrackRow('sfx', 'Sound Design / SFX', 'fa-volume-high', tracks.sfx)}
+          ${this._renderTrackRow('music', 'Music / Atmos', 'fa-music', tracks.music)}
+        </div>
+      </div>
+      ${_customTracks.map((ct) => this._renderTrackRow(
+        ct.key as 'script' | 'dialogue' | 'storyboard' | 'sfx' | 'music',
+        ct.title,
+        ct.icon,
+        tracks.custom
+      ))}
+      <div class="timeline-add-track-row">
+        <button
+          class="toolbar-btn timeline-add-track-btn"
+          @click=${() => { this._showAddTrackMenu = !this._showAddTrackMenu; }}
+        >
+          <i class="fa-solid fa-plus"></i> Add Track
+        </button>
+        ${this._showAddTrackMenu ? html`
+          <div class="timeline-add-track-menu">
+            ${CUSTOM_TRACK_TYPES.map((t) => html`
+              <button class="toolbar-btn" @click=${() => this._addCustomTrack(t)}>
+                <i class="fa-solid ${t.icon}"></i> ${t.title}
+              </button>
+            `)}
+          </div>
+        ` : ''}
+      </div>
       <div class="timeline-playhead">
         <div class="timeline-playhead-head"></div>
       </div>
       <div class="timeline-playhead-preview"></div>
     `;
+  }
+
+  private _openSoundEditor(): void {
+    openModal('sound-editor-modal');
   }
 
   updated(): void {

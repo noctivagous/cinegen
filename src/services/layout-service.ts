@@ -191,10 +191,14 @@ export function syncPrevisDrawerHeightToAccordion(): void {
   }
 
   overlay.classList.remove('is-accordion-compact');
+  const openCount =
+    (playback?.open ? 1 : 0) + (timeline?.open ? 1 : 0);
   const measured = measurePrevisDrawerAccordionExpandedHeight();
   const currentPx = parseFloat(overlay.style.height) || 0;
   const maxPx = getPrevisDrawerMaxHeightPx();
-  const rawTarget = Math.max(measured, currentPx);
+  // Preserve user-dragged height only when multiple sections are open.
+  // When a section is closed, shrink to the measured content height.
+  const rawTarget = openCount >= 2 ? Math.max(measured, currentPx) : measured;
   const target = clamp(
     rawTarget,
     Math.max(LAYOUT_LIMITS.minPrevisDrawerPx, measured),

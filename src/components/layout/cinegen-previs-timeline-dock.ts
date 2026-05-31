@@ -10,6 +10,7 @@ import {
   syncPrevisDrawerHeightToAccordion,
   syncPrevisFullscreenPaneLayout,
 } from '@/services/layout-service';
+import type { CinegenTimeline } from '@/components/panels/cinegen-timeline';
 
 @customElement('cinegen-previs-timeline-dock')
 export class CinegenPrevisTimelineDock extends CgLightElement {
@@ -17,7 +18,8 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
   @state() private _fullscreen = false;
   @state() private _playbackSectionOpen = false;
   @state() private _timelineSectionOpen = true;
-  @state() private _playbackTab: 'storyboard' | 'rendered' = 'storyboard';
+  @state() private _playbackTab: 'storyboard' | 'rendered' | 'both' = 'storyboard';
+  @state() private _playbackTimeText = '0:00';
 
   private _stackObserver: MutationObserver | null = null;
   private _toolbarObserver: ResizeObserver | null = null;
@@ -28,11 +30,13 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
     this.classList.add('previs-timeline-dock');
     this._syncFromDom();
     window.addEventListener('previs-timeline-dock-toggle', this._onToggle);
+    window.addEventListener('previs-time-updated', this._onPrevisTimeUpdated);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('previs-timeline-dock-toggle', this._onToggle);
+    window.removeEventListener('previs-time-updated', this._onPrevisTimeUpdated);
     this._stackObserver?.disconnect();
     this._stackObserver = null;
     this._toolbarObserver?.disconnect();
@@ -76,7 +80,11 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
     }
     this.classList.toggle('previs-timeline-dock--expanded', this._expanded);
     if (this._expanded) {
-      syncPrevisDrawerHeightFromPreferences();
+      void this.updateComplete.then(() => {
+        requestAnimationFrame(() => {
+          syncPrevisDrawerHeightFromPreferences();
+        });
+      });
     }
     this.requestUpdate();
   };
@@ -155,6 +163,30 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
     });
   }
 
+  private _onPrevisTimeUpdated = (e: Event): void => {
+    const detail = (e as CustomEvent).detail as { timeSeconds?: number } | undefined;
+    const seconds = detail?.timeSeconds ?? 0;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    this._playbackTimeText = `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  private _getTimeline(): CinegenTimeline | null {
+    return this.querySelector('cinegen-timeline') as CinegenTimeline | null;
+  }
+
+  private _togglePlay(): void {
+    this._getTimeline()?.togglePlayback();
+  }
+
+  private _stepBack(): void {
+    this._getTimeline()?.stepBackward();
+  }
+
+  private _stepForward(): void {
+    this._getTimeline()?.stepForward();
+  }
+
   render() {
     return html`
       <div
@@ -208,25 +240,42 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
                     <button
                       type="button"
                       class="toolbar-btn ${this._playbackTab === 'rendered' ? 'active' : ''}"
-                      @click=${() => {
-                        this._playbackTab = 'rendered';
-                      }}
+                      @click=${() => { this._playbackTab = 'rendered'; }}
                     >
                       Rendered
                     </button>
                     <button
                       type="button"
                       class="toolbar-btn ${this._playbackTab === 'storyboard' ? 'active' : ''}"
-                      @click=${() => {
-                        this._playbackTab = 'storyboard';
-                      }}
+                      @click=${() => { this._playbackTab = 'storyboard'; }}
                     >
                       Storyboard
+                    </button>
+                    <button
+                      type="button"
+                      class="toolbar-btn ${this._playbackTab === 'both' ? 'active' : ''}"
+                      @click=${() => { this._playbackTab = 'both'; }}
+                    >
+                      Storyboard + Rendered
                     </button>
                   </span>
                 </summary>
                 <div class="cg-accordion-body previs-playback-body">
-                  ${this._playbackTab === 'storyboard'
+                  ${this._playbackTab === 'both'
+                    ? html`
+                        <div class="previs-playback-split">
+                          <div class="previs-playback-split-pane">
+                            <cinegen-storyboard-animatic-player noScrubber></cinegen-storyboard-animatic-player>
+                          </div>
+                          <div class="previs-playback-split-pane previs-rendered-placeholder">
+                            <div class="previs-rendered-placeholder-inner">
+                              <i class="fa-solid fa-film"></i>
+                              <span>Rendered player will appear here when preview renders are available.</span>
+                            </div>
+                          </div>
+                        </div>
+                      `
+                    : this._playbackTab === 'storyboard'
                     ? html`
                         <div class="previs-playback-panel">
                           <cinegen-storyboard-animatic-player noScrubber></cinegen-storyboard-animatic-player>
@@ -236,10 +285,7 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
                         <div class="previs-playback-panel previs-rendered-placeholder">
                           <div class="previs-rendered-placeholder-inner">
                             <i class="fa-solid fa-film"></i>
-                            <span
-                              >Rendered player will appear here when preview renders are
-                              available.</span
-                            >
+                            <span>Rendered player will appear here when preview renders are available.</span>
                           </div>
                         </div>
                       `}
@@ -257,6 +303,17 @@ export class CinegenPrevisTimelineDock extends CgLightElement {
                     class="previs-accordion-header-tools previs-timeline-zoom-control"
                     @click=${this._stopSummaryToggle}
                   >
+                    <span class="previs-timeline-timecode">${this._playbackTimeText}</span>
+                    <button class="toolbar-btn" @click=${this._stepBack} title="Step back 1s">
+                      <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    <button class="toolbar-btn" @click=${this._togglePlay} title="Play / Pause">
+                      <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button class="toolbar-btn" @click=${this._stepForward} title="Step forward 1s">
+                      <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                    <span class="previs-timeline-zoom-divider"></span>
                     <i class="fa-solid fa-magnifying-glass-minus" style="font-size:9px;opacity:0.6;"></i>
                     <input
                       class="previs-timeline-zoom-slider"
