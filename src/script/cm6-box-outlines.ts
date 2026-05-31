@@ -46,17 +46,17 @@ function insetEmPx(view: EditorView): number {
   return Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16;
 }
 
-function insetShotGeometry(
-  shotGeom: { top: number; height: number; left: number; width: number },
-  sceneGeom: { top: number; height: number; left: number; width: number },
+function insetGeometry(
+  innerGeom: { top: number; height: number; left: number; width: number },
+  outerGeom: { top: number; height: number; left: number; width: number },
   inset: number
 ): { top: number; height: number; left: number; width: number } {
-  const sceneBottom = sceneGeom.top + sceneGeom.height;
-  const shotBottom = shotGeom.top + shotGeom.height;
-  const left = sceneGeom.left + inset;
-  const width = Math.max(0, sceneGeom.width - inset * 2);
-  const top = Math.max(shotGeom.top, sceneGeom.top + inset);
-  const bottom = Math.min(shotBottom, sceneBottom - inset);
+  const outerBottom = outerGeom.top + outerGeom.height;
+  const innerBottom = innerGeom.top + innerGeom.height;
+  const left = outerGeom.left + inset;
+  const width = Math.max(0, outerGeom.width - inset * 2);
+  const top = Math.max(innerGeom.top, outerGeom.top + inset);
+  const bottom = Math.min(innerBottom, outerBottom - inset);
   const height = Math.max(0, bottom - top);
   return { top, height, left, width };
 }
@@ -98,6 +98,32 @@ function startDrag(view: EditorView, target: DragTarget, event: MouseEvent): voi
   window.addEventListener('mouseup', onFinishBound);
 }
 
+function setBoxLabel(el: HTMLElement, range: ScriptBoxRange): void {
+  let labelEl = el.querySelector<HTMLElement>('.cm-script-box-label');
+  if (!labelEl) {
+    labelEl = document.createElement('span');
+    labelEl.className = 'cm-script-box-label';
+    el.prepend(labelEl);
+  }
+
+  if (range.kind === 'shot') {
+    labelEl.replaceChildren();
+    const shotSpan = document.createElement('span');
+    shotSpan.className = 'cm-script-box-label-shot';
+    shotSpan.textContent = range.label;
+    labelEl.appendChild(shotSpan);
+
+    const framesSpan = document.createElement('span');
+    framesSpan.className = 'cm-script-box-label-frames';
+    framesSpan.textContent = `Storyboard Frames: (${range.frameCount ?? 0})`;
+    labelEl.appendChild(framesSpan);
+    return;
+  }
+
+  labelEl.replaceChildren();
+  labelEl.textContent = range.label;
+}
+
 class BoxOutlineLayer {
   dom: HTMLElement;
   private boxes = new Map<string, HTMLElement>();
@@ -129,6 +155,7 @@ class BoxOutlineLayer {
 
   private boxKey(range: ScriptBoxRange): string {
     if (range.kind === 'scene') return `scene:${range.sceneId}`;
+    if (range.kind === 'frame') return `frame:${range.sceneId}:${range.shotId}:${range.frameId}`;
     return `shot:${range.sceneId}:${range.shotId}`;
   }
 
@@ -138,6 +165,7 @@ class BoxOutlineLayer {
     const inset = insetEmPx(this.view);
 
     const sceneGeoms = new Map<string, { top: number; height: number; left: number; width: number }>();
+
     for (const range of ranges) {
       if (range.kind !== 'scene') continue;
       const geom = rangeGeometry(this.view, range);
@@ -146,6 +174,7 @@ class BoxOutlineLayer {
 
     for (const range of ranges) {
       if (range.kind === 'frame') continue;
+
       const key = this.boxKey(range);
       seen.add(key);
       let geom = rangeGeometry(this.view, range);
@@ -153,7 +182,7 @@ class BoxOutlineLayer {
 
       if (range.kind === 'shot') {
         const sceneGeom = sceneGeoms.get(range.sceneId);
-        if (sceneGeom) geom = insetShotGeometry(geom, sceneGeom, inset);
+        if (sceneGeom) geom = insetGeometry(geom, sceneGeom, inset);
         if (geom.height <= 0 || geom.width <= 0) continue;
       }
 
@@ -206,8 +235,7 @@ class BoxOutlineLayer {
       el.style.left = `${geom.left}px`;
       el.style.width = `${geom.width}px`;
 
-      const labelEl = el.querySelector<HTMLElement>('.cm-script-box-label');
-      if (labelEl) labelEl.textContent = range.label;
+      setBoxLabel(el, range);
     }
 
     for (const [key, el] of this.boxes) {

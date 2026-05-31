@@ -18,6 +18,7 @@ import {
 } from '@/workspace/shot-frame-bridge';
 import { escHtml } from '@/utils/html';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import { emitStoryboardFrameSelected } from '@/events/shell-events';
 
 let _storyboardMenuDismissBound = false;
 
@@ -98,6 +99,7 @@ export class CinegenStoryboard extends CgLightElement {
     this.requestUpdate();
     window.highlightScriptForFrame?.(frame);
     updateInspector('storyboard-frame', frame);
+    emitStoryboardFrameSelected(frameId);
   }
 
   getSelectedFrame(): StoryboardFrame | null {

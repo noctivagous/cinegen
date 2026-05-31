@@ -50,7 +50,7 @@ import { emitAiInteractionLog } from '@/services/ai/interaction-log';
 import { ImageGenerationService } from '@/services/ai/image-generation-service';
 import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
 import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
-import { CG_TREE_NODE_SELECT } from '@/events/shell-events';
+import { CG_TREE_NODE_SELECT, emitStoryboardFrameSelected } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 import {
@@ -1221,6 +1221,8 @@ export function openStoryboardFrameEditor(frame: StoryboardFrame): void {
   window.selectedStoryboardFrameId = frame.id;
   renderStoryboard();
   syncFrameEditorForm();
+
+  emitStoryboardFrameSelected(frame.id);
 
   const preview = modal.querySelector('.sfe-preview');
   if (preview) {

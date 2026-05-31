@@ -26,6 +26,15 @@ export class CinegenToolbar extends CgLightElement {
             Setup...
           </button>
         </div>
+          <button
+          type="button"
+          id="project-sidebar-toggle-btn"
+          class="toolbar-btn active"
+          title="Show or hide project sidebar"
+          aria-pressed="true"
+        >
+          <i class="fa-solid fa-sitemap"></i> Project
+        </button>
         <cg-toolbar-split
           id="projects-split"
           menu-id="projects-menu"
@@ -358,15 +367,7 @@ export class CinegenToolbar extends CgLightElement {
         >
           <i class="fa-solid fa-wave-square"></i> Previs
         </button>
-        <button
-          type="button"
-          id="project-sidebar-toggle-btn"
-          class="toolbar-btn active"
-          title="Show or hide project sidebar"
-          aria-pressed="true"
-        >
-          <i class="fa-solid fa-sitemap"></i> Project
-        </button>
+      
         <button
           type="button"
           id="inspector-toggle-btn"

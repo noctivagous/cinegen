@@ -19,6 +19,7 @@ export interface CineGenPreferences {
   scriptEditorChipsEnabled: boolean;
   scriptEditorAnchorsEnabled: boolean;
   scriptEditorBoxOutlinesEnabled: boolean;
+  scriptEditorStoryboardFramesEnabled: boolean;
   scriptEditorFontSizePx: number;
   scriptEditorInsertBarVisible: boolean;
   inspectorVisible: boolean;
@@ -50,6 +51,7 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   scriptEditorChipsEnabled: true,
   scriptEditorAnchorsEnabled: false,
   scriptEditorBoxOutlinesEnabled: true,
+  scriptEditorStoryboardFramesEnabled: false,
   scriptEditorFontSizePx: 15,
   scriptEditorInsertBarVisible: false,
   inspectorVisible: true,

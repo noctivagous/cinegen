@@ -105,6 +105,11 @@ export class CinegenScriptEditorChrome extends CgLightElement {
             data-script-editor-box-outlines
             checked
           ></cg-vis-toggle>
+          <cg-vis-toggle
+            label="Storyboard Frames"
+            title="Show storyboard frame thumbnails floated on the right; script text wraps around them"
+            data-script-editor-storyboard-frames
+          ></cg-vis-toggle>
         </div>
         <span
           class="script-editor-options-toolbar-sep script-editor-options-toolbar-sep--push"

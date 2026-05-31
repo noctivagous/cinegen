@@ -12,6 +12,9 @@ export const CG_WORKSPACE_SCENE_TAB = 'cg-workspace-scene-tab';
 /** Previs: shot / frame selection changed. */
 export const CG_PREVIS_SELECTION_CHANGED = 'previs-selection-changed';
 
+/** Storyboard: a frame was selected (script wraps, grid, inspector sync). */
+export const CG_STORYBOARD_FRAME_SELECTED = 'storyboard-frame-selected';
+
 export interface CgTreeNodeSelectDetail {
   name: string;
   type: string;
@@ -30,6 +33,10 @@ export interface CgWorkspaceViewChangeDetail {
 export interface CgWorkspaceSceneTabDetail {
   tabIndex: number;
   sceneId: string | null;
+}
+
+export interface CgStoryboardFrameSelectedDetail {
+  frameId: number;
 }
 
 export function treeNodeSelectDetail(
@@ -86,6 +93,14 @@ export function emitWorkspaceSceneTab(detail: CgWorkspaceSceneTabDetail): void {
       bubbles: true,
       composed: true,
       detail,
+    })
+  );
+}
+
+export function emitStoryboardFrameSelected(frameId: number): void {
+  window.dispatchEvent(
+    new CustomEvent<CgStoryboardFrameSelectedDetail>(CG_STORYBOARD_FRAME_SELECTED, {
+      detail: { frameId },
     })
   );
 }

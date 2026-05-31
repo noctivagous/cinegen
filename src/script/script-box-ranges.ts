@@ -20,6 +20,10 @@ export type ScriptBoxRange = {
   shotId?: number;
   frameId?: number;
   label: string;
+  /** Linked storyboard frames for shot labels. */
+  frameCount?: number;
+  /** Frame box has no generated image yet. */
+  isEmpty?: boolean;
 };
 
 function findAnchorPos(doc: string, anchor: string): number {
@@ -91,6 +95,78 @@ function frameAnchorPos(doc: string, frame: StoryboardFrame): number {
   return findAnchorPos(doc, link);
 }
 
+function isEmptyFrame(frame: StoryboardFrame): boolean {
+  if (frame.imageUrl) return false;
+  const status = String(frame.generatingStatus || '').toLowerCase();
+  return status !== 'generating' && status !== 'pending';
+}
+
+function makeFrameRange(
+  view: EditorView,
+  frame: StoryboardFrame,
+  scene: ScriptBoxRange,
+  shot: SceneShot,
+  sceneNum: number,
+  from: number,
+  to: number
+): ScriptBoxRange {
+  return {
+    kind: 'frame',
+    from: snapToLineBoundary(view, from, 'start'),
+    to: snapToLineBoundary(view, Math.max(from, to), 'end'),
+    sceneId: scene.sceneId,
+    sceneNumber: sceneNum,
+    shotId: shot.id,
+    frameId: frame.id,
+    label: frame.label || `Frame ${frame.id}`,
+    isEmpty: isEmptyFrame(frame),
+  };
+}
+
+function appendFrameRanges(
+  view: EditorView,
+  ranges: ScriptBoxRange[],
+  scene: ScriptBoxRange,
+  shot: SceneShot,
+  shotFrom: number,
+  shotTo: number,
+  sceneNum: number
+): void {
+  const frames = getFramesForShot(scene.sceneId, shot.id);
+  if (!frames.length) return;
+
+  const docText = view.state.doc.toString();
+  const sorted = [...frames].sort((a, b) => a.id - b.id);
+  const entries = sorted.map((frame) => ({
+    frame,
+    pos: frameAnchorPos(docText, frame),
+  }));
+  const anchored = entries
+    .filter((entry) => entry.pos >= shotFrom && entry.pos <= shotTo)
+    .sort((a, b) => a.pos - b.pos || a.frame.id - b.frame.id);
+
+  if (!anchored.length) {
+    const count = sorted.length;
+    const span = Math.max(1, shotTo - shotFrom);
+    const slice = span / count;
+    for (let i = 0; i < count; i++) {
+      const frame = sorted[i];
+      const fFrom = i === 0 ? shotFrom : shotFrom + Math.floor(i * slice);
+      const fTo = i === count - 1 ? shotTo : shotFrom + Math.floor((i + 1) * slice) - 1;
+      ranges.push(makeFrameRange(view, frame, scene, shot, sceneNum, fFrom, fTo));
+    }
+    return;
+  }
+
+  for (let fi = 0; fi < anchored.length; fi++) {
+    const { frame } = anchored[fi];
+    const fNext = fi + 1 < anchored.length ? anchored[fi + 1].pos : shotTo + 1;
+    const fFrom = Math.max(shotFrom, anchored[fi].pos);
+    const fTo = Math.min(shotTo, fNext > fFrom ? fNext - 1 : shotTo);
+    ranges.push(makeFrameRange(view, frame, scene, shot, sceneNum, fFrom, fTo));
+  }
+}
+
 /** Shots and storyboard frames nested within each scene span. */
 export function computeShotAndFrameRanges(view: EditorView): ScriptBoxRange[] {
   const docText = view.state.doc.toString();
@@ -127,6 +203,7 @@ export function computeShotAndFrameRanges(view: EditorView): ScriptBoxRange[] {
 
       const sceneNum = sceneNumberFromSceneId(scene.sceneId);
       const shotNum = shot.number ?? i + 1;
+      const frames = getFramesForShot(scene.sceneId, shot.id);
       ranges.push({
         kind: 'shot',
         from: snapToLineBoundary(view, from, 'start'),
@@ -135,35 +212,10 @@ export function computeShotAndFrameRanges(view: EditorView): ScriptBoxRange[] {
         sceneNumber: sceneNum,
         shotId: shot.id,
         label: `Shot ${sceneNum}.${shotNum}`,
+        frameCount: frames.length,
       });
 
-      const frames = getFramesForShot(scene.sceneId, shot.id);
-      if (frames.length <= 1) continue;
-
-      type FrameAnchor = { frame: StoryboardFrame; pos: number };
-      const frameAnchors: FrameAnchor[] = frames
-        .map((frame) => ({ frame, pos: frameAnchorPos(docText, frame) }))
-        .filter((entry) => entry.pos >= from)
-        .sort((a, b) => a.pos - b.pos || a.frame.id - b.frame.id);
-
-      if (frameAnchors.length <= 1) continue;
-
-      for (let fi = 0; fi < frameAnchors.length; fi++) {
-        const { frame } = frameAnchors[fi];
-        const fNext = fi + 1 < frameAnchors.length ? frameAnchors[fi + 1].pos : to + 1;
-        const fFrom = Math.max(from, frameAnchors[fi].pos);
-        const fTo = Math.min(to, fNext > fFrom ? fNext - 1 : to);
-        ranges.push({
-          kind: 'frame',
-          from: snapToLineBoundary(view, fFrom, 'start'),
-          to: snapToLineBoundary(view, Math.max(fFrom, fTo), 'end'),
-          sceneId: scene.sceneId,
-          sceneNumber: sceneNum,
-          shotId: shot.id,
-          frameId: frame.id,
-          label: frame.label || `Frame ${frame.id}`,
-        });
-      }
+      appendFrameRanges(view, ranges, scene, shot, from, to, sceneNum);
     }
   }
 
@@ -193,15 +245,39 @@ export function computeShotAndFrameRanges(view: EditorView): ScriptBoxRange[] {
           .sort((a, b) => a - b);
         const from = anchors[0] >= 0 ? anchors[0] : scene.from;
         const to = scene.to;
+        const shotId = groupFrames[0]?.shotId;
         ranges.push({
           kind: 'shot',
           from: snapToLineBoundary(view, from, 'start'),
           to: snapToLineBoundary(view, to, 'end'),
           sceneId: scene.sceneId,
           sceneNumber: scene.sceneNumber,
-          shotId: groupFrames[0]?.shotId,
+          shotId,
           label: `Shot ${scene.sceneNumber}.${shotIndex}`,
+          frameCount: groupFrames.length,
         });
+
+        if (shotId != null) {
+          const pseudoShot = { id: shotId } as SceneShot;
+          appendFrameRanges(view, ranges, scene, pseudoShot, from, to, scene.sceneNumber);
+        } else {
+          for (let fi = 0; fi < groupFrames.length; fi++) {
+            const frame = groupFrames[fi];
+            const fNext = fi + 1 < groupFrames.length ? frameAnchorPos(docText, groupFrames[fi + 1]) : to + 1;
+            const fFrom = Math.max(from, frameAnchorPos(docText, frame) >= 0 ? frameAnchorPos(docText, frame) : from);
+            const fTo = Math.min(to, fNext > fFrom ? fNext - 1 : to);
+            ranges.push({
+              kind: 'frame',
+              from: snapToLineBoundary(view, fFrom, 'start'),
+              to: snapToLineBoundary(view, Math.max(fFrom, fTo), 'end'),
+              sceneId: scene.sceneId,
+              sceneNumber: scene.sceneNumber,
+              frameId: frame.id,
+              label: frame.label || `Frame ${frame.id}`,
+              isEmpty: isEmptyFrame(frame),
+            });
+          }
+        }
       }
     }
   }
@@ -211,6 +287,11 @@ export function computeShotAndFrameRanges(view: EditorView): ScriptBoxRange[] {
 
 export function allScriptBoxRanges(view: EditorView): ScriptBoxRange[] {
   return [...computeSceneRanges(view), ...computeShotAndFrameRanges(view)];
+}
+
+/** Storyboard frame anchor ranges for floated script widgets. */
+export function getStoryboardFrameWrapRanges(view: EditorView): ScriptBoxRange[] {
+  return computeShotAndFrameRanges(view).filter((range) => range.kind === 'frame');
 }
 
 export function applyShotRangeUpdate(

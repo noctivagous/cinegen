@@ -9,12 +9,15 @@ import { annotationField } from './cm6-annotations';
 import { chipsExtension } from './cm6-chips';
 import { anchorsExtension } from './cm6-anchors';
 import { boxOutlinesExtension } from './cm6-box-outlines';
+import { storyboardFrameWrapsExtension } from './cm6-storyboard-frame-wraps';
 import { getProjectFountainText, setProjectFountainText } from '@/data/project-data';
 import { markProjectDirty } from '@/services/project-service';
+import { refreshBreakdownFromScript } from '@/script/script-to-project';
 
 export { getProjectFountainText };
 
 let scriptProjectSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let scriptReSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 function scheduleProjectSync(view: EditorView): void {
   if (scriptProjectSyncTimer !== null) clearTimeout(scriptProjectSyncTimer);
@@ -24,6 +27,14 @@ function scheduleProjectSync(view: EditorView): void {
     setProjectFountainText(text);
     markProjectDirty(['screenplay']);
   }, 250);
+}
+
+function scheduleStructureSync(): void {
+  if (scriptReSyncTimer !== null) clearTimeout(scriptReSyncTimer);
+  scriptReSyncTimer = setTimeout(() => {
+    scriptReSyncTimer = null;
+    refreshBreakdownFromScript();
+  }, 2000);
 }
 
 export interface ScriptEditorConfig {
@@ -58,6 +69,7 @@ export function createScriptEditor(
     chipsExtension(),
     anchorsExtension(),
     boxOutlinesExtension(),
+    storyboardFrameWrapsExtension(),
     EditorView.domEventHandlers({
       mouseup(_event, view) {
         config.onMouseUp?.(view, _event as MouseEvent);
@@ -79,6 +91,7 @@ export function createScriptEditor(
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         scheduleProjectSync(update.view);
+        scheduleStructureSync();
         config.onChange?.(update.view);
       }
     }),

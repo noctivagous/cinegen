@@ -5593,6 +5593,9 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen
 
 .cm-script-box-label {
   position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 9px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -5605,8 +5608,19 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen
   user-select: none;
   max-width: calc(100% - 12px);
   overflow: hidden;
+}
+
+.cm-script-box-label-shot,
+.cm-script-box-label-frames {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cm-script-box-label-frames {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: rgba(201, 160, 220, 0.92);
 }
 
 .cm-script-box--scene .cm-script-box-label {
@@ -5619,6 +5633,77 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen
   top: 2px;
   right: 6px;
   left: auto;
+}
+
+/* Storyboard frame floats — right-aligned wrap objects in script text */
+.cm-storyboard-frame-wrap {
+  float: right;
+  clear: right;
+  display: block;
+  shape-outside: margin-box;
+  margin: 0 0 0.65em 1em;
+  line-height: 0;
+  pointer-events: auto;
+}
+
+.cm-storyboard-frame-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(201, 160, 220, 0.62);
+  border-radius: 4px;
+  background: rgba(201, 160, 220, 0.08);
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+
+.cm-storyboard-frame-box:focus,
+.cm-storyboard-frame-box:focus-visible {
+  outline: none;
+}
+
+.cm-storyboard-frame-box--empty {
+  border-style: dashed;
+  border-color: rgba(160, 160, 160, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cm-storyboard-frame-box--selected {
+  outline: 2px solid rgba(180, 210, 255, 0.95);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px rgba(90, 140, 214, 0.45);
+}
+
+.cm-storyboard-frame-box-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.cm-storyboard-frame-box-label {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding: 3px 5px;
+  font-size: 8px;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: rgba(240, 232, 255, 0.95);
+  background: linear-gradient(180deg, transparent, rgba(16, 16, 16, 0.88));
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.cm-storyboard-frame-box--empty .cm-storyboard-frame-box-label {
+  color: rgba(200, 200, 200, 0.85);
+  background: rgba(24, 24, 24, 0.55);
 }
 
 .cm-script-box-handle {

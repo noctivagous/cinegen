@@ -42,6 +42,7 @@
     "reviewQueue": "ai-director/review-queue.cinereviewqueue",
     "costTracking": "ai-director/cost-tracking.cinecosttracking",
     "modelRoutingRules": "ai-director/model-routing-rules.cinemodelrouting",
+    "features": "features.cinefeatures",
     "agentLog": "ai-director/agent-log.cineagentlog"
   },
   "settings": {

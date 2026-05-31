@@ -2,6 +2,7 @@ import { currentSceneData, projectScreenplay, storyboardFrames, timelineClips } 
 import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
+import { emitStoryboardFrameSelected } from '@/events/shell-events';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 
 export type ShotListRowKind = 'coverage' | 'master' | 'broll' | 'pickup';
@@ -630,6 +631,7 @@ export function selectStoryboardFrameById(frameId: number): void {
   window.renderStoryboard?.();
   window.highlightScriptForFrame?.(frame);
   updateInspector('storyboard-frame', frame);
+  emitStoryboardFrameSelected(frameId);
   requestAnimationFrame(() => {
     const frameEl = document.querySelector(
       `cinegen-storyboard .storyboard-frame[data-frame-id="${frameId}"]`

@@ -40,7 +40,7 @@ Server-resident `.cine` tier (`source/server/projects/`), GET/POST project endpo
 
 Feature catalog with stable `featureId`s, per-project `ProjectFeaturesConfig` persisted as `features.cinefeatures`, Project Features modal with checkbox tree and drag-reorder, blank-project default (Mood Boards only), `Alt+1…9` skips disabled sections, selection rerouting on config change, Start-from-Script wizard enables Production Office and Scenes after sync, blank project toolbar action routes through `createNewProject()`. Full details in `ARCHITECTURE-LEGACY-PROGRESS.md`.
 
-- [ ] Add `features.cinefeatures` to bundled sample manifests so duplicated samples carry explicit feature order.
+- [x] Add `features.cinefeatures` to bundled sample manifests so duplicated samples carry explicit feature order.
 - [ ] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
 
 ---
@@ -56,10 +56,11 @@ Architecture note: as remaining work lands, migrate high-traffic `fountain-bundl
 
 - [~] Wire script editor changes back into project structure.
   - [x] "Refresh Breakdown From Script" in Script Info toolbar (`refreshBreakdownFromScript()`).
-  - [ ] Automatic re-sync after meaningful editor edits (debounced) still pending.
+  - [x] Automatic re-sync after meaningful editor edits (2000ms debounced structure sync via `scheduleStructureSync`).
   - Reconciler preserves scene IDs and existing coverage when headings match (`syncFountainToProject`).
 
-- [ ] Verify empty-project placeholder (blank projects show Mood Boards only until features are enabled or a wizard runs).
+- [x] Verify empty-project placeholder (blank projects show Mood Boards only until features are enabled or a wizard runs).
+  - Code analysis confirms: `buildBlankProjectFeaturesConfig` enables only `mood-boards`, `buildDisplayProjectTree` filters to Mood Boards only, `getFirstEnabledTreeNodeName` routes to moodboards view, and `enableFeatureBranch` + `rerouteSelectionIfDisabled` handles re-routing when features are added.
 
 ---
 
