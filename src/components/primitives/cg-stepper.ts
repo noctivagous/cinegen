@@ -9,6 +9,7 @@ export class CgStepper extends CgLightElement {
   @property({ type: Number }) max = 100;
   @property({ type: Number }) step = 1;
   @property({ attribute: 'input-id' }) inputId = '';
+  @property({ type: Number }) value = 15;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -19,17 +20,29 @@ export class CgStepper extends CgLightElement {
     this.dataset.step = String(this.step);
   }
 
+  private _change(dir: number): void {
+    const next = Math.min(this.max, Math.max(this.min, this.value + dir * this.step));
+    if (next === this.value) return;
+    this.value = next;
+    this.dispatchEvent(
+      new CustomEvent('cg-change', {
+        bubbles: true,
+        detail: { value: this.value },
+      })
+    );
+  }
+
   render() {
     return html`
-      <button type="button" data-step="-1" aria-label="Decrease value">−</button>
+      <button type="button" @click=${() => this._change(-1)} aria-label="Decrease value">−</button>
       <input
         type="text"
         id=${this.inputId || nothing}
-        value="15"
+        .value=${String(this.value)}
         aria-label="Value"
         readonly
       />
-      <button type="button" data-step="1" aria-label="Increase value">+</button>
+      <button type="button" @click=${() => this._change(1)} aria-label="Increase value">+</button>
     `;
   }
 }

@@ -26,7 +26,8 @@ import {
   getReferenceImageUrls,
   STORYBOARD_STYLE_PROMPT,
 } from '@/storyboard/storyboard-prompt-builder';
-import { getCinegenStoryboard } from '@/panels/panel-hosts';
+import { getCinegenStoryboard, getCinegenScriptEditor } from '@/panels/panel-hosts';
+import { getCurrentScriptText, getCurrentScriptSelection } from '@/script/fountain-bundle';
 import { alertCG } from '@/utils/alert-cg';
 import { promptFrameCG } from '@/utils/prompt-frame-cg';
 import { escHtml } from '@/utils/html';
@@ -125,9 +126,6 @@ declare global {
   var storyboardFrames: Array<{ id: number; scene?: string; label: string; scriptLink?: string; notes?: string; imageUrl?: string; generatingStatus?: string; generatedPrompt?: string; userPromptOverride?: string }>;
 }
 
-function getScriptEditor(): HTMLTextAreaElement | null {
-  return document.getElementById('script-editor') as HTMLTextAreaElement | null;
-}
 
 interface StoryboardFrame {
   id: number;
@@ -283,7 +281,7 @@ function initStoryboardGenerationModeControls(): void {
 
 function syncReferenceGateControls(): void {
   const sceneKey = sceneKeyFromCurrentScene();
-  const script = getScriptEditor()?.value || '';
+  const script = getCurrentScriptText();
   const heading = extractSceneHeading(script, Number(currentSceneNumber()));
   const gate = validateRequiredReferenceSlots(sceneKey, heading);
   const status =
@@ -446,7 +444,7 @@ async function ensureReferenceCategoryFilled(
 
 function selectedSceneHeadingAndLines(): { sceneHeading: string; sceneBodyLines: string[] } {
   const scene = Number(currentSceneNumber());
-  const script = getScriptEditor()?.value || '';
+  const script = getCurrentScriptText();
   return {
     sceneHeading: extractSceneHeading(script, scene),
     sceneBodyLines: extractSceneBodyLines(script, scene),
@@ -597,18 +595,18 @@ export function renderStoryboard() {
 }
 
 export function highlightScriptForFrame(frame: StoryboardFrame): void {
-  const editor = getScriptEditor();
-  if (!editor || !frame.scriptLink) return;
-  const text = editor.value;
+  const host = getCinegenScriptEditor();
+  const view = host?.editorView;
+  if (!view || !frame.scriptLink) return;
+  const text = view.state.doc.toString();
   const searchStr = frame.scriptLink.trim();
   const idx = text.toLowerCase().indexOf(searchStr.toLowerCase());
   if (idx === -1) return;
-  editor.focus({ preventScroll: true });
-  editor.setSelectionRange(idx, idx + searchStr.length);
-  const lh = parseFloat(getComputedStyle(editor).lineHeight) || 19;
-  const line = text.slice(0, idx).split('\n').length;
-  editor.scrollTop = Math.max(0, (line - 3) * lh);
-  syncScriptRenderScroll();
+  view.dispatch({
+    selection: { anchor: idx, head: idx + searchStr.length },
+    scrollIntoView: true,
+  });
+  view.focus();
   window.setPrevisSelectionState?.({
     sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
     shotId: frame.shotId ?? null,
@@ -624,15 +622,14 @@ export function getSelectedStoryboardFrame(): StoryboardFrame | null {
 }
 
 export function getScriptSelectionOrCurrentLine(): string {
-  const editor = getScriptEditor();
-  if (!editor) return '';
-  const selected = editor.value.slice(editor.selectionStart, editor.selectionEnd).trim();
-  if (selected) return selected;
-  const before = editor.value.slice(0, editor.selectionStart);
-  const lineStart = before.lastIndexOf('\n') + 1;
-  const lineEndIdx = editor.value.indexOf('\n', editor.selectionStart);
-  const lineEnd = lineEndIdx === -1 ? editor.value.length : lineEndIdx;
-  return editor.value.slice(lineStart, lineEnd).trim();
+  const sel = getCurrentScriptSelection();
+  if (!sel) return '';
+  if (sel.text) return sel.text;
+  const view = getCinegenScriptEditor()?.editorView;
+  if (!view) return '';
+  const pos = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(pos);
+  return line.text.trim();
 }
 
 export async function addStoryboardFrame(): Promise<void> {
@@ -874,9 +871,9 @@ export function restoreLastDeletedFrame(): void {
 }
 
 export function highlightStoryboardForScriptSelection(): void {
-  const editor = getScriptEditor();
-  if (!editor) return;
-  const selectedText = editor.value.slice(editor.selectionStart, editor.selectionEnd).trim();
+  const sel = getCurrentScriptSelection();
+  if (!sel) return;
+  const selectedText = sel.text;
   if (!selectedText) return;
   const normalized = selectedText.toLowerCase();
   const frame = storyboardFrames.find(item => item.scriptLink && normalized.includes(item.scriptLink.toLowerCase()))
@@ -887,7 +884,7 @@ export function highlightStoryboardForScriptSelection(): void {
     sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
     shotId: frame.shotId ?? null,
     frameId: frame.id,
-    scriptRange: { start: editor.selectionStart, end: editor.selectionEnd },
+    scriptRange: { start: sel.from, end: sel.to },
     timelineItemId: frame.id ? `frame-${frame.id}` : null,
   });
   renderStoryboard();
@@ -902,8 +899,7 @@ export async function generateBoards(): Promise<void> {
   if (typeof triggerModelActivityBlink === 'function') triggerModelActivityBlink('image');
   const scene = currentSceneNumber();
   const sceneKey = sceneKeyFromCurrentScene();
-  const editor = getScriptEditor();
-  const scriptText = editor?.value || '';
+  const scriptText = getCurrentScriptText();
   const selection = getScriptSelectionOrCurrentLine();
   const sceneHeading = extractSceneHeading(scriptText, Number(scene));
   const sceneBodyLines = extractSceneBodyLines(scriptText, Number(scene));
@@ -1353,17 +1349,14 @@ export function initStoryboardFrameEditor(): void {
 }
 
 function insertAtCursor(text: string): void {
-  const editor = getScriptEditor();
-  if (!editor) return;
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
-  const before = editor.value.slice(0, start);
-  const after = editor.value.slice(end);
-  editor.value = before + text + after;
-  const newPos = start + text.length;
-  editor.setSelectionRange(newPos, newPos);
-  editor.focus();
-  window.scheduleFountainRender?.();
+  const view = getCinegenScriptEditor()?.editorView;
+  if (!view) return;
+  const { from, to } = view.state.selection.main;
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: from + text.length },
+  });
+  view.focus();
   window.scheduleScriptEditorProjectSync?.();
 }
 
@@ -1380,8 +1373,8 @@ export function showScriptContextMenu(clientX: number, clientY: number): void {
 
   hideScriptContextMenu();
   const selectedText = getScriptSelectionOrCurrentLine();
-  const editor = getScriptEditor();
-  const hasSelection = editor && editor.selectionStart !== editor.selectionEnd;
+  const sel = getCurrentScriptSelection();
+  const hasSelection = sel && sel.from !== sel.to;
   const existingChips = hasSelection ? window.extractChipsFromText?.(selectedText) || [] : [];
 
   const items: Array<{ id: string; label: string; icon: string }> = [
@@ -1537,13 +1530,12 @@ export function wireScriptContextMenuDismiss(): void {
 function toggleStoryboardFrameTextButton(): void {
   const btn = document.getElementById('make-storyboard-frame-text-btn');
   if (!btn) return;
-  const editor = getScriptEditor();
-  if (!editor) {
+  const sel = getCurrentScriptSelection();
+  if (!sel) {
     btn.hidden = true;
     return;
   }
-  const selected = editor.value.slice(editor.selectionStart, editor.selectionEnd).trim();
-  btn.hidden = !selected;
+  btn.hidden = !sel.text;
 }
 
 export function syncScriptSelectionToStoryboard(): void {
@@ -1598,7 +1590,6 @@ export function installStoryboardBundleGlobals(): void {
   normalizedReferenceBank();
   syncReferenceGateControls();
   document.addEventListener(CG_TREE_NODE_SELECT, () => syncReferenceGateControls());
-  document.getElementById('script-editor')?.addEventListener('input', () => syncReferenceGateControls());
   setTimeout(() => initStoryboardGenerationModeControls(), 0);
   setTimeout(() => {
     initStoryboardGenerationModeControls();

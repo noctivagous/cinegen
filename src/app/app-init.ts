@@ -6,7 +6,6 @@ import {
   primePersistedProjectTreeUi,
   resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
-import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { appShellStore } from '@/stores/app-shell';
 import {
   applyLayoutChromeFromPreferences,
@@ -20,8 +19,6 @@ declare global {
   function syncActiveProjectName(name: string): void;
   function hydrateScriptEditorFromProject(): void;
   function initStoryboardVisibilityToggles(): void;
-  function initScriptEditorChipsToggle(): void;
-  function initScriptEditorAnchorsToggle(): void;
   function initScriptEditorOptionsToolbar(): void;
   function initChipNavigation(): void;
   function initStoryboardNavigation(): void;
@@ -34,9 +31,7 @@ declare global {
   function initScriptPaneSegmentedControl(): void;
   function switchScriptPaneTab(tab: string): void;
   function syncScriptSelectionToStoryboard(): void;
-  function scheduleFountainRender(): void;
   function scheduleScriptEditorProjectSync(): void;
-  function syncScriptRenderScroll(): void;
   function syncProjectSidebarToggleButton(visible: boolean): void;
   function syncInspectorToggleButton(visible: boolean): void;
   function activateProjectTreeNode(node: string): void;
@@ -52,15 +47,6 @@ const App = {
     const prefs = appShellStore.preferences;
     const w = window as unknown as Record<string, unknown>;
 
-    if (typeof prefs.scriptEditorChipsEnabled === 'boolean') {
-      w.scriptEditorChipsEnabled = prefs.scriptEditorChipsEnabled;
-    }
-    if (typeof prefs.scriptEditorAnchorsEnabled === 'boolean') {
-      w.scriptEditorAnchorsEnabled = prefs.scriptEditorAnchorsEnabled;
-    }
-    if (typeof prefs.scriptEditorFontSizePx === 'number') {
-      w.scriptEditorFontSizePx = prefs.scriptEditorFontSizePx;
-    }
     if (typeof prefs.scriptEditorInsertBarVisible === 'boolean') {
       w.scriptEditorInsertBarVisible = prefs.scriptEditorInsertBarVisible;
     }
@@ -76,8 +62,6 @@ const App = {
     window.syncActiveProjectName?.(String(projectData.name ?? ''));
     window.hydrateScriptEditorFromProject?.();
     window.initStoryboardVisibilityToggles?.();
-    window.initScriptEditorChipsToggle?.();
-    window.initScriptEditorAnchorsToggle?.();
     window.initScriptEditorOptionsToolbar?.();
     window.initChipNavigation?.();
     window.initStoryboardNavigation?.();
@@ -90,27 +74,7 @@ const App = {
     window.initScriptPaneSegmentedControl?.();
     window.switchScriptPaneTab?.('script');
 
-    const scriptHost = getCinegenScriptEditor();
-    if (scriptHost) {
-      scriptHost.wireTextarea();
-      window.hydrateScriptEditorFromProject?.();
-      scriptHost.scheduleBackdropRender();
-    } else {
-      const scriptEditor = document.getElementById('script-editor');
-      if (scriptEditor) {
-        scriptEditor.addEventListener('mouseup', () => window.syncScriptSelectionToStoryboard?.());
-        scriptEditor.addEventListener('keyup', () => window.syncScriptSelectionToStoryboard?.());
-        scriptEditor.addEventListener('input', () => {
-          window.scheduleFountainRender?.();
-          window.scheduleScriptEditorProjectSync?.();
-        });
-        scriptEditor.addEventListener('scroll', () => window.syncScriptRenderScroll?.(), {
-          passive: true,
-        });
-        window.hydrateScriptEditorFromProject?.();
-        window.scheduleFountainRender?.();
-      }
-    }
+    window.hydrateScriptEditorFromProject?.();
 
     applyLayoutChromeFromPreferences(prefs);
 

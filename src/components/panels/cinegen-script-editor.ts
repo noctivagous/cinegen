@@ -1,14 +1,39 @@
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
+import { EditorView } from '@codemirror/view';
+import {
+  createScriptEditor,
+  insertFountainSnippetIntoEditor,
+  setEditorDocument,
+  scrollEditorToPos,
+  setEditorSelection,
+} from '@/script/cm6-script-editor';
+import {
+  setAnnotations,
+  getAnnotations,
+  annotateSelection,
+  clearSelectionAnnotations,
+} from '@/script/cm6-annotations';
+import { setChipsEnabled } from '@/script/cm6-chips';
+import { setAnchorsEnabled } from '@/script/cm6-anchors';
+import {
+  renderPrevisMargin,
+  handlePrevisMarginClick,
+  handlePrevisMarginDragStart,
+  refreshPrevisMargin,
+} from '@/script/previs-margin';
+import { getProjectAnnotations, setProjectAnnotations } from '@/data/project-data';
+import { markProjectDirty } from '@/services/project-service';
+import { appShellStore } from '@/stores/app-shell-store';
 
 /**
- * Script editor host — Fountain textarea + syntax backdrop.
- * Fountain parse/render stays in fountain-bundle.
+ * Script editor host — CodeMirror 6 Fountain editor.
+ * Replaces the transparent-textarea + render-overlay approach.
  */
 @customElement('cinegen-script-editor')
 export class CinegenScriptEditor extends CgLightElement {
-  private _wired = false;
+  private _editorView: EditorView | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -17,73 +42,167 @@ export class CinegenScriptEditor extends CgLightElement {
   }
 
   protected firstUpdated(): void {
-    this.wireTextarea();
-    const ta = this.getTextarea();
-    if (ta && !ta.value && window.getProjectFountainText?.()) {
+    this._initEditor();
+    this._wirePrevisMargin();
+    this._wireVisToggles();
+    this._wireGlobalEvents();
+  }
+
+  private _initEditor(): void {
+    const host = this.querySelector<HTMLElement>('.cm-host');
+    if (!host) return;
+
+    this._editorView = createScriptEditor(host, {
+      onMouseUp: (_view, _event) => {
+        window.syncScriptSelectionToStoryboard?.();
+      },
+      onKeyUp: (_view, _event) => {
+        window.syncScriptSelectionToStoryboard?.();
+      },
+      onContextMenu: (_view, event) => {
+        event.preventDefault();
+        window.showScriptContextMenu?.(event.clientX, event.clientY);
+      },
+      onScroll: (view) => {
+        const marginScroll = this.querySelector<HTMLElement>('.script-previs-margin .previs-margin-scroll');
+        if (marginScroll) marginScroll.scrollTop = view.scrollDOM.scrollTop;
+      },
+      onChange: (view) => {
+        const marks = getAnnotations(view);
+        setProjectAnnotations({ format: 'cine-annotations', version: 1, marks });
+        markProjectDirty(['annotations']);
+      },
+      sceneGutter: {
+        onSceneClick: (sceneNumber) => {
+          const sceneId = `scene${String(sceneNumber).padStart(2, '0')}`;
+          void Promise.all([
+            import('@/tree/project-tree-service'),
+            import('@/events/shell-events'),
+          ]).then(([{ findProjectNodeBySceneId }, { emitTreeNodeSelect, treeNodeSelectDetail }]) => {
+              const node = findProjectNodeBySceneId(sceneId);
+              if (node) emitTreeNodeSelect(treeNodeSelectDetail(node, null));
+            }
+          );
+        },
+      },
+    });
+
+    // Hydrate annotations from project sidecar
+    const ann = getProjectAnnotations();
+    if (ann.marks.length) {
+      setAnnotations(this._editorView, ann.marks);
+    }
+
+    // Hydrate from project if editor is empty
+    if (!this._editorView.state.doc.length) {
       window.hydrateScriptEditorFromProject?.();
     }
-    this.scheduleBackdropRender();
+
+    // Apply saved font size preference
+    const fontSize = appShellStore.preferences.scriptEditorFontSizePx ?? 15;
+    this.style.setProperty('--script-editor-font-size', `${fontSize}px`);
   }
 
-  wireTextarea(): void {
-    if (this._wired) return;
-    const ta = this.getTextarea();
-    if (!ta) return;
-    this._wired = true;
-
-    ta.addEventListener('input', () => {
-      window.scheduleFountainRender?.();
-      window.scheduleScriptEditorProjectSync?.();
+  private _wirePrevisMargin(): void {
+    const margin = this.querySelector<HTMLElement>('.script-previs-margin');
+    if (!margin) return;
+    renderPrevisMargin(margin);
+    margin.addEventListener('click', (event: Event) => {
+      handlePrevisMarginClick(event);
     });
-    ta.addEventListener('scroll', () => window.syncScriptRenderScroll?.(), { passive: true });
-    ta.addEventListener('contextmenu', (e: MouseEvent) => {
-      e.preventDefault();
-      window.showScriptContextMenu?.(e.clientX, e.clientY);
+    margin.addEventListener('mousedown', (event: MouseEvent) => {
+      handlePrevisMarginDragStart(event);
     });
-    ta.addEventListener('mouseup', () => window.syncScriptSelectionToStoryboard?.());
-    ta.addEventListener('keyup', () => window.syncScriptSelectionToStoryboard?.());
+  }
 
-    const margin = this.querySelector<HTMLElement>('#script-previs-margin');
-    if (margin) {
-      margin.addEventListener('click', (event: Event) => {
-        window.handleScriptPrevisMarginClick?.(event);
-      });
-      margin.addEventListener('mousedown', (event: MouseEvent) => {
-        window.handleScriptPrevisMarginDragStart?.(event);
-      });
+  private _wireVisToggles(): void {
+    if (!this._editorView) return;
+
+    // Toolbar is a sibling component; search from parent or document
+    const parent = this.closest<HTMLElement>('#script-pane-script') || this.parentElement;
+    const toolbar = parent?.querySelector<HTMLElement>('.script-editor-options-toolbar');
+    if (!toolbar) return;
+
+    toolbar.addEventListener('cg-change', (e: Event) => {
+      if (!this._editorView) return;
+      const detail = (e as CustomEvent).detail as
+        | { part?: string; checked?: boolean; value?: number }
+        | undefined;
+      if (!detail) return;
+
+      if (detail.part === 'chips') {
+        setChipsEnabled(this._editorView, !!detail.checked);
+      } else if (detail.part === 'anchors') {
+        setAnchorsEnabled(this._editorView, !!detail.checked);
+      } else if (typeof detail.value === 'number') {
+        // Font size stepper
+        const size = detail.value;
+        this.style.setProperty('--script-editor-font-size', `${size}px`);
+        appShellStore.patchPreferences({ scriptEditorFontSizePx: size });
+      }
+    });
+
+    // Sync initial compartment states from checkbox attributes
+    const chipsToggle = toolbar.querySelector('cg-vis-toggle[data-script-editor-chips]');
+    const anchorsToggle = toolbar.querySelector('cg-vis-toggle[data-script-editor-anchors]');
+    if (chipsToggle) {
+      const checked = (chipsToggle as any).checked ?? true;
+      setChipsEnabled(this._editorView, checked);
     }
+    if (anchorsToggle) {
+      const checked = (anchorsToggle as any).checked ?? false;
+      setAnchorsEnabled(this._editorView, checked);
+    }
+
+    // Initialise stepper value from preferences
+    const stepper = toolbar.querySelector('cg-stepper[input-id="script-editor-font-size-input"]');
+    if (stepper) {
+      const size = appShellStore.preferences.scriptEditorFontSizePx ?? 15;
+      (stepper as any).value = size;
+    }
+  }
+
+  private _wireGlobalEvents(): void {
     window.addEventListener('previs-selection-changed', () => {
-      window.renderScriptPrevisMargin?.();
+      refreshPrevisMargin();
     });
     window.addEventListener('storyboard-frames-changed', () => {
-      window.renderScriptPrevisMargin?.();
+      refreshPrevisMargin();
     });
     window.addEventListener('previs-timing-changed', () => {
-      window.renderScriptPrevisMargin?.();
+      refreshPrevisMargin();
     });
   }
 
-  getTextarea(): HTMLTextAreaElement | null {
-    return this.querySelector<HTMLTextAreaElement>('#script-editor');
+  get editorView(): EditorView | null {
+    return this._editorView;
   }
 
-  scheduleBackdropRender(): void {
-    window.scheduleFountainRender?.();
+  /** Insert a Fountain snippet by kind (see FOUNTAIN_SNIPPETS in fountain-bundle). */
+  insertSnippet(text: string, sel?: readonly [number, number] | null): void {
+    if (!this._editorView) return;
+    insertFountainSnippetIntoEditor(this._editorView, text, sel);
+  }
+
+  /** Replace the entire document (used for hydration / import). */
+  setDocument(text: string): void {
+    if (!this._editorView) return;
+    setEditorDocument(this._editorView, text);
+  }
+
+  /** Scroll to a document position and set selection. */
+  jumpToPos(pos: number, selectLength = 0): void {
+    if (!this._editorView) return;
+    setEditorSelection(this._editorView, pos, pos + selectLength);
+    scrollEditorToPos(this._editorView, pos);
   }
 
   render() {
     return html`
       <div class="script-editor-layout">
-        <div id="script-previs-margin" class="script-previs-margin"></div>
+        <div class="script-previs-margin"></div>
         <div class="script-editor-main">
-          <div id="script-editor-render-layer" class="script-editor-render-layer" aria-hidden="true">
-            <div id="script-editor-render" class="script-editor-render"></div>
-          </div>
-          <textarea
-            id="script-editor"
-            class="script-editor script-editor-input"
-            spellcheck="false"
-          ></textarea>
+          <div class="cm-host" style="flex:1;min-height:0;min-width:0;"></div>
         </div>
       </div>
     `;

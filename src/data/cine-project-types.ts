@@ -78,6 +78,8 @@ export type CineProjectManifest = {
     agentLog?: string;
     /** Style guide document */
     style?: string;
+    /** Script annotation sidecar */
+    annotations?: string;
   };
   settings?: Record<string, unknown>;
   tree?: Record<string, unknown>;
@@ -118,6 +120,7 @@ export type CineProjectFile = Omit<CineProjectManifest, 'documents'> & {
   costTracking?: Record<string, unknown>[];
   modelRoutingRules?: Record<string, unknown>;
   agentLog?: Record<string, unknown>[];
+  annotations?: Record<string, unknown>;
 };
 
 export type ProjectRegistryEntry = {

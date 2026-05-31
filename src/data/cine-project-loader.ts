@@ -657,6 +657,7 @@ export type AppliedCineProject = {
   agentLog?: Record<string, unknown>[];
   styleGuide?: Record<string, unknown>;
   projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
+  projectAnnotations?: import('@/data/project-data').CineAnnotationsDoc;
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {
@@ -749,6 +750,9 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
     costTracking: doc.costTracking ?? [],
     modelRoutingRules: doc.modelRoutingRules ?? {},
     agentLog: doc.agentLog ?? [],
+    projectAnnotations: (doc.annotations && typeof doc.annotations === 'object'
+      ? (doc.annotations as unknown as import('@/data/project-data').CineAnnotationsDoc)
+      : { format: 'cine-annotations', version: 1, marks: [] }),
   };
 }
 

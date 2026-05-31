@@ -8,6 +8,8 @@ import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinati
 import { updateInspector } from '@/components/panels/cinegen-inspector';
 import { persistProjectTreeExpandedState } from '@/services/project-service';
 import { sceneIdFromStoryboardFrame } from '@/workspace/shot-frame-bridge';
+import { getCinegenScriptEditor } from '@/panels/panel-hosts';
+import { getCurrentScriptText } from '@/script/fountain-bundle';
 
 // ==================== CHIP NAVIGATION ====================
 let chipNavFocus = { type: null, label: null };
@@ -162,16 +164,14 @@ function activateTreeNodeByName(name) {
 }
 
 function getChipAtScriptCaret() {
-  const ta = document.getElementById('script-editor');
-  if (!ta) return null;
-  const text = ta.value;
-  const pos = ta.selectionStart;
-  const lineStart = text.lastIndexOf('\n', Math.max(0, pos - 1)) + 1;
-  const lineEndRaw = text.indexOf('\n', pos);
-  const lineEnd = lineEndRaw === -1 ? text.length : lineEndRaw;
-  const line = text.slice(lineStart, lineEnd);
-  const col = pos - lineStart;
-  const lineIdx = text.slice(0, lineStart).split('\n').length - 1;
+  const view = getCinegenScriptEditor()?.editorView;
+  if (!view) return null;
+  const text = view.state.doc.toString();
+  const pos = view.state.selection.main.head;
+  const lineInfo = view.state.doc.lineAt(pos);
+  const line = lineInfo.text;
+  const col = pos - lineInfo.from;
+  const lineIdx = lineInfo.number - 1;
   const types = classifyFountainDocument(text.split('\n'));
   const lineType = types[lineIdx];
 
@@ -190,26 +190,27 @@ function getChipAtScriptCaret() {
 }
 
 function scrollScriptToLine(lineIndex) {
-  const ta = document.getElementById('script-editor');
-  if (!ta || lineIndex < 0) return;
-  const lines = ta.value.split('\n');
-  let pos = 0;
-  for (let i = 0; i < lineIndex; i++) pos += lines[i].length + 1;
-  const lineLen = (lines[lineIndex] || '').length;
-  ta.focus();
-  ta.setSelectionRange(pos, pos + lineLen);
-  const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 24;
-  ta.scrollTop = Math.max(0, lineIndex * lineHeight - ta.clientHeight * 0.35);
-  window.scheduleFountainRender?.();
+  const view = getCinegenScriptEditor()?.editorView;
+  if (!view || lineIndex < 0) return;
+  try {
+    const line = view.state.doc.line(lineIndex + 1);
+    view.dispatch({
+      selection: { anchor: line.from, head: line.to },
+      scrollIntoView: true,
+    });
+    view.focus();
+  } catch {
+    /* line number out of range */
+  }
 }
 
 function collectChipMentions(chipType, label) {
   const mentions = [];
   const push = (area, detail, meta = {}) => mentions.push({ area, detail, ...meta });
 
-  const ta = document.getElementById('script-editor');
-  if (ta) {
-    const lines = ta.value.split('\n');
+  const text = getCurrentScriptText();
+  if (text) {
+    const lines = text.split('\n');
     const types = classifyFountainDocument(lines);
     lines.forEach((line, idx) => {
       if (!line.trim()) return;
@@ -569,7 +570,7 @@ function initChipNavigation() {
     navigateChipDefault(chip.dataset.chipType, decodeChipLabel(chip.dataset.chipLabel));
   });
 
-  const scriptEditor = document.getElementById('script-editor');
+  const scriptEditor = document.querySelector('cinegen-script-editor');
   if (scriptEditor) {
     scriptEditor.addEventListener('click', (e) => {
       requestAnimationFrame(() => {

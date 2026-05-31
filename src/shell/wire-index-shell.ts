@@ -40,8 +40,14 @@ export function wireScriptEditorShell(): void {
     scriptPane.dataset.cgFountainBound = '1';
     scriptPane.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-fountain-snippet]');
-      if (!btn?.dataset.fountainSnippet) return;
-      callGlobal('insertFountainSnippet', btn.dataset.fountainSnippet);
+      if (btn?.dataset.fountainSnippet) {
+        callGlobal('insertFountainSnippet', btn.dataset.fountainSnippet);
+        return;
+      }
+      const ann = (e.target as HTMLElement).closest<HTMLElement>('[data-annotation-category]');
+      if (ann?.dataset.annotationCategory) {
+        callGlobal('annotateScriptSelection', ann.dataset.annotationCategory);
+      }
     });
   }
 

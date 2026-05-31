@@ -43,6 +43,32 @@ export function setProjectFountainText(text: string): void {
   projectScreenplay = { format: 'fountain', text: text ?? '' };
 }
 
+/** Annotation mark persisted in the sidecar document. */
+export interface AnnotationMark {
+  from: number;
+  to: number;
+  category: string;
+  note?: string;
+}
+
+/** Sidecar document shape stored in `annotations.cineannotations`. */
+export interface CineAnnotationsDoc {
+  format: 'cine-annotations';
+  version: 1;
+  marks: AnnotationMark[];
+}
+
+/** Script annotation sidecar — breakdown highlights persisted per project. */
+export let projectAnnotations: CineAnnotationsDoc = { format: 'cine-annotations', version: 1, marks: [] };
+
+export function getProjectAnnotations(): CineAnnotationsDoc {
+  return projectAnnotations;
+}
+
+export function setProjectAnnotations(doc: CineAnnotationsDoc): void {
+  projectAnnotations = doc;
+}
+
 /** Project registry and active project — entries map to `.cine` package dirs in `project-files/`. */
 export let projectRegistry: ProjectRegistryEntry[] = [];
 export let activeProjectId = '';
@@ -467,6 +493,9 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
     : (assetLibrary.locations as any[]);
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
+  projectAnnotations = applied.projectAnnotations && typeof applied.projectAnnotations === 'object'
+    ? (applied.projectAnnotations as CineAnnotationsDoc)
+    : { format: 'cine-annotations', version: 1, marks: [] };
 
   // Mood boards are stored in `.cinereferenceimages` for `.cine` packages,
   // and included in local-project snapshots via the same field.

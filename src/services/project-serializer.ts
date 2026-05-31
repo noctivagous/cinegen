@@ -45,6 +45,7 @@ const DOC_TYPE_TO_FILENAME: Record<string, string> = {
   shotLibrary: 'shot-library.cineshotlibrary',
   cameraPresets: 'camera-presets.cinecamerapresets',
   spatialAnnotations: 'spatial-annotations.cinespatialannotations',
+  annotations: 'annotations.cineannotations',
   generationQueue: 'generation-queue.cinegenerationqueue',
   reviewQueue: 'review-queue.cinereviewqueue',
   costTracking: 'cost-tracking.cinecosttracking',
@@ -86,6 +87,7 @@ export function serializeAppliedProject(
   const reviewQueueFilename = 'review-queue.cinereviewqueue';
   const costTrackingFilename = 'cost-tracking.cinecosttracking';
   const agentLogFilename = 'agent-log.cineagentlog';
+  const annotationsFilename = 'annotations.cineannotations';
 
   const manifest: CineProjectManifest = {
     format: 'cinegen-package',
@@ -110,6 +112,7 @@ export function serializeAppliedProject(
       reviewQueue: reviewQueueFilename,
       costTracking: costTrackingFilename,
       agentLog: agentLogFilename,
+      annotations: annotationsFilename,
     },
     settings: (applied as any).settings || {},
   };
@@ -166,6 +169,7 @@ export function serializeAppliedProject(
     [reviewQueueFilename]: JSON.stringify(applied.reviewQueue ?? [], null, 2),
     [costTrackingFilename]: JSON.stringify(applied.costTracking ?? [], null, 2),
     [agentLogFilename]: JSON.stringify(applied.agentLog ?? [], null, 2),
+    [annotationsFilename]: JSON.stringify(applied.projectAnnotations ?? { format: 'cine-annotations', version: 1, marks: [] }, null, 2),
   };
 
   // If incremental, keep only the dirty document types; otherwise serialize all.

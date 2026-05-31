@@ -15,12 +15,6 @@ import {
 
 let scriptPaneTab = 'script';
 let scriptInfoWardrobe: any[] = [];
-let scriptEditorChipsEnabled = true;
-let scriptEditorAnchorsEnabled = false;
-const SCRIPT_EDITOR_FONT_MIN = 10;
-const SCRIPT_EDITOR_FONT_MAX = 28;
-const SCRIPT_EDITOR_FONT_DEFAULT = 15;
-let scriptEditorFontSizePx = SCRIPT_EDITOR_FONT_DEFAULT;
 let scriptEditorInsertBarVisible = false;
 
 function normalizeEntityName(value: any) {
@@ -185,69 +179,6 @@ function getProjectRegistryMatchTokens() {
   return tokens.sort((a: any, b: any) => b.text.length - a.text.length);
 }
 
-function buildScriptInlineChip(label: any, type: any, extraClass = '') {
-  const safe = escapeHtml(label);
-  const extra = extraClass ? ` ${extraClass.trim()}` : '';
-  return `<span class="script-inline-chip script-inline-chip--${type}${extra} chip-nav-target"${chipDataAttrs(type, label)} title="${safe} — double-click to open">${safe}</span>`;
-}
-
-function buildScriptInlineAnchor(label: any) {
-  const safe = escapeHtml(label);
-  return `<span class="script-inline-anchor" title="Storyboard anchor">${safe}</span>`;
-}
-
-function getScriptAnchorMatchTokens() {
-  if (!Array.isArray((window as any).storyboardFrames)) return [];
-  const seen = new Set();
-  const tokens: any[] = [];
-  (window as any).storyboardFrames.forEach((frame: any) => {
-    const text = String(frame.scriptLink || '').trim();
-    if (!text) return;
-    const key = text.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    tokens.push({ text, type: 'anchor' });
-  });
-  return tokens.sort((a: any, b: any) => b.text.length - a.text.length);
-}
-
-function lineSegmentIsScriptAnchor(segment: any, anchorTokens: any) {
-  if (!segment || !anchorTokens.length) return false;
-  const lower = segment.toLowerCase();
-  return anchorTokens.some((token: any) => {
-    const anchor = token.text.toLowerCase();
-    return lower === anchor || lower.includes(anchor);
-  });
-}
-
-function findAnchorSubstringMatches(line: any, anchorTokens: any) {
-  const matches: any[] = [];
-  const lower = line.toLowerCase();
-  anchorTokens.forEach((token: any) => {
-    const search = token.text.toLowerCase();
-    if (!search) return;
-    let idx = 0;
-    while ((idx = lower.indexOf(search, idx)) !== -1) {
-      matches.push({
-        start: idx,
-        end: idx + token.text.length,
-        text: line.slice(idx, idx + token.text.length),
-        type: 'anchor'
-      });
-      idx += search.length;
-    }
-  });
-  matches.sort((a: any, b: any) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
-  const kept: any[] = [];
-  let cursor = 0;
-  matches.forEach((m: any) => {
-    if (m.start < cursor) return;
-    kept.push(m);
-    cursor = m.end;
-  });
-  return kept;
-}
-
 function findNonOverlappingMatches(line: any, tokens: any) {
   const matches: any[] = [];
   tokens.forEach((token: any) => {
@@ -279,132 +210,10 @@ function findNonOverlappingMatches(line: any, tokens: any) {
   return kept;
 }
 
-function decorateLineWithRegistryChips(line: any) {
-  return decorateLineForScriptBackdrop(line, 'action');
-}
-
-function decorateCharacterCueLine(line: any) {
-  return decorateLineForScriptBackdrop(line, 'character');
-}
-
-function decorateLineForScriptBackdrop(line: any, lineType: any) {
-  const chips = scriptEditorChipsEnabled;
-  const anchors = scriptEditorAnchorsEnabled;
-  if (!line) return '\u00a0';
-  if (!chips && !anchors) return escapeHtml(line);
-
-  const anchorTokens = anchors ? getScriptAnchorMatchTokens() : [];
-
-  if (chips && lineType === 'character') {
-    const m = line.match(/^(\s*)(.*?)(\s*)$/);
-    if (!m || !m[2]) return decorateLineContent(line, chips, anchors, anchorTokens);
-    const [, lead, core, trail] = m;
-    const anchorClass =
-      anchors && lineSegmentIsScriptAnchor(core, anchorTokens) ? 'script-inline-anchor' : '';
-    return escapeHtml(lead) + buildScriptInlineChip(core, 'character', anchorClass) + escapeHtml(trail);
-  }
-
-  return decorateLineContent(line, chips, anchors, anchorTokens);
-}
-
-function decorateLineContent(line: any, chips: any, anchors: any, anchorTokens: any) {
-  const chipMatches = chips
-    ? findNonOverlappingMatches(line, getProjectRegistryMatchTokens())
-    : [];
-  const anchorMatches = anchors
-    ? findAnchorSubstringMatches(line, anchorTokens)
-    : [];
-  const anchorOnly = anchorMatches.filter(
-    (am) => !chipMatches.some((cm) => am.start < cm.end && am.end > cm.start)
-  );
-  const allMatches = [...chipMatches, ...anchorOnly].sort(
-    (a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start)
-  );
-  const kept: any[] = [];
-  let cursor = 0;
-  allMatches.forEach((m: any) => {
-    if (m.start < cursor) return;
-    kept.push(m);
-    cursor = m.end;
-  });
-
-  if (!kept.length) return escapeHtml(line);
-
-  let html = '';
-  let pos = 0;
-  kept.forEach((m: any) => {
-    html += escapeHtml(line.slice(pos, m.start));
-    const slice = line.slice(m.start, m.end);
-    if (m.type === 'anchor') {
-      html += buildScriptInlineAnchor(slice);
-    } else {
-      const anchorClass =
-        anchors && lineSegmentIsScriptAnchor(slice, anchorTokens) ? 'script-inline-anchor' : '';
-      html += buildScriptInlineChip(slice, m.type, anchorClass);
-    }
-    pos = m.end;
-  });
-  html += escapeHtml(line.slice(pos));
-  return html;
-}
-
-export function decorateFountainLine(line: any, lineType: any) {
-  return decorateLineForScriptBackdrop(line, lineType);
-}
-
-function setScriptEditorChipsEnabled(enabled: any) {
-  scriptEditorChipsEnabled = !!enabled;
-  document.querySelectorAll('input[data-script-editor-chips]').forEach((input) => {
-    (input as HTMLInputElement).checked = scriptEditorChipsEnabled;
-  });
-  window.scheduleFountainRender?.();
-}
-
-function initScriptEditorChipsToggle() {
-  document.querySelectorAll('input[data-script-editor-chips]').forEach((input) => {
-    (input as HTMLInputElement).checked = scriptEditorChipsEnabled;
-    input.addEventListener('change', () => {
-      setScriptEditorChipsEnabled((input as HTMLInputElement).checked);
-    });
-  });
-}
-
-function setScriptEditorAnchorsEnabled(enabled: any) {
-  scriptEditorAnchorsEnabled = !!enabled;
-  document.querySelectorAll('input[data-script-editor-anchors]').forEach((input) => {
-    (input as HTMLInputElement).checked = scriptEditorAnchorsEnabled;
-  });
-  persistScriptEditorPreferences({ scriptEditorAnchorsEnabled: scriptEditorAnchorsEnabled });
-  window.scheduleFountainRender?.();
-}
-
-function initScriptEditorAnchorsToggle() {
-  document.querySelectorAll('input[data-script-editor-anchors]').forEach((input) => {
-    (input as HTMLInputElement).checked = scriptEditorAnchorsEnabled;
-    input.addEventListener('change', () => {
-      setScriptEditorAnchorsEnabled((input as HTMLInputElement).checked);
-    });
-  });
-}
-
 function persistScriptEditorPreferences(patch: any) {
   void import('@/stores/app-shell-store').then(({ appShellStore }) => {
     appShellStore.patchPreferences({ ...appShellStore.preferences, ...patch });
   });
-}
-
-function applyScriptEditorFontSize(px: any) {
-  const size = Math.max(
-    SCRIPT_EDITOR_FONT_MIN,
-    Math.min(SCRIPT_EDITOR_FONT_MAX, Math.round(Number(px) || SCRIPT_EDITOR_FONT_DEFAULT))
-  );
-  scriptEditorFontSizePx = size;
-  const stack = document.getElementById('script-editor-stack');
-  if (stack) stack.style.setProperty('--script-editor-font-size', `${size}px`);
-  const input = document.getElementById('script-editor-font-size-input');
-  if (input) (input as HTMLInputElement).value = String(size);
-  window.syncScriptRenderScroll?.();
-  persistScriptEditorPreferences({ scriptEditorFontSizePx: size });
 }
 
 function setScriptEditorInsertBarVisible(visible: any) {
@@ -419,29 +228,6 @@ function setScriptEditorInsertBarVisible(visible: any) {
 
 function initScriptEditorOptionsToolbar() {
   setScriptEditorInsertBarVisible(scriptEditorInsertBarVisible);
-  applyScriptEditorFontSize(scriptEditorFontSizePx);
-
-  const toggleBtn = document.getElementById('script-insert-bar-toggle');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      setScriptEditorInsertBarVisible(!scriptEditorInsertBarVisible);
-    });
-  }
-
-  const stepper = document.querySelector('[data-script-editor-font-stepper]');
-  if (stepper) {
-    const min = Number(stepper.getAttribute('data-min')) || SCRIPT_EDITOR_FONT_MIN;
-    const max = Number(stepper.getAttribute('data-max')) || SCRIPT_EDITOR_FONT_MAX;
-    const step = Number(stepper.getAttribute('data-step')) || 1;
-    stepper.querySelectorAll('button[data-step]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const dir = Number(btn.getAttribute('data-step'));
-        const next = scriptEditorFontSizePx + dir * step;
-        applyScriptEditorFontSize(Math.min(max, Math.max(min, next)));
-      });
-    });
-  }
 }
 
 
@@ -458,24 +244,6 @@ function _exposeMutableStateOnWindow(): void {
     enumerable: true,
     get() { return scriptInfoWardrobe; },
     set(v) { scriptInfoWardrobe = v; },
-  });
-  Object.defineProperty(w, 'scriptEditorChipsEnabled', {
-    configurable: true,
-    enumerable: true,
-    get() { return scriptEditorChipsEnabled; },
-    set(v) { scriptEditorChipsEnabled = v; },
-  });
-  Object.defineProperty(w, 'scriptEditorAnchorsEnabled', {
-    configurable: true,
-    enumerable: true,
-    get() { return scriptEditorAnchorsEnabled; },
-    set(v) { scriptEditorAnchorsEnabled = v; },
-  });
-  Object.defineProperty(w, 'scriptEditorFontSizePx', {
-    configurable: true,
-    enumerable: true,
-    get() { return scriptEditorFontSizePx; },
-    set(v) { scriptEditorFontSizePx = v; },
   });
   Object.defineProperty(w, 'scriptEditorInsertBarVisible', {
     configurable: true,
@@ -502,23 +270,8 @@ export function installUtilsBundleGlobals(): void {
   w.characterMatchAliases = characterMatchAliases;
   w.normalizeFountainCharacterCue = normalizeFountainCharacterCue;
   w.getProjectRegistryMatchTokens = getProjectRegistryMatchTokens;
-  w.buildScriptInlineChip = buildScriptInlineChip;
-  w.buildScriptInlineAnchor = buildScriptInlineAnchor;
-  w.getScriptAnchorMatchTokens = getScriptAnchorMatchTokens;
-  w.lineSegmentIsScriptAnchor = lineSegmentIsScriptAnchor;
-  w.findAnchorSubstringMatches = findAnchorSubstringMatches;
   w.findNonOverlappingMatches = findNonOverlappingMatches;
-  w.decorateLineWithRegistryChips = decorateLineWithRegistryChips;
-  w.decorateCharacterCueLine = decorateCharacterCueLine;
-  w.decorateLineForScriptBackdrop = decorateLineForScriptBackdrop;
-  w.decorateLineContent = decorateLineContent;
-  w.decorateFountainLine = decorateFountainLine;
-  w.setScriptEditorChipsEnabled = setScriptEditorChipsEnabled;
-  w.initScriptEditorChipsToggle = initScriptEditorChipsToggle;
-  w.setScriptEditorAnchorsEnabled = setScriptEditorAnchorsEnabled;
-  w.initScriptEditorAnchorsToggle = initScriptEditorAnchorsToggle;
   w.persistScriptEditorPreferences = persistScriptEditorPreferences;
-  w.applyScriptEditorFontSize = applyScriptEditorFontSize;
   w.setScriptEditorInsertBarVisible = setScriptEditorInsertBarVisible;
   w.initScriptEditorOptionsToolbar = initScriptEditorOptionsToolbar;
   w.positionMenuWithinViewport = positionMenuWithinViewport;

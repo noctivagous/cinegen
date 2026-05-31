@@ -1,3 +1,4 @@
+import { getCurrentScriptText } from '@/script/fountain-bundle';
 import { alertCG } from '@/utils/alert-cg';
 
 /**
@@ -11,9 +12,9 @@ interface ScriptEntities {
 }
 
 export function extractScriptEntities(): ScriptEntities {
-  const editor = document.getElementById('script-editor');
-  if (!editor) return { characters: [], locations: [] };
-  const lines = (editor as HTMLTextAreaElement).value.split('\n');
+  const text = getCurrentScriptText();
+  if (!text) return { characters: [], locations: [] };
+  const lines = text.split('\n');
   const types = classifyFountainDocument(lines);
   const characters: string[] = [];
   const locations: string[] = [];

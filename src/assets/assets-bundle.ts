@@ -5,6 +5,7 @@ import {
   storyboardFrames,
 } from '@/data/project-data';
 import { getCinegenAssetsPanel, getCinegenLocationScout } from '@/panels/panel-hosts';
+import { getCurrentScriptText } from '@/script/fountain-bundle';
 import { alertCG } from '@/utils/alert-cg';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
 
@@ -124,7 +125,7 @@ export function switchAssetTab(tab: number) {
 }
 
 export function autoSuggestBreakdown() {
-  const scriptText = (document.getElementById('script-editor') as HTMLTextAreaElement | null)?.value || '';
+  const scriptText = getCurrentScriptText();
   const propValues = splitEntityValue(breakdownData[0].props);
   propValues.push('AI-detected: wet footprints');
   breakdownData[0].props = joinEntityValue(uniqueByName(propValues));
@@ -255,7 +256,7 @@ export function renderBreakdownTable() {
 }
 
 export function syncScriptToStoryboard() {
-  const scriptText = (document.getElementById('script-editor') as HTMLTextAreaElement | null)?.value || '';
+  const scriptText = getCurrentScriptText();
   window.storyboardFrames = storyboardFrames.map(frame => {
     if (frame.scriptLink) return frame;
     const labelCandidate = frame.label.split('-').pop().trim();

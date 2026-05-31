@@ -32,6 +32,15 @@ const FOUNTAIN_TOOLBAR = [
   { snippet: 'lyrics', icon: 'fa-music', label: 'Lyrics' },
 ] as const;
 
+const ANNOTATION_CATEGORIES = [
+  { category: 'character', icon: 'fa-user', label: 'Char', color: '#ffd479' },
+  { category: 'prop', icon: 'fa-hammer', label: 'Prop', color: '#d6834a' },
+  { category: 'wardrobe', icon: 'fa-shirt', label: 'Ward', color: '#c9a0dc' },
+  { category: 'sfx', icon: 'fa-bolt', label: 'SFX', color: '#7fb4ff' },
+  { category: 'location', icon: 'fa-map-marker-alt', label: 'Loc', color: '#6fc9a8' },
+  { category: 'vfx', icon: 'fa-wand-magic-sparkles', label: 'VFX', color: '#ff7f7f' },
+] as const;
+
 @customElement('cinegen-script-editor-chrome')
 export class CinegenScriptEditorChrome extends CgLightElement {
   render() {
@@ -69,6 +78,26 @@ export class CinegenScriptEditorChrome extends CgLightElement {
         <div class="script-editor-font-control">
           <span class="script-editor-options-label">Size</span>
           <cg-stepper input-id="script-editor-font-size-input" min="10" max="28" step="1"></cg-stepper>
+        </div>
+        <span
+          class="script-editor-options-toolbar-sep script-editor-options-toolbar-sep--push"
+          aria-hidden="true"
+        ></span>
+        <span class="script-editor-options-toolbar-sep" aria-hidden="true"></span>
+        <div class="script-editor-annotation-tools">
+          ${ANNOTATION_CATEGORIES.map(
+            (a) => html`
+              <button
+                type="button"
+                class="toolbar-btn script-annotation-tool"
+                data-annotation-category=${a.category}
+                title="Annotate as ${a.label}"
+                style="color:${a.color}"
+              >
+                <i class="fa-solid ${a.icon}"></i> ${a.label}
+              </button>
+            `
+          )}
         </div>
         <span
           class="script-editor-options-toolbar-sep script-editor-options-toolbar-sep--push"
