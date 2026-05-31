@@ -12,6 +12,7 @@ export class CgVisToggle extends CgLightElement {
   @property({ attribute: 'data-storyboard-part' }) storyboardPart = '';
   @property({ type: Boolean, attribute: 'data-script-editor-chips' }) scriptEditorChips = false;
   @property({ type: Boolean, attribute: 'data-script-editor-anchors' }) scriptEditorAnchors = false;
+  @property({ type: Boolean, attribute: 'data-script-editor-box-outlines' }) scriptEditorBoxOutlines = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -23,7 +24,13 @@ export class CgVisToggle extends CgLightElement {
     this.checked = input.checked;
     const part =
       this.storyboardPart ||
-      (this.scriptEditorChips ? 'chips' : this.scriptEditorAnchors ? 'anchors' : '');
+      (this.scriptEditorChips
+        ? 'chips'
+        : this.scriptEditorAnchors
+          ? 'anchors'
+          : this.scriptEditorBoxOutlines
+            ? 'boxOutlines'
+            : '');
     this.dispatchEvent(
       new CustomEvent('cg-change', {
         bubbles: true,
@@ -41,6 +48,7 @@ export class CgVisToggle extends CgLightElement {
         data-storyboard-part=${this.storyboardPart || nothing}
         ?data-script-editor-chips=${this.scriptEditorChips}
         ?data-script-editor-anchors=${this.scriptEditorAnchors}
+        ?data-script-editor-box-outlines=${this.scriptEditorBoxOutlines}
         @change=${this._onChange}
       />
       <span class="storyboard-vis-switch" aria-hidden="true"></span>

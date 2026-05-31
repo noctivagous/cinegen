@@ -8,6 +8,7 @@ import type { SceneGutterConfig } from './scene-gutter';
 import { annotationField } from './cm6-annotations';
 import { chipsExtension } from './cm6-chips';
 import { anchorsExtension } from './cm6-anchors';
+import { boxOutlinesExtension } from './cm6-box-outlines';
 import { getProjectFountainText, setProjectFountainText } from '@/data/project-data';
 import { markProjectDirty } from '@/services/project-service';
 
@@ -56,6 +57,7 @@ export function createScriptEditor(
     annotationField,
     chipsExtension(),
     anchorsExtension(),
+    boxOutlinesExtension(),
     EditorView.domEventHandlers({
       mouseup(_event, view) {
         config.onMouseUp?.(view, _event as MouseEvent);

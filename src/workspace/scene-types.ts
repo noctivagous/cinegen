@@ -14,6 +14,8 @@ export type SceneShot = {
   bestTake?: boolean;
   /** Primary Fountain anchor for this camera setup. */
   scriptLink?: string;
+  /** Optional script character span for box-outline boundaries. */
+  scriptRange?: { start: number; end: number };
   /** Ordered storyboard frame ids belonging to this shot. */
   frameIds?: number[];
 

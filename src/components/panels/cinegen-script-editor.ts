@@ -17,6 +17,7 @@ import {
 } from '@/script/cm6-annotations';
 import { setChipsEnabled } from '@/script/cm6-chips';
 import { setAnchorsEnabled } from '@/script/cm6-anchors';
+import { setBoxOutlinesEnabled, refreshBoxOutlines } from '@/script/cm6-box-outlines';
 import {
   renderPrevisMargin,
   handlePrevisMarginClick,
@@ -132,8 +133,13 @@ export class CinegenScriptEditor extends CgLightElement {
 
       if (detail.part === 'chips') {
         setChipsEnabled(this._editorView, !!detail.checked);
+        appShellStore.patchPreferences({ scriptEditorChipsEnabled: !!detail.checked });
       } else if (detail.part === 'anchors') {
         setAnchorsEnabled(this._editorView, !!detail.checked);
+        appShellStore.patchPreferences({ scriptEditorAnchorsEnabled: !!detail.checked });
+      } else if (detail.part === 'boxOutlines') {
+        setBoxOutlinesEnabled(this._editorView, !!detail.checked);
+        appShellStore.patchPreferences({ scriptEditorBoxOutlinesEnabled: !!detail.checked });
       } else if (typeof detail.value === 'number') {
         // Font size stepper
         const size = detail.value;
@@ -145,13 +151,21 @@ export class CinegenScriptEditor extends CgLightElement {
     // Sync initial compartment states from checkbox attributes
     const chipsToggle = toolbar.querySelector('cg-vis-toggle[data-script-editor-chips]');
     const anchorsToggle = toolbar.querySelector('cg-vis-toggle[data-script-editor-anchors]');
+    const boxOutlinesToggle = toolbar.querySelector('cg-vis-toggle[data-script-editor-box-outlines]');
     if (chipsToggle) {
-      const checked = (chipsToggle as any).checked ?? true;
+      const checked = appShellStore.preferences.scriptEditorChipsEnabled ?? true;
+      (chipsToggle as HTMLElement & { checked: boolean }).checked = checked;
       setChipsEnabled(this._editorView, checked);
     }
     if (anchorsToggle) {
-      const checked = (anchorsToggle as any).checked ?? false;
+      const checked = appShellStore.preferences.scriptEditorAnchorsEnabled ?? false;
+      (anchorsToggle as HTMLElement & { checked: boolean }).checked = checked;
       setAnchorsEnabled(this._editorView, checked);
+    }
+    if (boxOutlinesToggle) {
+      const checked = appShellStore.preferences.scriptEditorBoxOutlinesEnabled ?? true;
+      (boxOutlinesToggle as HTMLElement & { checked: boolean }).checked = checked;
+      setBoxOutlinesEnabled(this._editorView, checked);
     }
 
     // Initialise stepper value from preferences
@@ -168,8 +182,12 @@ export class CinegenScriptEditor extends CgLightElement {
     });
     window.addEventListener('storyboard-frames-changed', () => {
       refreshPrevisMargin();
+      if (this._editorView) refreshBoxOutlines(this._editorView);
     });
     window.addEventListener('previs-timing-changed', () => {
+      refreshPrevisMargin();
+    });
+    window.addEventListener('script-box-ranges-changed', () => {
       refreshPrevisMargin();
     });
   }

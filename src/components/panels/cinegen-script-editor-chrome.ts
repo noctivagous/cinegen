@@ -98,6 +98,13 @@ export class CinegenScriptEditorChrome extends CgLightElement {
               </button>
             `
           )}
+          <span class="script-editor-annotation-tools-sep" aria-hidden="true"></span>
+          <cg-vis-toggle
+            label="Box Outlines"
+            title="Show box outlines for scenes and shots; drag top/bottom edges to adjust shot spans"
+            data-script-editor-box-outlines
+            checked
+          ></cg-vis-toggle>
         </div>
         <span
           class="script-editor-options-toolbar-sep script-editor-options-toolbar-sep--push"

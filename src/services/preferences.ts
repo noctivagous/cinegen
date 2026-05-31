@@ -18,6 +18,7 @@ export const PREFS_KEY = PREFERENCES_STORAGE_KEY;
 export interface CineGenPreferences {
   scriptEditorChipsEnabled: boolean;
   scriptEditorAnchorsEnabled: boolean;
+  scriptEditorBoxOutlinesEnabled: boolean;
   scriptEditorFontSizePx: number;
   scriptEditorInsertBarVisible: boolean;
   inspectorVisible: boolean;
@@ -48,6 +49,7 @@ export interface CineGenPreferences {
 export const DEFAULT_PREFERENCES: CineGenPreferences = {
   scriptEditorChipsEnabled: true,
   scriptEditorAnchorsEnabled: false,
+  scriptEditorBoxOutlinesEnabled: true,
   scriptEditorFontSizePx: 15,
   scriptEditorInsertBarVisible: false,
   inspectorVisible: true,
