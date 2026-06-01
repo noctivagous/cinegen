@@ -294,6 +294,7 @@ export function buildStoryboardPrompt(frame: StoryboardFrame): StoryboardPromptR
   const cameraParts: string[] = [];
   if (shot?.type) cameraParts.push(`Shot type: ${shot.type}`);
   if (cameraText) cameraParts.push(cameraText);
+  if (scene?.lightingOverride) cameraParts.push(`Lighting: ${scene.lightingOverride}`);
   if (cameraParts.length) {
     elements.push({ priority: 5, text: cameraParts.join(', ') + '.' });
   }
@@ -303,7 +304,7 @@ export function buildStoryboardPrompt(frame: StoryboardFrame): StoryboardPromptR
     elements.push({ priority: 6, text: `Master intent: ${scene.master.prompt}.` });
   }
 
-  // 7. Visual style (treatment + frame override)
+  // 7. Visual style (treatment + frame override + per-scene overrides)
   const styleParts: string[] = [];
   const styleFromNotes = extractStoryboardStyleFromNotes(frame.notes);
   if (styleFromNotes) {
@@ -312,9 +313,14 @@ export function buildStoryboardPrompt(frame: StoryboardFrame): StoryboardPromptR
     styleParts.push(STORYBOARD_STYLE_PROMPT);
   }
   if (treatment.genre) styleParts.push(`Genre: ${treatment.genre}`);
-  if (treatment.tone) styleParts.push(`Tone: ${treatment.tone}`);
+  if (scene?.visualToneOverride) {
+    styleParts.push(`Tone: ${scene.visualToneOverride}`);
+  } else if (treatment.tone) {
+    styleParts.push(`Tone: ${treatment.tone}`);
+  }
   if (treatment.notes) styleParts.push(treatment.notes);
-  const activePalette = colorState.getPalette();
+  const scenePalette = scene?.colorOverride;
+  const activePalette = scenePalette?.length ? scenePalette : colorState.getPalette();
   if (activePalette.length) {
     styleParts.push(`Color palette: ${activePalette.join(', ')}`);
   }

@@ -176,6 +176,8 @@ export function parseCineManifest(
   if (file.documents.costTracking) assertDocExtension(file.documents.costTracking, '.cinecosttracking', sourceLabel);
   if (file.documents.modelRoutingRules) assertDocExtension(file.documents.modelRoutingRules, '.cinemodelrouting', sourceLabel);
   if (file.documents.agentLog) assertDocExtension(file.documents.agentLog, '.cineagentlog', sourceLabel);
+  if (file.documents.scratchpad) assertDocExtension(file.documents.scratchpad, '.cinescratchpad', sourceLabel);
+  if (file.documents.features) assertDocExtension(file.documents.features, '.cinefeatures', sourceLabel);
   return file;
 }
 
@@ -268,6 +270,20 @@ function loadJsonDoc(packageBasename: string, relativePath: string): Record<stri
     sourceLabel,
     'object document'
   );
+}
+
+function loadFeaturesDoc(
+  packageBasename: string,
+  relativePath: string | undefined
+): AppliedCineProject['projectFeatures'] | undefined {
+  if (!relativePath) return undefined;
+  const sourceLabel = `${packageBasename}/${relativePath}`;
+  assertDocExtension(relativePath, '.cinefeatures', sourceLabel);
+  const doc = loadJsonDoc(packageBasename, relativePath);
+  if (doc.version === 1 && Array.isArray(doc.order)) {
+    return doc as AppliedCineProject['projectFeatures'];
+  }
+  return undefined;
 }
 
 function loadOptionalArrayDoc(
@@ -514,6 +530,11 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     '.cineagentlog schema: array of agent log records',
     'id'
   );
+  const scratchPad = documents.scratchpad
+    ? loadJsonDoc(packageBasename, documents.scratchpad)
+    : undefined;
+  const projectFeatures = loadFeaturesDoc(packageBasename, documents.features);
+
   if (documents.assetDetails) {
     assertDocExtension(
       documents.assetDetails,
@@ -590,6 +611,8 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     costTracking,
     modelRoutingRules,
     agentLog,
+    scratchPad,
+    projectFeatures,
     screenplay: loadScreenplayDoc(packageBasename, documents.screenplay),
     treatment: loadTreatmentDoc(packageBasename, documents.treatment),
     storyboard,
@@ -658,6 +681,7 @@ export type AppliedCineProject = {
   styleGuide?: Record<string, unknown>;
   projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
   projectAnnotations?: import('@/data/project-data').CineAnnotationsDoc;
+  scratchPad?: Record<string, unknown>;
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {
@@ -753,6 +777,8 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
     projectAnnotations: (doc.annotations && typeof doc.annotations === 'object'
       ? (doc.annotations as unknown as import('@/data/project-data').CineAnnotationsDoc)
       : { format: 'cine-annotations', version: 1, marks: [] }),
+    scratchPad: doc.scratchPad ?? { format: 'cine-scratchpad', version: 1, entries: [] },
+    projectFeatures: doc.projectFeatures,
   };
 }
 

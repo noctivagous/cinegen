@@ -17,9 +17,9 @@ const ORDER: ShotLifecycleStatus[] = [
 
 const ALLOWED: Record<ShotLifecycleStatus, ShotLifecycleStatus[]> = {
   planned: ['storyboarded', 'planned'],
-  storyboarded: ['planned', 'prompted', 'storyboarded'],
+  storyboarded: ['planned', 'prompted', 'storyboarded', 'queued'],
   prompted: ['storyboarded', 'queued', 'prompted'],
-  queued: ['prompted', 'generated', 'queued'],
+  queued: ['prompted', 'generated', 'queued', 'storyboarded'],
   generated: ['queued', 'reviewed', 'generated'],
   reviewed: ['generated', 'approved', 'rejected', 'reviewed'],
   approved: ['reviewed', 'locked', 'approved'],

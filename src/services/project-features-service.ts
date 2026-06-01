@@ -4,6 +4,7 @@
 
 import { activeProjectId, projectData } from '@/data/project-data';
 import {
+  BLANK_PROJECT_ENABLED_IDS,
   buildAllEnabledFeaturesConfig,
   buildBlankProjectFeaturesConfig,
   catalogNodeToTreeNode,
@@ -57,6 +58,21 @@ export function setProjectFeaturesConfig(
 
 export function resetProjectFeaturesConfigCache(): void {
   _runtimeConfig = null;
+}
+
+/** Apply features from a loaded snapshot and refresh the sidebar tree when requested. */
+export function applyProjectFeaturesFromSnapshot(
+  applied: {
+    projectData?: Record<string, unknown>;
+    projectFeatures?: ProjectFeaturesConfig;
+  },
+  opts?: { refreshTree?: boolean }
+): void {
+  resetProjectFeaturesConfigCache();
+  setProjectFeaturesConfig(normalizeConfigForProject(applied), { persist: false });
+  if (opts?.refreshTree !== false && typeof window.refreshProjectTree === 'function') {
+    window.refreshProjectTree();
+  }
 }
 
 export function normalizeProjectFeaturesConfig(raw: ProjectFeaturesConfig): ProjectFeaturesConfig {
@@ -329,7 +345,7 @@ export function normalizeConfigForProject(applied: {
     // If the saved config is the blank default but the project has actual tree
     // children, infer enabled features from the tree so existing content is visible.
     const isBlankDefault = Object.entries(config.enabled).every(
-      ([id, v]) => v === (id === 'mood-boards')
+      ([id, v]) => v === BLANK_PROJECT_ENABLED_IDS.has(id)
     );
     const hasTreeChildren = ((applied.projectData?.children ?? []) as TreeNode[]).length > 0;
     if (!isBlankDefault || !hasTreeChildren) return config;

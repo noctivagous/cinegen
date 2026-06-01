@@ -5,6 +5,7 @@ import { colorState } from '@/color/color-state';
 import { getShotById } from '@/workspace/shot-frame-bridge';
 import { CG_PREVIS_SELECTION_CHANGED } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
+import { markActiveShotPrompted } from '@/services/generation-queue-service';
 import { getAgentHealth, buildGenerationPrompt } from '@/services/ai/agents-service';
 
 /** Camera, lighting and atmosphere option data */
@@ -370,6 +371,7 @@ export async function buildCameraPrompt(): Promise<void> {
           String(shotId),
         );
         if (result.ok && result.data) {
+          markActiveShotPrompted(sceneId, shotId);
           alertCG(`Shot Prompt (Agent):\n\n"${result.data}"\n\nCopy this into the shot's prompt field or AI generation input.`);
           return;
         }
@@ -386,6 +388,7 @@ export async function buildCameraPrompt(): Promise<void> {
     alertCG('Select at least one option from the panels below to build a shot prompt.');
     return;
   }
+  markActiveShotPrompted(sceneId, shotId);
   alertCG(`Shot Prompt:\n\n"${prompt}"\n\nCopy this into the shot's prompt field or AI generation input.`);
 }
 

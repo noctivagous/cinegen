@@ -17,7 +17,7 @@ import {
   getProductionContext,
 } from '@/services/ai/agents-service';
 import { applyProductionContext } from '@/services/agent-context-adapter';
-import { runWizardCompletion } from '@/wizard/wizard-completion-hook';
+import { applyWizardOutput } from '@/wizard/wizard-completion-hook';
 import { renderScriptWizardAnalysisSummary } from '@/wizard/script-wizard-analysis-summary';
 
 interface ScriptWizardDeps {
@@ -86,18 +86,15 @@ export function createScriptWizardSlides(deps: ScriptWizardDeps): WizardSlide[] 
           deps.setProjectFountainText(state.scriptText);
           deps.hydrateScriptEditorFromProject();
 
-          // Run deterministic script-to-project sync (scenes, breakdown, shots, assets)
+          // Sync project state and capture result for Slide 1
           const syncResult = deps.syncFountainToProject(state.scriptText, created.id);
           state.projectId = created.id;
           state.detectedCharacters = syncResult.characters;
           state.detectedLocations = syncResult.locations;
 
-          runWizardCompletion({
-            projectId: created.id,
-            featureBranches: ['production-office', 'scenes'],
-            dirtyDocs: ['screenplay', 'scenes', 'breakdown', 'characters', 'locations', 'features'],
+          applyWizardOutput({
             fountainText: state.scriptText,
-            flushSnapshot: true,
+            featureBranches: ['production-office', 'scenes'],
           });
 
           deps.renderProjectsModalList();

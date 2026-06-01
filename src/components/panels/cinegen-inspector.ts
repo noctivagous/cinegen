@@ -14,6 +14,9 @@ import { escHtml } from '@/utils/html';
 import { patchAppShellPreferences } from '@/stores/app-shell';
 import { syncLayoutSplitDividers } from '@/services/layout-service';
 import { getFramesForShot, getShotForFrame } from '@/workspace/shot-frame-bridge';
+import { assetLibrary, currentSceneData, sceneReferenceOverrides, notifyStoryboardReferencesChanged } from '@/data/project-data';
+import { markProjectDirty } from '@/services/project-service';
+import { syncAssetLibraryToReferenceBank } from '@/storyboard/storyboard-reference-sync';
 
 @customElement('cinegen-inspector')
 export class CinegenInspector extends CgLightElement {
@@ -117,6 +120,8 @@ export class CinegenInspector extends CgLightElement {
     const sceneId = window.currentSceneId ?? '';
     const shotId = data.id as number;
     const frames = sceneId ? getFramesForShot(sceneId, shotId) : [];
+    const refSlots = data.sceneReferenceSlots as string[] | undefined;
+    const refUrls = Array.isArray(refSlots) ? refSlots : [];
     return html`
       <div class="font-bold">${data.label}</div>
       <p class="text-xs">${data.type}</p>
@@ -143,7 +148,33 @@ export class CinegenInspector extends CgLightElement {
             </ul>
           </div>`
         : nothing}
-      <div class="mt-4 flex gap-2">
+      <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
+      <div class="flex flex-wrap gap-2 mb-2">
+        ${refUrls.map(
+          (url, i) => html`
+            <div style="position:relative;">
+              <img src=${url} alt="Shot ref ${i + 1}" style="width:72px;height:72px;object-fit:cover;border-radius:4px;" />
+              <button
+                type="button"
+                style="
+                  position: absolute; top: -4px; right: -4px;
+                  width: 16px; height: 16px; border-radius: 50%;
+                  background: rgba(200,50,50,0.85); color: #fff;
+                  border: none; font-size: 10px; line-height: 16px;
+                  text-align: center; cursor: pointer; padding: 0;
+                "
+                @click=${() => this._onShotRefRemoved(sceneId, shotId, i)}
+              >&times;</button>
+            </div>
+          `
+        )}
+        <cg-reference-upload
+          label="Add"
+          field="shot-ref"
+          @cg-file-loaded=${(e: CustomEvent) => this._onShotRefUploaded(sceneId, shotId, e.detail.dataUrl)}
+        ></cg-reference-upload>
+      </div>
+      <div class="mt-2 flex gap-2">
         <button
           type="button"
           class="btn-ai text-xs flex-1"
@@ -156,6 +187,39 @@ export class CinegenInspector extends CgLightElement {
         title: 'Chips in shot',
       })}
     `;
+  }
+
+  private _onShotRefUploaded(sceneId: string, shotId: number, dataUrl: string): void {
+    const scene = (currentSceneData as Record<string, unknown>)[sceneId] as Record<string, unknown> | undefined;
+    if (!scene) return;
+    const coverage = scene.coverage as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(coverage)) return;
+    const shot = coverage.find((s) => s.id === shotId);
+    if (!shot) return;
+    if (!Array.isArray(shot.sceneReferenceSlots)) shot.sceneReferenceSlots = [];
+    (shot.sceneReferenceSlots as string[]).push(dataUrl);
+
+    if (!(sceneReferenceOverrides as Record<string, unknown>)[sceneId]) {
+      (sceneReferenceOverrides as Record<string, unknown>)[sceneId] = {};
+    }
+    notifyStoryboardReferencesChanged();
+    markProjectDirty(['scenes', 'storyboard']);
+    this.requestUpdate();
+  }
+
+  private _onShotRefRemoved(sceneId: string, shotId: number, index: number): void {
+    const scene = (currentSceneData as Record<string, unknown>)[sceneId] as Record<string, unknown> | undefined;
+    if (!scene) return;
+    const coverage = scene.coverage as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(coverage)) return;
+    const shot = coverage.find((s) => s.id === shotId);
+    if (!shot) return;
+    if (Array.isArray(shot.sceneReferenceSlots)) {
+      (shot.sceneReferenceSlots as string[]).splice(index, 1);
+    }
+    notifyStoryboardReferencesChanged();
+    markProjectDirty(['scenes', 'storyboard']);
+    this.requestUpdate();
   }
 
   private _renderCameraLighting(data: Record<string, unknown>) {
@@ -208,25 +272,134 @@ export class CinegenInspector extends CgLightElement {
   }
 
   private _renderAsset(data: Record<string, unknown>) {
+    const name = String(data.name || '');
+    const charEntry = Array.isArray(assetLibrary.characters)
+      ? (assetLibrary.characters as Record<string, unknown>[]).find(
+          (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
+        )
+      : null;
+    const refs = charEntry?.references as Record<string, unknown> | undefined;
+    const hasRefs = refs && typeof refs === 'object';
+
     return html`
-      <div class="text-center text-lg">${data.name}</div>
+      <div class="text-center text-lg">${name}</div>
       <p class="text-xs mt-2">Available in 12 scenes</p>
       ${this._unsafeChips(this._extractChips([data.name, data.desc]), {
         title: 'Chips in asset',
       })}
+      ${hasRefs ? this._renderCharacterRefSlots(name, refs!) : ''}
     `;
   }
 
+  private _renderCharacterRefSlots(name: string, refs: Record<string, unknown>) {
+    const fields: Array<{ key: string; label: string }> = [
+      { key: 'face', label: 'Face' },
+      { key: 'body', label: 'Body' },
+      { key: 'profile', label: 'Profile' },
+      { key: 'threeQuarter', label: '3/4' },
+      { key: 'closeUp', label: 'Close-up' },
+      { key: 'costume', label: 'Costume' },
+    ];
+    return html`
+      <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
+      <div class="grid gap-2" style="grid-template-columns: repeat(3, 1fr);">
+        ${fields.map(
+          (f) => html`
+            <div>
+              <cg-reference-upload
+                label=${f.label}
+                field=${f.key}
+                currentUrl=${(f.key === 'costume'
+                  ? (Array.isArray(refs[f.key]) ? (refs[f.key] as string[])[0] : '')
+                  : String(refs[f.key] || '')
+                )}
+                @cg-file-loaded=${(e: CustomEvent) =>
+                  this._onCharRefUploaded(name, e.detail.field, e.detail.dataUrl)}
+                @cg-file-removed=${(e: CustomEvent) =>
+                  this._onCharRefRemoved(name, e.detail.field)}
+              ></cg-reference-upload>
+            </div>
+          `
+        )}
+      </div>
+    `;
+  }
+
+  private _onCharRefUploaded(charName: string, field: string, dataUrl: string): void {
+    const chars = Array.isArray(assetLibrary.characters) ? (assetLibrary.characters as Record<string, unknown>[]) : [];
+    const entry = chars.find((c) => String(c.name || '').toLowerCase() === charName.toLowerCase());
+    if (!entry) return;
+    const refs = entry.references as Record<string, unknown> | undefined;
+    if (!refs || typeof refs !== 'object') return;
+    if (field === 'costume') {
+      if (!Array.isArray(refs.costume)) refs.costume = [];
+      (refs.costume as string[]).push(dataUrl);
+    } else {
+      refs[field] = dataUrl;
+    }
+    syncAssetLibraryToReferenceBank();
+    markProjectDirty(['assetLibrary', 'storyboard']);
+  }
+
+  private _onCharRefRemoved(charName: string, field: string): void {
+    const chars = Array.isArray(assetLibrary.characters) ? (assetLibrary.characters as Record<string, unknown>[]) : [];
+    const entry = chars.find((c) => String(c.name || '').toLowerCase() === charName.toLowerCase());
+    if (!entry) return;
+    const refs = entry.references as Record<string, unknown> | undefined;
+    if (!refs || typeof refs !== 'object') return;
+    if (field === 'costume') {
+      refs.costume = [];
+    } else {
+      delete refs[field];
+    }
+    syncAssetLibraryToReferenceBank();
+    markProjectDirty(['assetLibrary', 'storyboard']);
+  }
+
   private _renderLocation(data: Record<string, unknown>) {
+    const name = String(data.name || '');
+    const locEntry = Array.isArray(assetLibrary.locations)
+      ? (assetLibrary.locations as Record<string, unknown>[]).find(
+          (l) => String(l.name || '').toLowerCase() === name.toLowerCase()
+        )
+      : null;
+    const refArray = locEntry?.references;
+    const refUrls = Array.isArray(refArray) ? (refArray as string[]) : [];
+
     return html`
       <div class="text-center">
         <i class="fa-solid ${data.icon} text-6xl"></i>
       </div>
-      <div class="font-bold mt-2">${data.name}</div>
+      <div class="font-bold mt-2">${name}</div>
       ${this._unsafeChips(this._extractChips([data.name, data.tags]), {
         title: 'Chips in location',
       })}
+      <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
+      <div class="flex flex-wrap gap-2">
+        ${refUrls.map(
+          (url) => html`
+            <div style="position:relative;">
+              <img src=${url} alt="Location ref" style="width:72px;height:72px;object-fit:cover;border-radius:4px;" />
+            </div>
+          `
+        )}
+        <cg-reference-upload
+          label="Add"
+          field="loc-ref"
+          @cg-file-loaded=${(e: CustomEvent) => this._onLocRefUploaded(name, e.detail.dataUrl)}
+        ></cg-reference-upload>
+      </div>
     `;
+  }
+
+  private _onLocRefUploaded(locName: string, dataUrl: string): void {
+    const locs = Array.isArray(assetLibrary.locations) ? (assetLibrary.locations as Record<string, unknown>[]) : [];
+    const entry = locs.find((l) => String(l.name || '').toLowerCase() === locName.toLowerCase());
+    if (!entry) return;
+    if (!Array.isArray(entry.references)) entry.references = [];
+    (entry.references as string[]).push(dataUrl);
+    syncAssetLibraryToReferenceBank();
+    markProjectDirty(['assetLibrary', 'storyboard']);
   }
 
   private _renderStoryboardFrame(data: Record<string, unknown>) {

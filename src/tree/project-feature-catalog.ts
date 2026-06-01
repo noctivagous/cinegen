@@ -124,6 +124,15 @@ const MOOD_BOARDS_CATALOG: FeatureCatalogNode = {
   children: [],
 };
 
+const SCRATCHPAD_CATALOG: FeatureCatalogNode = {
+  id: 'scratchpad',
+  name: 'ScratchPad',
+  type: 'folder',
+  icon: 'fa-pen-fancy',
+  view: 'scratchpad',
+  desc: 'Generative scratch surface — free-form ideation and prompt experiments',
+};
+
 let _catalog: FeatureCatalogNode[] | null = null;
 
 export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
@@ -139,7 +148,7 @@ export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
       dynamicChildren: true,
       children: [],
     };
-    _catalog = [...withoutScenes, MOOD_BOARDS_CATALOG, scenes];
+    _catalog = [...withoutScenes, MOOD_BOARDS_CATALOG, SCRATCHPAD_CATALOG, scenes];
   }
   return _catalog;
 }
@@ -200,11 +209,11 @@ export function catalogNodeToTreeNode(node: FeatureCatalogNode, expanded = false
   return tree;
 }
 
-/** Default blank-project features: mood boards only. */
-export const BLANK_PROJECT_ENABLED_IDS = new Set(['mood-boards']);
+/** Default blank-project features: mood boards + scratchpad. */
+export const BLANK_PROJECT_ENABLED_IDS = new Set(['mood-boards', 'scratchpad']);
 
 export function buildBlankProjectFeaturesOrder(): string[] {
-  return ['mood-boards'];
+  return ['mood-boards', 'scratchpad'];
 }
 
 export function buildAllEnabledFeaturesConfig(): { version: 1; enabled: Record<string, boolean>; order: string[] } {

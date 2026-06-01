@@ -9,17 +9,18 @@
 
 import type { AppliedCineProject } from '@/data/cine-project-loader';
 import { buildBlankProjectFeaturesConfig } from '@/tree/project-feature-catalog';
+import { getProjectFeaturesConfig } from '@/services/project-features-service';
 import {
-  getProjectFeaturesConfig,
-  normalizeConfigForProject,
-  resetProjectFeaturesConfigCache,
-  setProjectFeaturesConfig,
-} from '@/services/project-features-service';
+  activatePersistedProjectTreeSelection,
+  primePersistedProjectTreeUi,
+  resetProjectTreeUiRestoreFlag,
+} from '@/tree/project-tree-service';
 import {
   DEFAULT_PROJECT_SETTINGS,
   activeProjectId,
   applyProjectSnapshot,
   ensureProjectSettingsRecord,
+  loadProjectFromCineFile,
   mergeDefaultProjectSettings,
   activeMoodBoardId,
   assetDetailData,
@@ -30,6 +31,7 @@ import {
   locationLibrary,
   moodBoards,
   projectData,
+  projectScratchPad,
   projectRegistry,
   projectScreenplay,
   projectTreatment,
@@ -42,6 +44,7 @@ import {
   storyboardVisibility,
   styleGuide,
   timelineClips,
+  generationQueue,
 } from '@/data/project-data';
 import {
   LOCAL_PROJECTS_STORAGE_KEY,
@@ -146,6 +149,9 @@ function createBlankSnapshot(projectName: string): AppliedCineProject {
       styleReference: '',
     },
     projectFeatures: buildBlankProjectFeaturesConfig(),
+    generationQueue: [],
+    reviewQueue: [],
+    agentLog: [],
   };
 }
 
@@ -226,6 +232,55 @@ function openProjectLocal(projectId: string): CreateBlankProjectResult | null {
 
 export function openProject(projectId: string): CreateBlankProjectResult | null {
   return openProjectLocal(projectId);
+}
+
+function refreshWorkspaceAfterProjectSwitch(projectId: string, displayName?: string): void {
+  const name = displayName || String((projectData as { name?: unknown }).name ?? '');
+  window.syncActiveProjectName?.(name);
+  const refresh = window as unknown as Record<string, (() => void) | undefined>;
+  refresh.renderFullTree?.();
+  refresh.renderBreakdownTable?.();
+  refresh.renderStoryboard?.();
+  refresh.renderTimeline?.();
+  refresh.hydrateScriptEditorFromProject?.();
+  window.renderProjectsMenu?.();
+  primePersistedProjectTreeUi(projectId);
+  queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
+}
+
+/**
+ * Load the project the user last had open (local snapshot, bundled `.cine`, or server project).
+ * Call during boot before the first sidebar tree render.
+ */
+export async function restoreActiveProjectOnBoot(projectId: string): Promise<boolean> {
+  if (!projectId) return false;
+
+  hydrateProjectRegistryFromPersistence();
+  prepareActiveProjectTreeUiForSwitch();
+  resetProjectTreeUiRestoreFlag();
+
+  const serverResult = await loadServerProject(projectId);
+  if (serverResult) {
+    refreshWorkspaceAfterProjectSwitch(projectId, serverResult.name);
+    return true;
+  }
+
+  const entry = projectRegistry.find((p) => p.id === projectId);
+  if (!entry) return false;
+
+  let opened: CreateBlankProjectResult | null = null;
+  if (entry.file) {
+    if (activeProjectId !== projectId) {
+      loadProjectFromCineFile(entry.file);
+    }
+    opened = { id: entry.id, name: String(projectData.name || entry.name) };
+  } else {
+    opened = openProject(projectId);
+  }
+
+  if (!opened) return false;
+  refreshWorkspaceAfterProjectSwitch(projectId, opened.name);
+  return true;
 }
 
 /** Load a server-resident writable .cine project via the /api/projects/:id/load endpoint. */
@@ -455,6 +510,10 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
       colorPalette: colorState.getPalette(),
     },
     projectFeatures: structuredClone(getProjectFeaturesConfig()),
+    scratchPad: structuredClone(projectScratchPad),
+    generationQueue: structuredClone(generationQueue),
+    reviewQueue: [],
+    agentLog: [],
   };
 }
 
@@ -633,5 +692,73 @@ export function restoreProjectTreeExpandedState(projectId?: string): void {
 
 export function prepareActiveProjectTreeUiForSwitch(): void {
   persistProjectTreeExpandedState();
+}
+
+/* ── Project export (download .cine.zip) ──────────────────────────────────── */
+
+export async function exportProject(projectId = activeProjectId): Promise<void> {
+  if (!projectId) return;
+  const entry = projectRegistry.find((p) => p.id === projectId);
+  if (!entry) return;
+
+  // Flush dirty state before export
+  await triggerProjectSave();
+
+  // Fetch the zip
+  const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/export`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Export failed' }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${(entry.name || 'project').replace(/[^a-zA-Z0-9_-]/g, '_')}.cine.zip`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function fetchExportManifest(
+  projectId = activeProjectId,
+): Promise<Record<string, unknown> | null> {
+  if (!projectId) return null;
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/export/manifest`);
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/* ── Project import (upload .cine.zip) ─────────────────────────────────────── */
+
+export interface ImportResult {
+  ok: boolean;
+  project?: { id: string; name: string; writable: boolean; lastModified: string };
+  error?: string;
+  missing?: string[];
+}
+
+export async function importProject(file: File): Promise<ImportResult> {
+  const buffer = await file.arrayBuffer();
+  const res = await fetch('/api/projects/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: buffer,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: data.error || `HTTP ${res.status}`,
+      missing: data.missing,
+    };
+  }
+  return { ok: true, project: data };
 }
 

@@ -95,6 +95,10 @@ export class CinegenStoryboardPane extends CgLightElement {
           <button class="toolbar-btn btn-ai" data-ws-action="generateStoryboardReferences">
             <i class="fa-solid fa-id-card"></i> References
           </button>
+          <button class="toolbar-btn btn-ai" data-ws-action="draftShotStoryboards"
+                  title="Generate 1 frame per shot with cinematography set">
+            <i class="fa-solid fa-images"></i> Draft Shot Storyboards
+          </button>
           <button class="toolbar-btn" data-ws-action="addStoryboardFrame">
             <i class="fa-solid fa-plus"></i> Add Frame
           </button>

@@ -360,7 +360,7 @@ declare global {
     handleFDXImport?: (event: Event) => void;
     handleFountainImport?: (event: Event) => void;
     importScript?: () => void;
-    stubNewBlankProject?: () => void;
+    openBlankProjectWizard?: () => void;
     openScriptWizardModal?: () => void;
     closeScriptWizardModal?: () => void;
     openVisualWizardModal?: () => void;

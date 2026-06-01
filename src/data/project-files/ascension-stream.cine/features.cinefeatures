@@ -76,6 +76,7 @@
     "global-assets/library-browser": true,
     "global-assets/scrap-bin": true,
     "mood-boards": true,
+    "scratchpad": true,
     "scenes": true
   },
   "order": [
@@ -154,6 +155,7 @@
     "global-assets/library-browser",
     "global-assets/scrap-bin",
     "mood-boards",
+    "scratchpad",
     "scenes"
   ]
 }

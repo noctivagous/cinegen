@@ -6,6 +6,8 @@ import http from 'node:http';
 import https from 'node:https';
 import { URL } from 'node:url';
 import { WebSocketServer } from 'ws';
+import { Archiver } from 'archiver';
+import yauzl from 'yauzl';
 import { AGENT_STATIC_ROUTES } from '../src/constants/agent-routes.js';
 import {
   providerRuntimeByProxyTarget,
@@ -461,7 +463,7 @@ function handleConnections(req, res) {
 }
 
 /* ── Atomic directory writes for .cine packages ───────────────────────────── */
-const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|json)$/;
+const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|cinescratchpad|json)$/;
 
 /**
  * Write a batch of documents atomically into a .cine directory.
@@ -573,6 +575,22 @@ function listServerProjects() {
     }
   } catch { /* ignore readdir fail */ }
   return entries;
+}
+
+function estimateDirSize(dirPath) {
+  let total = 0;
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        total += estimateDirSize(fullPath);
+      } else if (entry.isFile()) {
+        total += fs.statSync(fullPath).size;
+      }
+    }
+  } catch { /* ignore */ }
+  return total;
 }
 
 function handleProjectsApi(req, res) {
@@ -785,6 +803,230 @@ function handleProjectsApi(req, res) {
         json(res, 200, { ok: true, written, projectId: id });
       } catch (e) {
         json(res, 500, { error: 'Failed to write documents', detail: e.message });
+      }
+    });
+    return;
+  }
+
+  // GET /api/projects/:id/export/manifest — lightweight export preview
+  const exportManifestMatch = url.match(/^\/api\/projects\/([^/]+)\/export\/manifest$/);
+  if (exportManifestMatch && method === 'GET') {
+    const id = exportManifestMatch[1];
+    const proj = listServerProjects().find((p) => p.id === id);
+    if (!proj) {
+      json(res, 404, { error: 'Project not found' });
+      return;
+    }
+    try {
+      const dirPath = path.join(PROJECTS_DIR, proj.dir);
+      const manifestRaw = JSON.parse(fs.readFileSync(path.join(dirPath, 'cine.manifest.json'), 'utf-8'));
+      const docs = manifestRaw.documents || {};
+
+      let sceneCount = 0;
+      let shotCount = 0;
+      let frameCount = 0;
+      let charCount = 0;
+      let locCount = 0;
+      let propCount = 0;
+
+      if (docs.scenes) {
+        const scenes = JSON.parse(fs.readFileSync(path.join(dirPath, docs.scenes), 'utf-8'));
+        sceneCount = Object.keys(scenes || {}).length;
+        for (const s of Object.values(scenes || {})) {
+          if (s.coverage && Array.isArray(s.coverage)) shotCount += s.coverage.length;
+        }
+      }
+      if (docs.storyboard) {
+        const sb = JSON.parse(fs.readFileSync(path.join(dirPath, docs.storyboard), 'utf-8'));
+        frameCount = (sb.frames && Array.isArray(sb.frames)) ? sb.frames.length : 0;
+      }
+      if (docs.characters) {
+        const chars = JSON.parse(fs.readFileSync(path.join(dirPath, docs.characters), 'utf-8'));
+        charCount = Array.isArray(chars) ? chars.length : 0;
+      }
+      if (docs.locations) {
+        const locs = JSON.parse(fs.readFileSync(path.join(dirPath, docs.locations), 'utf-8'));
+        locCount = Array.isArray(locs) ? locs.length : 0;
+      }
+      if (docs.props && fs.existsSync(path.join(dirPath, docs.props))) {
+        const props = JSON.parse(fs.readFileSync(path.join(dirPath, docs.props), 'utf-8'));
+        propCount = Array.isArray(props) ? props.length : 0;
+      }
+
+      const exportSize = estimateDirSize(dirPath);
+      json(res, 200, {
+        projectId: id,
+        name: manifestRaw.name || proj.name,
+        format: manifestRaw.format,
+        version: manifestRaw.version,
+        sceneCount,
+        shotCount,
+        frameCount,
+        charCount,
+        locCount,
+        propCount,
+        exportSize,
+        externalUrls: [],
+      });
+    } catch (e) {
+      json(res, 500, { error: 'Failed to read export manifest', detail: e.message });
+    }
+    return;
+  }
+
+  // GET /api/projects/:id/export — download .cine.zip
+  const exportMatch = url.match(/^\/api\/projects\/([^/]+)\/export$/);
+  if (exportMatch && method === 'GET') {
+    const id = exportMatch[1];
+    const proj = listServerProjects().find((p) => p.id === id);
+    if (!proj) {
+      json(res, 404, { error: 'Project not found' });
+      return;
+    }
+    const dirPath = path.join(PROJECTS_DIR, proj.dir);
+    if (!fs.existsSync(dirPath)) {
+      json(res, 404, { error: 'Project directory not found on disk' });
+      return;
+    }
+
+    res.writeHead(200, {
+      ...corsHeaders('*'),
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(proj.name || 'project')}.cine.zip"`,
+      'Transfer-Encoding': 'chunked',
+    });
+
+    const archive = new Archiver('zip', { zlib: { level: 6 } });
+    archive.pipe(res);
+    archive.directory(dirPath, false);
+    archive.finalize().catch((e) => {
+      /* stream error — client may have disconnected */
+    });
+    return;
+  }
+
+  // POST /api/projects/import — import a .cine.zip from raw binary body
+  if (url === '/api/projects/import' && method === 'POST') {
+    const chunks = [];
+    req.on('data', (c) => chunks.push(c));
+    req.on('end', async () => {
+      try {
+        const zipBuffer = Buffer.concat(chunks);
+        if (zipBuffer.length < 20) {
+          json(res, 400, { error: 'Empty or invalid zip file' });
+          return;
+        }
+
+        // Extract to a temp directory
+        const tmpDir = fs.mkdtempSync(path.join(fs.realpathSync(PROJECTS_DIR), 'import-'));
+        let manifestId = '';
+        let manifestName = '';
+        const extractedFiles = [];
+
+        await new Promise((resolve, reject) => {
+          yauzl.fromBuffer(zipBuffer, { lazyEntries: true }, (err, zipfile) => {
+            if (err) { reject(err); return; }
+            zipfile.readEntry();
+            zipfile.on('entry', (entry) => {
+              if (/\/$/.test(entry.fileName)) {
+                // Directory entry — ensure it exists
+                const dirPath = path.join(tmpDir, entry.fileName);
+                fs.mkdirSync(dirPath, { recursive: true });
+                zipfile.readEntry();
+                return;
+              }
+              // File entry
+              const filePath = path.join(tmpDir, entry.fileName);
+              fs.mkdirSync(path.dirname(filePath), { recursive: true });
+              zipfile.openReadStream(entry, (openErr, readStream) => {
+                if (openErr) { reject(openErr); return; }
+                const writeStream = fs.createWriteStream(filePath);
+                readStream.pipe(writeStream);
+                writeStream.on('finish', () => {
+                  extractedFiles.push(entry.fileName);
+                  zipfile.readEntry();
+                });
+                writeStream.on('error', reject);
+              });
+            });
+            zipfile.on('end', () => resolve());
+            zipfile.on('error', reject);
+          });
+        });
+
+        // Validate: must have cine.manifest.json
+        const manifestPath = path.join(tmpDir, 'cine.manifest.json');
+        if (!fs.existsSync(manifestPath)) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          json(res, 400, { error: 'Missing cine.manifest.json — not a valid .cine package' });
+          return;
+        }
+
+        let manifest;
+        try {
+          manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        } catch {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          json(res, 400, { error: 'Invalid cine.manifest.json — could not parse JSON' });
+          return;
+        }
+
+        if (manifest.format !== 'cinegen-package') {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          json(res, 400, { error: `Unrecognized format "${manifest.format}". Expected "cinegen-package".` });
+          return;
+        }
+
+        if (manifest.version > 2) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          json(res, 400, { error: `Project version ${manifest.version} is newer than current (2). Please update CineGen.` });
+          return;
+        }
+
+        // Validate all documents listed in manifest exist
+        const docs = manifest.documents || {};
+        const missingDocs = [];
+        for (const [key, relPath] of Object.entries(docs)) {
+          if (typeof relPath !== 'string') continue;
+          const fullPath = path.join(tmpDir, relPath);
+          if (!fs.existsSync(fullPath)) {
+            missingDocs.push(`${key}: ${relPath}`);
+          }
+        }
+        if (missingDocs.length) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          json(res, 400, { error: 'Missing document files', missing: missingDocs });
+          return;
+        }
+
+        // Determine final ID (disambiguate if exists)
+        manifestId = manifest.id || `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        manifestName = manifest.name || 'Imported Project';
+        const destDirName = `${manifestId}.cine`;
+        let destPath = path.join(PROJECTS_DIR, destDirName);
+
+        if (fs.existsSync(destPath)) {
+          manifestId = `${manifestId}-${Date.now().toString(36)}`;
+          destPath = path.join(PROJECTS_DIR, `${manifestId}.cine`);
+        }
+
+        // Update manifest id in temp copy
+        manifest.id = manifestId;
+        manifest.name = manifestName;
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+
+        // Atomically install the project
+        fs.renameSync(tmpDir, destPath);
+
+        const stat = fs.statSync(path.join(destPath, 'cine.manifest.json'));
+        json(res, 201, {
+          id: manifestId,
+          name: manifestName,
+          writable: true,
+          lastModified: stat.mtime.toISOString(),
+        });
+      } catch (e) {
+        json(res, 500, { error: 'Failed to import project', detail: e.message });
       }
     });
     return;

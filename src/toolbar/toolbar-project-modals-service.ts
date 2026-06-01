@@ -31,6 +31,10 @@ declare const projectData: { name: string };
 declare const loadProjectFromCineFile: (filename: string) => void;
 
 export function closeProjectsModal(): void {
+  const layout = document.getElementById('projects-modal-layout');
+  const wizardBody = document.getElementById('projects-modal-wizard-body');
+  if (layout) layout.style.removeProperty('display');
+  if (wizardBody) wizardBody.style.display = 'none';
   closeModal('projects-modal');
 }
 
@@ -120,6 +124,10 @@ export function openProjectsModal(): void {
   closeAiProvidersModal();
   hydrateProjectRegistryFromPersistence();
   renderProjectsModalList();
+  const layout = document.getElementById('projects-modal-layout');
+  const wizardBody = document.getElementById('projects-modal-wizard-body');
+  if (layout) layout.style.removeProperty('display');
+  if (wizardBody) wizardBody.style.display = 'none';
   openModal('projects-modal');
 }
 

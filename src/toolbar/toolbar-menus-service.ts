@@ -33,12 +33,29 @@ declare const projectRegistry: Array<{ id: string; name: string; file?: string }
 declare const projectData: { name: string };
 declare const loadProjectFromCineFile: (filename: string) => void;
 
-export function renderProjectsMenu(): void {
+async function _fetchAndMergeProjects(): Promise<Array<{ id: string; name: string; file?: string }>> {
+  hydrateProjectRegistryFromPersistence();
+  const byId = new Map<string, { id: string; name: string; file?: string }>();
+  for (const p of projectRegistry) byId.set(p.id, p);
+  try {
+    const res = await fetch('/api/projects');
+    if (res.ok) {
+      const data = await res.json();
+      for (const sp of data.projects || []) {
+        if (!byId.has(sp.id)) byId.set(sp.id, { id: sp.id, name: sp.name });
+      }
+    }
+  } catch {
+    /* network fail — use registry only */
+  }
+  return Array.from(byId.values());
+}
+
+function _renderProjectList(projects: Array<{ id: string; name: string; file?: string }>): void {
   const menu = document.getElementById('projects-menu');
   if (!menu) return;
-  hydrateProjectRegistryFromPersistence();
   menu.replaceChildren();
-  projectRegistry.forEach((proj) => {
+  for (const proj of projects) {
     const isActive = proj.id === appShellStore.activeProjectId;
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -58,7 +75,12 @@ export function renderProjectsMenu(): void {
     btn.append(check, label);
     btn.addEventListener('click', () => switchProject(proj.id));
     menu.appendChild(btn);
-  });
+  }
+}
+
+export async function renderProjectsMenu(): Promise<void> {
+  const projects = await _fetchAndMergeProjects();
+  _renderProjectList(projects);
 }
 
 function switchProject(projectId: string): void {
@@ -210,6 +232,15 @@ function initDebugMenu(): void {
 }
 
 const EXPORT_ACTIONS: Record<string, () => void> = {
+  'cine-package': () => {
+    void import('@/services/project-service').then(({ exportProject }) => {
+      exportProject().catch((err: unknown) => {
+        import('@/utils/alert-cg').then(({ alertCG }) => {
+          alertCG(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
+      });
+    });
+  },
   screenplay: () => window.exportScreenplay?.(),
   pdf: () => (window as Window & { exportPDF?: () => void }).exportPDF?.(),
 };

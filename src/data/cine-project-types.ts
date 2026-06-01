@@ -80,6 +80,8 @@ export type CineProjectManifest = {
     style?: string;
     /** Script annotation sidecar */
     annotations?: string;
+    /** ScratchPad free-form ideation entries */
+    scratchpad?: string;
   };
   settings?: Record<string, unknown>;
   tree?: Record<string, unknown>;
@@ -121,6 +123,9 @@ export type CineProjectFile = Omit<CineProjectManifest, 'documents'> & {
   modelRoutingRules?: Record<string, unknown>;
   agentLog?: Record<string, unknown>[];
   annotations?: Record<string, unknown>;
+  scratchPad?: Record<string, unknown>;
+  /** Sidebar feature visibility + order (`features.cinefeatures`). */
+  projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
 };
 
 export type ProjectRegistryEntry = {

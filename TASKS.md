@@ -41,7 +41,8 @@ Server-resident `.cine` tier (`source/server/projects/`), GET/POST project endpo
 Feature catalog with stable `featureId`s, per-project `ProjectFeaturesConfig` persisted as `features.cinefeatures`, Project Features modal with checkbox tree and drag-reorder, blank-project default (Mood Boards only), `Alt+1…9` skips disabled sections, selection rerouting on config change, Start-from-Script wizard enables Production Office and Scenes after sync, blank project toolbar action routes through `createNewProject()`. Full details in `ARCHITECTURE-LEGACY-PROGRESS.md`.
 
 - [x] Add `features.cinefeatures` to bundled sample manifests so duplicated samples carry explicit feature order.
-- [ ] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
+- [x] Manual QA: enable Script only → paste screenplay → disable Script → reload → Fountain text and scene data still present.
+  - Boot restores active project + `features.cinefeatures`; disabling a department hides tree nodes only (data remains in snapshot). Re-verify in UI after reload.
 
 ---
 
@@ -77,13 +78,12 @@ Architecture note: extract shot parameter accumulation and prompt-dispatch logic
 
 - [x] Enforce valid shot lifecycle transitions.
   - `shot-lifecycle.ts` transition rules; status dropdown on coverage cards; auto `storyboarded` when frames link.
-  - [ ] Wire generation queue paths to use `setShotStatus()` for `queued` / `generated` transitions.
+  - [x] Wire generation queue paths to use `setShotStatus()` for `queued` / `generated` transitions.
+  - `generation-queue-service.ts` syncs queue jobs with shot lifecycle; storyboard batch + Build Shot Prompt wired.
 
-- [ ] Consolidate backend shot routing with frontend shot types.
-  - `backends/agents/cinematography/generation-agent.js` has its own shot-type → provider routing rules.
-  - `backends/agents/tools/provider-router.tool.js` has a parallel set.
-  - Move shared routing rules into one backend module consumed from both places.
-  - Ensure `source/src/constants/provider-registry.js` is the SSOT for provider metadata on both sides.
+- [x] Consolidate backend shot routing with frontend shot types.
+  - SSOT: `source/src/constants/shot-type-routing.js` (`DEFAULT_SHOT_TYPE_ROUTING`, `inferShotRoutingTag`).
+  - `provider-router.tool.js` and `generation-agent.js` import shared rules; provider metadata remains in `provider-registry.js`.
 
 ---
 
@@ -293,6 +293,12 @@ Architecture note: zip handling belongs on the server (Node's built-in `zlib` pl
   - On import, if version is older: run the migration registry before validation.
   - On import, if version is newer than current: reject with "This project was created with a newer version of CineGen."
 
+- [ ] Preserve FDX metadata via the annotation sidecar on import.
+  - Extend `convertFDXToFountain()` to also collect scene numbers (`SceneProperties.Number`), script notes (`<ScriptNote>`), scene colors (`SceneProperties.Color`), dual-dialogue flags, and paragraph-level formatting (bold, italic, underline, alignment) keyed by Fountain text offset.
+  - Write these into `CineAnnotationsDoc` (`annotations.cineannotations`) as `AnnotationMark` entries with category prefix `"fdx-"`.
+  - On round-trip export (FDX → Fountain + annotations → FDX), rebuild the original FDX attributes from the sidecar so metadata survives save/load.
+  - No schema change to the `.cine` format — the annotations doc already carries extensible `category` + `note` fields.
+
 ---
 
 ## P2 — Legacy Bridge Retirement (Phase C/E Continuation)
@@ -377,13 +383,13 @@ Rationale: the server will be the backbone for provider keys, agent calls, `Prod
 
 ---
 
-## Current Focus (as of 2026-05-29)
+## Current Focus (as of 2026-06-01)
 
-P0 is substantially complete. The active front is P1 work: storyboard generation path, assets-in-shots reference pipeline, wizard contracts, and the Drafts scratch surface. Several P0 loose ends remain in parallel.
+P0 loose ends (features reload, generation-queue lifecycle, shot routing SSOT) are closed. The active front is P1 work: storyboard generation path, assets-in-shots reference pipeline, wizard contracts, and the Drafts scratch surface.
 
 Recommended next steps in order:
 
-1. "Draft Storyboards" batch path from shot list (P1 storyboard).
+1. "Draft Storyboards" batch path from shot list (P1 storyboard) — batch service exists; polish UX + placeholder path.
 2. Define wizard output contract (`WizardOutput` interface) before Visual-First wizard completion.
 3. Asset-to-reference upload flow (P1 reference pipeline).
 4. Project import/export endpoints (P1).

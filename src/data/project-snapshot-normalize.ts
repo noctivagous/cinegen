@@ -5,7 +5,7 @@
 import type { AppliedCineProject } from '@/data/cine-project-loader';
 import { DEFAULT_FOUNTAIN_SCRIPT } from '@/data/default-fountain-script';
 import { buildBlankProjectFeaturesConfig } from '@/tree/project-feature-catalog';
-import type { MoodBoard } from '@/data/project-data';
+import type { CineScratchPadDoc, MoodBoard } from '@/data/project-data';
 
 function normalizeMoodBoardsSnapshot(raw: unknown): MoodBoard[] {
   if (!Array.isArray(raw)) return [];
@@ -102,6 +102,15 @@ function normalizeScreenplay(applied: AppliedCineProject): AppliedCineProject['p
   return { format: 'fountain', text: DEFAULT_FOUNTAIN_SCRIPT };
 }
 
+function normalizeScratchPad(raw: unknown): CineScratchPadDoc {
+  if (raw && typeof raw === 'object' && (raw as Record<string, unknown>).format === 'cine-scratchpad') {
+    const doc = raw as Record<string, unknown>;
+    const entries = Array.isArray(doc.entries) ? doc.entries : [];
+    return { format: 'cine-scratchpad', version: 1, entries };
+  }
+  return { format: 'cine-scratchpad', version: 1, entries: [] };
+}
+
 /** Ensure snapshot invariants before applying to mutable module state. */
 export function normalizeAppliedCineProject(applied: AppliedCineProject): AppliedCineProject {
   const tree = asObject(applied.projectData);
@@ -150,5 +159,6 @@ export function normalizeAppliedCineProject(applied: AppliedCineProject): Applie
     generationQueue: asArray(applied.generationQueue) as Record<string, unknown>[],
     reviewQueue: asArray(applied.reviewQueue) as Record<string, unknown>[],
     agentLog: asArray(applied.agentLog) as Record<string, unknown>[],
+    scratchPad: normalizeScratchPad(applied.scratchPad),
   };
 }

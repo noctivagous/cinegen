@@ -12,6 +12,8 @@ import {
   generateArchetypeId,
   generateImageId,
 } from '@/wizard/concept-wizard-state';
+import { applyWizardOutput } from '@/wizard/wizard-completion-hook';
+import type { WizardOutput } from '@/wizard/wizard-output-types';
 
 let _state: ConceptWizardState = createEmptyConceptWizardState();
 
@@ -229,88 +231,51 @@ export function buildConceptPayload(): {
 
 /**
  * Apply the concept wizard's generated scene kit into the live project data.
- * Writes styleGuide, colorState, mood board items, and placeholder characters.
+ * Builds a WizardOutput and applies it through the canonical applyWizardOutput().
  */
 export function applyConceptWizardSceneKit(): {
-  styleGuideUpdated: boolean;
-  moodBoardItemsAdded: number;
-  charactersAdded: number;
+  output: WizardOutput;
   promptTemplate: string;
 } {
   const s = _state;
-  const result = {
-    styleGuideUpdated: false,
-    moodBoardItemsAdded: 0,
-    charactersAdded: 0,
-    promptTemplate: '',
+
+  const palette = s.generatedColorPalette?.length ? s.generatedColorPalette : s.colorPalette;
+
+  const output: WizardOutput = {
+    styleGuide: {
+      colorPalette: palette.length ? [...palette] : undefined,
+      lightingMood: s.lightingMood || s.lightingDesc || undefined,
+      visualTone: s.styleNotes || s.moodDescription || undefined,
+    },
+    moodBoardItems: s.generatedImages.map((img) => ({
+      type: 'image' as const,
+      label: img.prompt.slice(0, 60),
+      source: img.url,
+    })),
+    characters: s.archetypes.map((arch) => ({
+      id: arch.id,
+      name: arch.name,
+      role: arch.role,
+      description: `${arch.archetype}: ${arch.description} (${arch.vibe})`,
+    })),
+    featureBranches: ['mood-boards', 'production-office', 'scenes', 'casting', 'production-design', 'cinematography'],
   };
 
-  // 1. Style guide + color state
-  const palette = s.generatedColorPalette?.length ? s.generatedColorPalette : s.colorPalette;
-  if (palette.length) {
-    const { styleGuide: sg } = require('@/data/project-data') as typeof import('@/data/project-data');
-    sg.colorPalette = [...palette];
-    sg.lightingMood = s.lightingMood || s.lightingDesc || '';
-    sg.visualTone = s.styleNotes || s.moodDescription || '';
-    result.styleGuideUpdated = true;
+  applyWizardOutput(output);
 
-    const { colorState } = require('@/color/color-state') as typeof import('@/color/color-state');
-    colorState.setPalette(palette);
-  }
-
-  // 2. Mood board images
-  if (s.generatedImages.length) {
-    const { addMoodBoardItem, activeMoodBoardId, moodBoards } = require('@/data/project-data') as typeof import('@/data/project-data');
-    let targetBoardId = activeMoodBoardId;
-    if (!targetBoardId && moodBoards.length) {
-      targetBoardId = moodBoards[0].id;
-    }
-    if (targetBoardId) {
-      for (const img of s.generatedImages) {
-        addMoodBoardItem(targetBoardId, {
-          type: 'image',
-          label: img.prompt.slice(0, 60),
-          source: img.url,
-          active: false,
-          notes: '',
-          order: 0,
-          metadata: {},
-        });
-        result.moodBoardItemsAdded += 1;
-      }
-    }
-  }
-
-  // 3. Placeholder characters from archetypes
-  if (s.archetypes.length) {
-    const { assetLibrary: lib } = require('@/data/project-data') as typeof import('@/data/project-data');
-    if (!lib.characters) lib.characters = [];
-    for (const arch of s.archetypes) {
-      lib.characters.push({
-        id: arch.id,
-        name: arch.name,
-        role: arch.role,
-        desc: `${arch.archetype}: ${arch.description} (${arch.vibe})`,
-        type: 'actor',
-        usageRefs: [],
-      });
-      result.charactersAdded += 1;
-    }
-  }
-
-  // 4. Style-locked prompt template
+  // Build prompt template for caller feedback
   const tone = s.styleNotes || s.moodDescription || '';
   const lighting = s.lightingMood || s.lightingDesc || '';
-  const paletteStr = (s.generatedColorPalette?.length ? s.generatedColorPalette : s.colorPalette).join(', ');
+  const paletteStr = palette.join(', ');
   const tags = (s.generatedAtmosphereTags?.length ? s.generatedAtmosphereTags : s.atmosphereTags).join(', ');
-  result.promptTemplate = [
+  const promptTemplate = [
     tone && `Tone: ${tone}`,
     lighting && `Lighting: ${lighting}`,
     paletteStr && `Palette: ${paletteStr}`,
     tags && `Atmosphere: ${tags}`,
   ].filter(Boolean).join(' | ');
 
-  return result;
+  return { output, promptTemplate };
 }
 
 export function buildScriptOutlinePayload(): {

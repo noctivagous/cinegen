@@ -9,6 +9,8 @@ import {
   type BeatLocation,
   type BeatReferenceItem,
 } from '@/wizard/beat-board-state';
+import { applyWizardOutput } from '@/wizard/wizard-completion-hook';
+import type { WizardOutput } from '@/wizard/wizard-output-types';
 
 let _state: BeatBoardState = createEmptyBeatBoardState();
 
@@ -158,13 +160,14 @@ export function buildBbImportPayload(): {
 /**
  * Generate a Fountain-format outline from beats, sync it to project state,
  * and map each beat to shots with cinematography parameters.
+ *
+ * Uses WizardOutput + applyWizardOutput() for canonical project mutation,
+ * then applies beat-specific shot enrichment directly.
  */
-export function applyBeatBoardSceneKit(projectId: string): {
+export function applyBeatBoardSceneKit(): {
+  output: WizardOutput;
   fountainText: string;
-  scenesCreated: number;
   shotsCreated: number;
-  charactersAdded: number;
-  locationsAdded: number;
 } {
   const s = _state;
   const beats = s.beats;
@@ -173,17 +176,14 @@ export function applyBeatBoardSceneKit(projectId: string): {
 
   // 1. Build Fountain outline from beats
   const lines: string[] = [];
-  const usedLocs = new Set<string>();
 
   for (let i = 0; i < beats.length; i++) {
     const beat = beats[i];
     const loc = locs[i % locs.length]?.name || 'UNKNOWN LOCATION';
     const intExt = locs[i % locs.length]?.intExt || 'INT/EXT';
-    const time = 'DAY'; // default; could be inferred from mood later
-    usedLocs.add(loc);
 
     lines.push('');
-    lines.push(`${intExt.toUpperCase()}. ${loc.toUpperCase()} — ${time}`);
+    lines.push(`${intExt.toUpperCase()}. ${loc.toUpperCase()} — DAY`);
     lines.push('');
     lines.push(`_${beat.title}_`);
     lines.push('');
@@ -199,21 +199,68 @@ export function applyBeatBoardSceneKit(projectId: string): {
 
   const fountainText = lines.join('\n').trim();
 
-  // 2. Sync to project via deterministic pipeline
-  const { syncFountainToProject } = require('@/script/script-to-project') as typeof import('@/script/script-to-project');
-  const syncResult = syncFountainToProject(fountainText, projectId);
+  // 2. Build scene overrides keyed by deterministic sceneId
+  const sceneOverrides: Record<string, { beatTitle: string; beatDuration: number; cameraNotes: string }> = {};
+  const beatEntries: import('@/wizard/wizard-output-types').BeatBoardEntry[] = [];
 
-  // 3. Enrich scenes with beat-to-shot mapping
+  for (let i = 0; i < beats.length; i++) {
+    const beat = beats[i];
+    const sceneId = `scene${String(i + 1).padStart(2, '0')}`;
+    sceneOverrides[sceneId] = {
+      beatTitle: beat.title,
+      beatDuration: beat.durationSeconds || 5,
+      cameraNotes: beat.cameraNotes || '',
+    };
+    beatEntries.push({
+      id: beat.id,
+      order: i,
+      title: beat.title,
+      description: beat.description,
+      sceneId,
+      characters: [],
+      locationId: locs[i % locs.length]?.id,
+      cameraNotes: beat.cameraNotes,
+      durationSeconds: beat.durationSeconds || 5,
+      assetNeeds: beat.assetNeeds || [],
+    });
+  }
+
+  // 3. Build and apply WizardOutput
+  const output: WizardOutput = {
+    fountainText,
+    sceneOverrides,
+    beatBoard: { entries: beatEntries },
+    characters: chars.map((c) => ({
+      id: c.id,
+      name: c.name,
+      role: 'supporting',
+      description: c.description || '',
+    })),
+    locations: locs.map((l) => ({
+      id: l.id,
+      name: l.name,
+      intExt: l.intExt,
+    })),
+    styleGuide: {
+      lightingMood: s.lightingMood || undefined,
+      visualTone: s.styleMood || undefined,
+      colorPalette: s.colorPalette.length ? [...s.colorPalette] : undefined,
+    },
+    featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
+  };
+
+  applyWizardOutput(output);
+
+  // 4. Beat-specific shot enrichment (richer than the generic camera-notes path in applyWizardOutput)
   const { currentSceneData } = require('@/data/project-data') as typeof import('@/data/project-data');
   const scenes = Object.values(currentSceneData as Record<string, any>);
-  let shotsCreated = syncResult.shotsCreated;
+  let shotsCreated = 0;
 
   for (let i = 0; i < beats.length && i < scenes.length; i++) {
     const beat = beats[i];
     const scene = scenes[i];
     if (!scene) continue;
 
-    // Add beat-derived shots based on camera notes
     const camNotes = beat.cameraNotes?.toLowerCase() || '';
     const extraShots: any[] = [];
     const baseId = Date.now() + i * 100;
@@ -225,16 +272,11 @@ export function applyBeatBoardSceneKit(projectId: string): {
         type: 'Insert',
         previsRole: 'coverage',
         label: `${beat.title} — Detail`,
-        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        duration: `${beat.durationSeconds || 5}s`,
         durationSeconds: beat.durationSeconds || 5,
-        shotType: 'CU',
-        cameraAngle: 'Eye-Level',
-        cameraMovement: 'Static',
-        lens: 'Medium (50mm)',
-        lightingTechnique: 'Practical',
-        composition: 'Depth of Field',
-        status: 'planned',
-        beatId: beat.id,
+        shotType: 'CU', cameraAngle: 'Eye-Level', cameraMovement: 'Static',
+        lens: 'Medium (50mm)', lightingTechnique: 'Practical', composition: 'Depth of Field',
+        status: 'planned', beatId: beat.id,
       });
     }
     if (camNotes.includes('wide') || camNotes.includes('establish')) {
@@ -244,16 +286,11 @@ export function applyBeatBoardSceneKit(projectId: string): {
         type: 'Coverage',
         previsRole: 'coverage',
         label: `${beat.title} — Wide`,
-        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        duration: `${beat.durationSeconds || 5}s`,
         durationSeconds: beat.durationSeconds || 5,
-        shotType: 'WS',
-        cameraAngle: 'High Angle',
-        cameraMovement: 'Static',
-        lens: 'Wide (14–24mm)',
-        lightingTechnique: 'Hard',
-        composition: 'Leading Lines',
-        status: 'planned',
-        beatId: beat.id,
+        shotType: 'WS', cameraAngle: 'High Angle', cameraMovement: 'Static',
+        lens: 'Wide (14–24mm)', lightingTechnique: 'Hard', composition: 'Leading Lines',
+        status: 'planned', beatId: beat.id,
       });
     }
     if (camNotes.includes('move') || camNotes.includes('track') || camNotes.includes('dolly')) {
@@ -263,83 +300,33 @@ export function applyBeatBoardSceneKit(projectId: string): {
         type: 'Coverage',
         previsRole: 'coverage',
         label: `${beat.title} — Tracking`,
-        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        duration: `${beat.durationSeconds || 5}s`,
         durationSeconds: beat.durationSeconds || 5,
-        shotType: 'MS',
-        cameraAngle: 'Eye-Level',
-        cameraMovement: 'Tracking',
-        lens: 'Standard (35mm)',
-        lightingTechnique: 'Mixed',
-        composition: 'Rule of Thirds',
-        status: 'planned',
-        beatId: beat.id,
+        shotType: 'MS', cameraAngle: 'Eye-Level', cameraMovement: 'Tracking',
+        lens: 'Standard (35mm)', lightingTechnique: 'Mixed', composition: 'Rule of Thirds',
+        status: 'planned', beatId: beat.id,
       });
     }
 
     if (!extraShots.length) {
-      // Default: at least one beat-specific shot
       extraShots.push({
         id: baseId,
         number: (scene.coverage?.length || 0) + 1,
         type: 'Coverage',
         previsRole: 'coverage',
         label: `${beat.title} — Beat ${i + 1}`,
-        duration: formatPrevisDuration(beat.durationSeconds || 5),
+        duration: `${beat.durationSeconds || 5}s`,
         durationSeconds: beat.durationSeconds || 5,
-        shotType: 'MS',
-        cameraAngle: 'Eye-Level',
-        cameraMovement: 'Static',
-        lens: 'Standard (35mm)',
-        lightingTechnique: 'Mixed',
-        composition: 'Rule of Thirds',
-        status: 'planned',
-        beatId: beat.id,
+        shotType: 'MS', cameraAngle: 'Eye-Level', cameraMovement: 'Static',
+        lens: 'Standard (35mm)', lightingTechnique: 'Mixed', composition: 'Rule of Thirds',
+        status: 'planned', beatId: beat.id,
       });
     }
 
     if (!scene.coverage) scene.coverage = [];
     scene.coverage.push(...extraShots);
     shotsCreated += extraShots.length;
-
-    // Tag scene with beat metadata
-    scene.beatTitle = beat.title;
-    scene.beatDuration = beat.durationSeconds;
   }
 
-  // 4. Add characters / locations to asset library
-  const { assetLibrary: lib } = require('@/data/project-data') as typeof import('@/data/project-data');
-  if (!lib.characters) lib.characters = [];
-  if (!lib.locations) lib.locations = [];
-
-  for (const c of chars) {
-    lib.characters.push({
-      id: c.id,
-      name: c.name,
-      role: 'supporting',
-      desc: c.description || '',
-      type: 'actor',
-      usageRefs: [],
-    });
-  }
-  for (const l of locs) {
-    lib.locations.push({
-      id: l.id,
-      name: l.name,
-      tags: l.intExt,
-      desc: '',
-      usageRefs: [],
-    });
-  }
-
-  return {
-    fountainText,
-    scenesCreated: syncResult.sceneCount,
-    shotsCreated,
-    charactersAdded: chars.length,
-    locationsAdded: locs.length,
-  };
-}
-
-function formatPrevisDuration(seconds: number): string {
-  return `${seconds}s`;
+  return { output, fountainText, shotsCreated };
 }

@@ -4,7 +4,6 @@ import {
   activatePersistedProjectTreeSelection,
   findProjectNodeByName,
   primePersistedProjectTreeUi,
-  resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
 import { appShellStore } from '@/stores/app-shell';
 import {
@@ -51,12 +50,7 @@ const App = {
       w.scriptEditorInsertBarVisible = prefs.scriptEditorInsertBarVisible;
     }
     if (typeof prefs.activeProjectId === 'string') {
-      const exists = projectRegistry.some((p) => p.id === prefs.activeProjectId);
-      if (exists) {
-        appShellStore.setActiveProjectId(prefs.activeProjectId, { persist: false });
-        resetProjectTreeUiRestoreFlag();
-        window.refreshProjectTree?.();
-      }
+      appShellStore.setActiveProjectId(prefs.activeProjectId, { persist: false });
     }
 
     window.syncActiveProjectName?.(String(projectData.name ?? ''));

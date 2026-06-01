@@ -12,7 +12,7 @@ export const projectsModalTemplate = html`
         </button>
       </div>
       <div class="projects-modal-body panel-content">
-        <div class="projects-modal-layout">
+        <div class="projects-modal-layout" id="projects-modal-layout">
           <div class="projects-modal-section">
             <h2 class="projects-modal-section-title">Recent projects</h2>
             <p class="projects-modal-section-lead">Open a production you have been working on.</p>
@@ -55,8 +55,9 @@ export const projectsModalTemplate = html`
             </div>
           </aside>
         </div>
+        <div id="projects-modal-wizard-body" class="projects-modal-wizard-body" style="display:none;"></div>
       </div>
-      <div class="projects-modal-footer bevel-sunken">
+      <div class="projects-modal-footer bevel-sunken" id="projects-modal-footer">
         <span class="projects-modal-footer-hint">Use the caret menu on the toolbar for a quick switch without closing the hub.</span>
         <button type="button" class="toolbar-btn" data-cg-close="projects-modal">Close</button>
       </div>

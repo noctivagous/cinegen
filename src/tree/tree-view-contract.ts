@@ -15,6 +15,7 @@ export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] 
   'chip-global': {},
   moodboards: {},
   'moodboard-detail': { requiredFields: ['boardId'] },
+  scratchpad: {},
   'asset-detail': { requiredFields: ['detailKey'] },
   'review-queue': {},
 };

@@ -43,7 +43,8 @@
     "costTracking": "ai-director/cost-tracking.cinecosttracking",
     "modelRoutingRules": "ai-director/model-routing-rules.cinemodelrouting",
     "features": "features.cinefeatures",
-    "agentLog": "ai-director/agent-log.cineagentlog"
+    "agentLog": "ai-director/agent-log.cineagentlog",
+    "scratchpad": "scratchpad.cinescratchpad"
   },
   "settings": {
     "aspectRatio": "2.39:1",

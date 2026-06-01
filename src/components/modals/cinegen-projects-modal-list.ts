@@ -85,61 +85,118 @@ export class CinegenProjectsModalList extends CgLightElement {
     this._projects = Array.from(byId.values());
   }
 
+  private _importInput: HTMLInputElement | null = null;
+
+  private _triggerImport(): void {
+    if (!this._importInput) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.zip,application/zip';
+      input.style.display = 'none';
+      input.addEventListener('change', (e) => this._onImportFile(e));
+      this.appendChild(input);
+      this._importInput = input;
+    }
+    this._importInput.value = '';
+    this._importInput.click();
+  }
+
+  private async _onImportFile(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const { importProject } = await import('@/services/project-service');
+      const result = await importProject(file);
+      if (result.ok && result.project) {
+        await this.refresh();
+        this.dispatchEvent(
+          new CustomEvent<CgProjectOpenDetail>(CG_PROJECT_OPEN, {
+            bubbles: true,
+            composed: true,
+            detail: { projectId: result.project.id },
+          })
+        );
+      } else {
+        const { alertCG } = await import('@/utils/alert-cg');
+        const msg = result.error || 'Import failed';
+        const detail = result.missing?.length ? `\nMissing files: ${result.missing.join(', ')}` : '';
+        alertCG(`Import failed: ${msg}${detail}`);
+      }
+    } catch (err: unknown) {
+      const { alertCG } = await import('@/utils/alert-cg');
+      alertCG(`Import error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      input.value = '';
+    }
+  }
+
   render() {
     const activeId = (this._shellStore ?? appShellStore).activeProjectId;
 
-    return repeat(
-      this._projects,
-      (proj) => proj.id,
-      (proj) => {
-        const isActive = proj.id === activeId;
-        const isWritable = !!proj.writable;
-        const statusLabel = isWritable ? 'Local' : 'Sample';
-        return html`
-          <div
-            class=${classMap({
-              'projects-modal-project-card': true,
-              'is-active': isActive,
-            })}
-            aria-current=${isActive ? 'true' : 'false'}
-          >
-            <button
-              type="button"
-              class="projects-modal-project-card-main"
-              @click=${() => this._openProject(proj.id)}
+    return html`
+      <div class="projects-modal-import-bar" style="display:flex;gap:8px;margin-bottom:8px;">
+        <button
+          type="button"
+          class="toolbar-btn text-xs"
+          @click=${() => this._triggerImport()}
+        >
+          <i class="fa-solid fa-file-import"></i> Import Project…
+        </button>
+      </div>
+      ${repeat(
+        this._projects,
+        (proj) => proj.id,
+        (proj) => {
+          const isActive = proj.id === activeId;
+          const isWritable = !!proj.writable;
+          const statusLabel = isWritable ? 'Local' : 'Sample';
+          return html`
+            <div
+              class=${classMap({
+                'projects-modal-project-card': true,
+                'is-active': isActive,
+              })}
+              aria-current=${isActive ? 'true' : 'false'}
             >
-              <div class="projects-modal-thumb" aria-hidden="true"></div>
-              <div class="projects-modal-project-meta">
-                <span class="projects-modal-project-name">${proj.name}</span>
-                <span class="projects-modal-project-hint"
-                  >${isActive ? 'Currently open' : 'Open this production'}</span
-                >
-                <span
-                  class=${classMap({
-                    'project-status-badge': true,
-                    'project-status-badge--local': isWritable,
-                    'project-status-badge--sample': !isWritable,
-                  })}
-                  title=${isWritable ? 'Writable local project' : 'Read-only bundled sample'}
-                >${statusLabel}</span>
-              </div>
-            </button>
-            ${!isWritable
-              ? html`
-                  <button
-                    type="button"
-                    class="projects-modal-project-duplicate-btn"
-                    title="Duplicate as writable local project"
-                    @click=${() => this._duplicateProject(proj.id)}
+              <button
+                type="button"
+                class="projects-modal-project-card-main"
+                @click=${() => this._openProject(proj.id)}
+              >
+                <div class="projects-modal-thumb" aria-hidden="true"></div>
+                <div class="projects-modal-project-meta">
+                  <span class="projects-modal-project-name">${proj.name}</span>
+                  <span class="projects-modal-project-hint"
+                    >${isActive ? 'Currently open' : 'Open this production'}</span
                   >
-                    <i class="fa-solid fa-copy" aria-hidden="true"></i> Duplicate
-                  </button>
-                `
-              : ''}
-          </div>
-        `;
-      }
-    );
+                  <span
+                    class=${classMap({
+                      'project-status-badge': true,
+                      'project-status-badge--local': isWritable,
+                      'project-status-badge--sample': !isWritable,
+                    })}
+                    title=${isWritable ? 'Writable local project' : 'Read-only bundled sample'}
+                  >${statusLabel}</span>
+                </div>
+              </button>
+              ${!isWritable
+                ? html`
+                    <button
+                      type="button"
+                      class="projects-modal-project-duplicate-btn"
+                      title="Duplicate as writable local project"
+                      @click=${() => this._duplicateProject(proj.id)}
+                    >
+                      <i class="fa-solid fa-copy" aria-hidden="true"></i> Duplicate
+                    </button>
+                  `
+                : ''}
+            </div>
+          `;
+        }
+      )}
+    `;
   }
 
   private _openProject(projectId: string): void {

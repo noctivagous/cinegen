@@ -459,10 +459,11 @@ export async function routeGenerationJob(
   projectId: string,
   shotId: string,
   shotType?: string,
+  shotMetadata?: Record<string, unknown>,
 ): Promise<{ ok: boolean; projectId: string; data: string }> {
   return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_ROUTE_SHOT, {
     method: 'POST',
-    body: JSON.stringify({ projectId, shotId, shotType }),
+    body: JSON.stringify({ projectId, shotId, shotType, shotMetadata }),
   });
 }
 

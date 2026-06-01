@@ -25,6 +25,7 @@ const WORKSPACE_ACTIONS: Record<string, string> = {
   'clear-camera-selections': 'clearCameraSelections',
   'global-ai-assist': 'globalAIAssist',
   'openSectionSettings': 'openSectionSettingsModal',
+  'draftShotStoryboards': 'draftShotStoryboards',
   'duplicateSelectedFrame': 'duplicateSelectedFrame',
   'moveSelectedFrameUp': 'moveSelectedFrameUp',
   'moveSelectedFrameDown': 'moveSelectedFrameDown',

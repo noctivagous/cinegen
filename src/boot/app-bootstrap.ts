@@ -156,6 +156,16 @@ async function bootstrap(): Promise<void> {
   initDebugModule();
   markBootReady('debug');
 
+  const bootProjectId =
+    appShellStore.activeProjectId || appShellStore.preferences.activeProjectId;
+  if (bootProjectId) {
+    const { restoreActiveProjectOnBoot } = await import('../services/project-service');
+    const restored = await restoreActiveProjectOnBoot(bootProjectId);
+    if (restored) {
+      appShellStore.syncActiveProjectFromModule(bootProjectId);
+    }
+  }
+
   initApp();
   markBootReady('app');
 

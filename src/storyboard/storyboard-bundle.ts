@@ -55,6 +55,7 @@ import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
 import { CG_TREE_NODE_SELECT, emitStoryboardFrameSelected } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
+import { generateAllShotStoryboards } from '@/storyboard/storyboard-generation-service';
 import {
   STORYBOARD_GENERATION_MODE_STORAGE_KEY,
   STORYBOARD_REFERENCE_STORAGE_KEY,
@@ -1599,6 +1600,7 @@ export function installStoryboardBundleGlobals(): void {
   w.highlightStoryboardForScriptSelection = highlightStoryboardForScriptSelection;
   w.syncScriptSelectionToStoryboard = syncScriptSelectionToStoryboard;
   w.generateBoards = generateBoards;
+  w.draftShotStoryboards = generateAllShotStoryboards;
   w.setStoryboardGenerationMode = setStoryboardGenerationMode;
   w.getStoryboardGenerationMode = getStoryboardGenerationMode;
   w.makeStoryboardFrameForText = makeStoryboardFrameForText;

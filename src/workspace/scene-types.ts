@@ -60,4 +60,14 @@ export type SceneDetail = {
   broll: SceneBroll[];
   pickups: SceneBroll[];
   notes: string;
+
+  /** Overrides project-level style defaults for this scene. */
+  colorOverride?: string[];
+  lightingOverride?: string;
+  visualToneOverride?: string;
+
+  /** Beat Board metadata (persistent reference, not used for prompt building). */
+  beatTitle?: string;
+  beatDuration?: number;
+  cameraNotes?: string;
 };

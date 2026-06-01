@@ -233,10 +233,10 @@ Progress note (2026-05-26):
 ### Known Open Gaps
 
 - **Media URL portability unresolved.** AI-generated image and video URLs from providers expire. No media caching layer, no local copy path, no import/export media handling yet.
-- **Import/export not built.** `GET /api/projects/:id/export` and `POST /api/projects/import` do not exist. The format and serializer are ready; server-side zip handling and client UI are P1 work.
+- **Import/export (partial).** `GET /api/projects/:id/export`, `POST /api/projects/import`, and toolbar/projects-modal UI exist; media portability and validation UX remain P1.
 - **Snapshot invariant enforcement.** Normalizers in `project-data.ts` for missing fields need to be written; the required-fields contract is documented but not yet enforced on load.
 - **Agent LLM key consistency.** Proxy reads `source/server/keys.json`; Mastra reads `backends/.env`. These two stores are not yet unified.
-- **Shot lifecycle transitions not enforced.** Status badges display correctly but invalid transitions (e.g. `queued` without `prompted`) are not blocked in the mutation path.
+- **Shot lifecycle (improved).** `setShotStatus()` enforces transitions; generation-queue service advances `prompted` / `queued` / `generated` (video) or returns to `storyboarded` (image jobs).
 
 ---
 

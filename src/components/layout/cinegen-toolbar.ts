@@ -195,6 +195,9 @@ export class CinegenToolbar extends CgLightElement {
         <cg-toolbar-split id="save-export-split" menu-id="save-export-menu" main-title="Save project">
           <span slot="main"><i class="fa-solid fa-floppy-disk"></i> Save</span>
           <div slot="menu">
+            <button type="button" class="toolbar-split-menu-item" role="menuitem" data-export-action="cine-package">
+              Download Project…
+            </button>
             <button type="button" class="toolbar-split-menu-item" role="menuitem" data-export-action="screenplay">
               Export Screenplay…
             </button>

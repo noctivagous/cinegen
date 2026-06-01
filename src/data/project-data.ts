@@ -59,6 +59,40 @@ export interface CineAnnotationsDoc {
 }
 
 /** Script annotation sidecar — breakdown highlights persisted per project. */
+/** ScratchPad entry — a single ideation/text scratch on the generative surface. */
+export interface CineScratchPadEntry {
+  id: string;
+  title: string;
+  text: string;
+  provider?: string;
+  modelId?: string;
+  outputUrl?: string;
+  thumbnailUrl?: string;
+  createdAt: number;
+  updatedAt: number;
+  tags?: string[];
+  promotedTo?: {
+    type: 'frame' | 'moodboard' | 'reference' | 'shot';
+    targetId: string;
+  };
+}
+
+export type CineScratchPadDoc = {
+  format: 'cine-scratchpad';
+  version: 1;
+  entries: CineScratchPadEntry[];
+};
+
+export let projectScratchPad: CineScratchPadDoc = { format: 'cine-scratchpad', version: 1, entries: [] };
+
+export function getProjectScratchPad(): CineScratchPadDoc {
+  return projectScratchPad;
+}
+
+export function setProjectScratchPad(doc: CineScratchPadDoc): void {
+  projectScratchPad = doc;
+}
+
 export let projectAnnotations: CineAnnotationsDoc = { format: 'cine-annotations', version: 1, marks: [] };
 
 export function getProjectAnnotations(): CineAnnotationsDoc {
@@ -297,6 +331,9 @@ export interface MoodBoard {
 export let moodBoards: MoodBoard[] = [];
 export let activeMoodBoardId: string | null = null;
 
+/** AI Director generation queue (`generation-queue.cinegenerationqueue`). */
+export let generationQueue: Array<Record<string, unknown>> = [];
+
 export function normalizeMoodBoards(raw: unknown): MoodBoard[] {
   if (!Array.isArray(raw)) return [];
   const boards: MoodBoard[] = [];
@@ -493,6 +530,13 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
     : (assetLibrary.locations as any[]);
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
+  generationQueue = Array.isArray(applied.generationQueue)
+    ? (structuredClone(applied.generationQueue) as Array<Record<string, unknown>>)
+    : [];
+  projectScratchPad = applied.scratchPad && typeof applied.scratchPad === 'object'
+    ? (applied.scratchPad as CineScratchPadDoc)
+    : { format: 'cine-scratchpad', version: 1, entries: [] };
+
   projectAnnotations = applied.projectAnnotations && typeof applied.projectAnnotations === 'object'
     ? (applied.projectAnnotations as CineAnnotationsDoc)
     : { format: 'cine-annotations', version: 1, marks: [] };
@@ -533,12 +577,12 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
   notifyStoryboardFramesChanged();
   notifyStoryboardReferencesChanged();
 
-  void import('@/services/project-features-service').then((svc) => {
-    svc.resetProjectFeaturesConfigCache();
-    svc.setProjectFeaturesConfig(svc.normalizeConfigForProject(applied), { persist: false });
-    if (typeof window.refreshProjectTree === 'function') {
-      window.refreshProjectTree();
-    }
+  void import('@/storyboard/storyboard-reference-sync').then(({ syncAssetLibraryToReferenceBank }) => {
+    syncAssetLibraryToReferenceBank();
+  }).catch(() => { /* ignore */ });
+
+  void import('@/services/project-features-service').then(({ applyProjectFeaturesFromSnapshot }) => {
+    applyProjectFeaturesFromSnapshot(applied, { refreshTree: false });
   });
 }
 

@@ -137,7 +137,7 @@ function buildCommands(): void {
     handler: (args) => {
       const action = args[0]?.toLowerCase();
       if (action === 'new') {
-        window.stubNewBlankProject?.();
+        window.openBlankProjectWizard?.();
         return { ok: true, action };
       }
       if (action === 'open') {
@@ -190,7 +190,7 @@ function buildCommands(): void {
     handler: (args) => {
       const target = args[0]?.toLowerCase();
       if (target === 'project') {
-        window.stubNewBlankProject?.();
+        window.openBlankProjectWizard?.();
         return { ok: true, target };
       }
       if (target === 'script') {
