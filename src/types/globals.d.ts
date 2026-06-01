@@ -489,6 +489,7 @@ declare global {
     'cinegen-moodboard-item-detail': import('@/components/panels/cinegen-moodboard-item-detail').CinegenMoodboardItemDetail;
     'cinegen-moodboard-item-viewer': import('@/components/panels/cinegen-moodboard-item-viewer').CinegenMoodboardItemViewer;
     'cinegen-overview-view': import('@/components/panels/cinegen-overview-view').CinegenOverviewView;
+    'cinegen-project-overview-view': import('@/components/panels/cinegen-project-overview-view').CinegenProjectOverviewView;
     'cinegen-asset-detail-view': import('@/components/panels/cinegen-asset-detail-view').CinegenAssetDetailView;
     'cinegen-workspace-empty': import('@/components/panels/cinegen-workspace-empty').CinegenWorkspaceEmpty;
     // 'cinegen-console': import('@/console/console-element').CinegenConsole;

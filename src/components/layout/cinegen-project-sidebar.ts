@@ -18,6 +18,7 @@ import { patchAppShellPreferences } from '@/stores/app-shell';
 import { applyLayoutChromeFromPreferences } from '@/services/layout-service';
 import type { CineGenPreferences } from '@/services/preferences';
 import { LAYOUT_LIMITS } from '@/services/layout-metrics';
+import { openProjectOverview } from '@/workspace/project-overview';
 
 const VIEW_OPTIONS = [
   { value: 'tree', label: 'Tree', icon: 'fa-solid fa-sitemap' },
@@ -83,6 +84,10 @@ export class CinegenProjectSidebar extends CgLightElement {
 
   private _openFeaturesModal(): void {
     void (window as Window & { openProjectFeaturesModal?: () => Promise<void> }).openProjectFeaturesModal?.();
+  }
+
+  private _openProjectOverview(): void {
+    void openProjectOverview();
   }
 
   private _setView(mode: CineGenPreferences['projectHierarchyViewMode']) {
@@ -196,6 +201,16 @@ export class CinegenProjectSidebar extends CgLightElement {
           id="project-tree-header-label"
           class="flex items-center gap-2 min-w-0 flex-1 overflow-hidden"
         ></span>
+        <button
+          slot="actions"
+          type="button"
+          class="sidebar-project-overview-btn toolbar-btn"
+          title="Project Overview"
+          aria-label="Project Overview"
+          @click=${() => this._openProjectOverview()}
+        >
+          <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+        </button>
       </cg-panel-header>
       <div class="panel-content tree-container" style="overflow-y: auto;">
         <div class="sidebar-view-bar">

@@ -99,10 +99,15 @@ export function savePreferences(
   if (window.CineGen) {
     window.CineGen.preferences = merged;
   }
-  patchAppShellState({
+  const shellPatch: { preferences: CineGenPreferences; activeProjectId?: string } = {
     preferences: merged,
-    activeProjectId: merged.activeProjectId,
-  });
+  };
+  // Only sync activeProjectId when callers explicitly set it — otherwise unrelated
+  // preference writes (e.g. tree selection during project switch) revert the shell.
+  if (nextPreferences && Object.prototype.hasOwnProperty.call(nextPreferences, 'activeProjectId')) {
+    shellPatch.activeProjectId = merged.activeProjectId;
+  }
+  patchAppShellState(shellPatch);
   return merged;
 }
 

@@ -113,6 +113,63 @@ cinegen-toolbar .toolbar-btn.active {
   border-left-color: #141414;
 }
 
+/* Layout / panel chrome toggles — lighter bevel + soft corners; not production workflow actions */
+cinegen-toolbar .toolbar-btn--gui-chrome,
+.sg-demo-toolbar .toolbar-btn--gui-chrome {
+  background: var(--chrome-btn-bg);
+  border: 1px solid var(--chrome-border-outer);
+  border-top-color: var(--chrome-border-highlight);
+  border-left-color: var(--chrome-border-highlight);
+  border-radius: 6px;
+  box-shadow: var(--chrome-inset-top), var(--chrome-drop-shadow);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.65);
+  color: var(--text-dim);
+  padding: 4px 10px;
+}
+
+cinegen-toolbar .toolbar-btn--gui-chrome:hover,
+.sg-demo-toolbar .toolbar-btn--gui-chrome:hover {
+  background: var(--chrome-btn-bg-hover);
+  color: var(--text-main);
+}
+
+cinegen-toolbar .toolbar-btn--gui-chrome:active,
+cinegen-toolbar .toolbar-btn--gui-chrome.active,
+.sg-demo-toolbar .toolbar-btn--gui-chrome:active,
+.sg-demo-toolbar .toolbar-btn--gui-chrome.active {
+  background: var(--chrome-btn-bg-active);
+  border-color: var(--chrome-active-border);
+  border-top-color: var(--chrome-active-border-top);
+  border-left-color: var(--chrome-active-border-top);
+  box-shadow: var(--chrome-active-inset);
+  padding: 5px 10px 3px 10px;
+  color: var(--text-highlight);
+}
+
+cinegen-toolbar .toolbar-split--gui-chrome .toolbar-split-main.toolbar-btn--gui-chrome,
+.sg-demo-toolbar .toolbar-split--gui-chrome .toolbar-split-main.toolbar-btn--gui-chrome {
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+
+cinegen-toolbar .toolbar-split--gui-chrome .toolbar-split-trigger.toolbar-btn--gui-chrome,
+.sg-demo-toolbar .toolbar-split--gui-chrome .toolbar-split-trigger.toolbar-btn--gui-chrome {
+  border-radius: 0 6px 6px 0;
+  border-left: 1px solid var(--chrome-active-border-top);
+}
+
+cinegen-toolbar .toolbar-split--open.toolbar-split--gui-chrome .toolbar-split-main.toolbar-btn--gui-chrome,
+cinegen-toolbar .toolbar-split--open.toolbar-split--gui-chrome .toolbar-split-trigger.toolbar-btn--gui-chrome,
+.sg-demo-toolbar .toolbar-split--open.toolbar-split--gui-chrome .toolbar-split-main.toolbar-btn--gui-chrome,
+.sg-demo-toolbar .toolbar-split--open.toolbar-split--gui-chrome .toolbar-split-trigger.toolbar-btn--gui-chrome {
+  background: var(--chrome-btn-bg-active);
+  border-color: var(--chrome-active-border);
+  border-top-color: var(--chrome-active-border-top);
+  border-left-color: var(--chrome-active-border-top);
+  box-shadow: var(--chrome-active-inset);
+  color: var(--text-highlight);
+}
+
 cinegen-toolbar .toolbar-split--open .toolbar-split-trigger,
 cinegen-toolbar .toolbar-split--open .toolbar-split-main {
   background: var(--chrome-toolbar-btn-bg-active);
@@ -1180,11 +1237,18 @@ cg-panel-modal .cg-panel-modal-close {
   color: var(--text-main);
 }
 
+.projects-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .projects-modal-layout {
   display: grid;
   grid-template-columns: 1fr minmax(220px, 280px);
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
   min-height: 280px;
 }
 
@@ -1209,14 +1273,40 @@ cg-panel-modal .cg-panel-modal-close {
   color: var(--text-dim);
 }
 
+.projects-modal-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.projects-modal-layout > .projects-modal-section:first-child {
+  flex: 1;
+}
+
 .projects-modal-project-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
-  max-height: calc(85vh - 280px);
+  flex: 1;
   min-height: 0;
-  flex-shrink: 1;
+}
+
+.projects-modal-project-card-main {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  min-width: 0;
 }
 
 .projects-modal-project-card {
@@ -2074,6 +2164,31 @@ cg-panel-modal .cg-panel-modal-close {
 #project-hierarchy-sidebar .project-tree-header-aspect {
   font-weight: normal;
   color: var(--text-dim);
+}
+
+#project-hierarchy-sidebar .sidebar-project-overview-btn {
+  flex-shrink: 0;
+  width: 20px;
+  min-width: 20px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  opacity: 0.85;
+}
+
+#project-hierarchy-sidebar .sidebar-project-overview-btn:hover,
+#project-hierarchy-sidebar .sidebar-project-overview-btn:focus-visible {
+  color: var(--accent-blue);
+  opacity: 1;
+}
+
+#project-hierarchy-sidebar .sidebar-project-overview-btn i {
+  font-size: 11px;
+  line-height: 1;
 }
 
 #project-hierarchy-sidebar .tree-item {

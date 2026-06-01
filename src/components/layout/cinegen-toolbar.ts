@@ -29,7 +29,7 @@ export class CinegenToolbar extends CgLightElement {
           <button
           type="button"
           id="project-sidebar-toggle-btn"
-          class="toolbar-btn active"
+          class="toolbar-btn toolbar-btn--gui-chrome active"
           title="Show or hide project sidebar"
           aria-pressed="true"
         >
@@ -250,6 +250,7 @@ export class CinegenToolbar extends CgLightElement {
           id="moodboards-split"
           menu-id="moodboards-menu"
           menu-wide
+          variant="gui-chrome"
           main-title="Mood Boards — visual research collections"
         >
           <span slot="main"><i class="fa-solid fa-images"></i> Mood Boards</span>
@@ -361,7 +362,7 @@ export class CinegenToolbar extends CgLightElement {
         <button
           type="button"
           id="previs-timeline-toggle-btn"
-          class="toolbar-btn"
+          class="toolbar-btn toolbar-btn--gui-chrome"
           title=${`Expand or collapse Previs timeline drawer (${getPrevisTimelineShortcutChip()})`}
           aria-pressed="false"
         >
@@ -371,7 +372,7 @@ export class CinegenToolbar extends CgLightElement {
         <button
           type="button"
           id="inspector-toggle-btn"
-          class="toolbar-btn active"
+          class="toolbar-btn toolbar-btn--gui-chrome active"
           title="Show or hide inspector"
           aria-pressed="true"
         >

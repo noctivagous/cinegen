@@ -82,7 +82,14 @@ export class CgToolbarSplit extends CgLightElement {
     } else {
       this.classList.remove('toolbar-split--unified');
     }
+    this.classList.toggle('toolbar-split--gui-chrome', this.variant === 'gui-chrome');
     this.classList.remove('btn-ai');
+  }
+
+  private _buttonModifierClass(): string {
+    if (this.variant === 'btn-ai') return ' btn-ai';
+    if (this.variant === 'gui-chrome') return ' toolbar-btn--gui-chrome';
+    return '';
   }
 
   private _captureLightDomSlots(): void {
@@ -207,7 +214,7 @@ export class CgToolbarSplit extends CgLightElement {
       .filter(Boolean)
       .join(' ');
 
-    const aiClass = this.variant === 'btn-ai' ? ' btn-ai' : '';
+    const aiClass = this._buttonModifierClass();
 
     if (this.unified) {
       return html`

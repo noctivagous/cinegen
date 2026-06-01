@@ -3,6 +3,7 @@ export const PREPROD_MODES = new Set(['script', 'storyboard', 'both']);
 export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] }> = {
   default: {},
   overview: {},
+  'project-overview': {},
   'preprod-workspace': {},
   breakdown: {},
   'scene-detail': {},

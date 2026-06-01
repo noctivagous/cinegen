@@ -77,15 +77,18 @@ export class AppShellStore {
   }
 
   setActiveProjectId(projectId: string, options: { persist?: boolean } = {}): void {
-    if (!projectId || projectId === this.activeProjectId) return;
+    if (!projectId) return;
 
-    setProjectActiveId(projectId);
-    patchAppShellState({ activeProjectId: projectId });
+    const changed = projectId !== this.activeProjectId;
+    if (changed) {
+      setProjectActiveId(projectId);
+      patchAppShellState({ activeProjectId: projectId });
+      this._debouncedSaveToServer();
+    }
 
     if (options.persist !== false) {
       savePreferences({ activeProjectId: projectId });
     }
-    this._debouncedSaveToServer();
   }
 
   setCurrentView(viewName: string, label?: string): void {

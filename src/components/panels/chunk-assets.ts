@@ -5,4 +5,5 @@ import './cinegen-asset-detail-view';
 import './cinegen-overview-master-detail';
 import './cinegen-overview-panel';
 import './cinegen-overview-view';
+import './cinegen-project-overview-view';
 import './cinegen-review-queue-view';

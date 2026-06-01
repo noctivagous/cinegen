@@ -57,10 +57,10 @@ export function renderProjectsModalList(): void {
 }
 
 async function openProjectFromProjectsHub(projectId: string): Promise<void> {
-  if (projectId === appShellStore.activeProjectId) return;
+  const isAlreadyActive = projectId === appShellStore.activeProjectId;
 
   // Try server-resident project first (new P0 tier)
-  const serverResult = await loadServerProject(projectId);
+  const serverResult = isAlreadyActive ? null : await loadServerProject(projectId);
   if (serverResult) {
     prepareActiveProjectTreeUiForSwitch();
     resetProjectTreeUiRestoreFlag();
@@ -75,6 +75,11 @@ async function openProjectFromProjectsHub(projectId: string): Promise<void> {
     window.renderProjectsMenu?.();
     primePersistedProjectTreeUi(projectId);
     queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
+    closeProjectsModal();
+    return;
+  }
+
+  if (isAlreadyActive) {
     closeProjectsModal();
     return;
   }

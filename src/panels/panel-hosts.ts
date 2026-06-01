@@ -36,7 +36,11 @@ export function getCinegenTimeline(): CinegenTimeline | null {
 }
 
 export function getCinegenOverviewPanel(): CinegenOverviewPanel | null {
-  return document.querySelector<CinegenOverviewPanel>('cinegen-overview-panel');
+  const projectView = document.getElementById('view-project-overview');
+  if (projectView && !projectView.classList.contains('hidden')) {
+    return document.getElementById('project-overview-panel-content') as CinegenOverviewPanel | null;
+  }
+  return document.querySelector<CinegenOverviewPanel>('#view-overview cinegen-overview-panel');
 }
 
 export function getCinegenTreatmentPanel(): CinegenTreatmentPanel | null {
