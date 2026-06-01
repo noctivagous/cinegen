@@ -10,9 +10,10 @@ import { chipsExtension } from './cm6-chips';
 import { anchorsExtension } from './cm6-anchors';
 import { boxOutlinesExtension } from './cm6-box-outlines';
 import { storyboardFrameWrapsExtension } from './cm6-storyboard-frame-wraps';
+import { storyboardLinksExtension } from './cm6-storyboard-links';
 import { getProjectFountainText, setProjectFountainText } from '@/data/project-data';
 import { markProjectDirty } from '@/services/project-service';
-import { refreshBreakdownFromScript } from '@/script/script-to-project';
+import { syncBreakdownFromScript } from '@/script/script-to-project';
 
 export { getProjectFountainText };
 
@@ -33,7 +34,7 @@ function scheduleStructureSync(): void {
   if (scriptReSyncTimer !== null) clearTimeout(scriptReSyncTimer);
   scriptReSyncTimer = setTimeout(() => {
     scriptReSyncTimer = null;
-    refreshBreakdownFromScript();
+    syncBreakdownFromScript();
   }, 2000);
 }
 
@@ -70,6 +71,7 @@ export function createScriptEditor(
     anchorsExtension(),
     boxOutlinesExtension(),
     storyboardFrameWrapsExtension(),
+    storyboardLinksExtension(),
     EditorView.domEventHandlers({
       mouseup(_event, view) {
         config.onMouseUp?.(view, _event as MouseEvent);
@@ -132,6 +134,7 @@ export function insertFountainSnippetIntoEditor(
 
 /** Replace the editor document and optionally scroll to a position. */
 export function setEditorDocument(view: EditorView, text: string, scrollToEnd = false): void {
+  if (view.state.doc.toString() === text) return;
   const tr = view.state.update({
     changes: { from: 0, to: view.state.doc.length, insert: text },
     selection: { anchor: 0 },

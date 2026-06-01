@@ -22,6 +22,8 @@ import {
   setStoryboardFrameWrapsEnabled,
   refreshStoryboardFrameWraps,
 } from '@/script/cm6-storyboard-frame-wraps';
+import { refreshStoryboardLinks } from '@/script/cm6-storyboard-links';
+import { reflowShotRangesForStoryboardFrames } from '@/script/script-box-ranges';
 import {
   renderPrevisMargin,
   handlePrevisMarginClick,
@@ -152,7 +154,9 @@ export class CinegenScriptEditor extends CgLightElement {
         const size = detail.value;
         this.style.setProperty('--script-editor-font-size', `${size}px`);
         appShellStore.patchPreferences({ scriptEditorFontSizePx: size });
+        reflowShotRangesForStoryboardFrames(this._editorView);
         refreshStoryboardFrameWraps(this._editorView);
+        refreshBoxOutlines(this._editorView);
       }
     });
 
@@ -197,8 +201,10 @@ export class CinegenScriptEditor extends CgLightElement {
     window.addEventListener('storyboard-frames-changed', () => {
       refreshPrevisMargin();
       if (this._editorView) {
+        reflowShotRangesForStoryboardFrames(this._editorView);
         refreshBoxOutlines(this._editorView);
         refreshStoryboardFrameWraps(this._editorView);
+        refreshStoryboardLinks(this._editorView);
       }
     });
     window.addEventListener('previs-timing-changed', () => {
@@ -206,6 +212,9 @@ export class CinegenScriptEditor extends CgLightElement {
     });
     window.addEventListener('script-box-ranges-changed', () => {
       refreshPrevisMargin();
+      if (this._editorView) {
+        refreshBoxOutlines(this._editorView);
+      }
     });
   }
 

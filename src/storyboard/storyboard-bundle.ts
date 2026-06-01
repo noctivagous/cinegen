@@ -26,6 +26,8 @@ import {
   getReferenceImageUrls,
   STORYBOARD_STYLE_PROMPT,
 } from '@/storyboard/storyboard-prompt-builder';
+import { EditorView } from '@codemirror/view';
+import { resolveFrameScriptRange, applyScriptLinkRangeToFrame } from '@/script/storyboard-link-ranges';
 import { getCinegenStoryboard, getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { getCurrentScriptText, getCurrentScriptSelection } from '@/script/fountain-bundle';
 import { alertCG } from '@/utils/alert-cg';
@@ -134,6 +136,7 @@ interface StoryboardFrame {
   durationSeconds?: number;
   label: string;
   scriptLink?: string;
+  scriptRange?: { start: number; end: number };
   notes?: string;
   imageUrl?: string;
   generatingStatus?: string;
@@ -597,23 +600,23 @@ export function renderStoryboard() {
 export function highlightScriptForFrame(frame: StoryboardFrame): void {
   const host = getCinegenScriptEditor();
   const view = host?.editorView;
-  if (!view || !frame.scriptLink) return;
-  const text = view.state.doc.toString();
-  const searchStr = frame.scriptLink.trim();
-  const idx = text.toLowerCase().indexOf(searchStr.toLowerCase());
-  if (idx === -1) return;
-  view.dispatch({
-    selection: { anchor: idx, head: idx + searchStr.length },
-    scrollIntoView: true,
-  });
-  view.focus();
-  window.setPrevisSelectionState?.({
-    sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
-    shotId: frame.shotId ?? null,
-    frameId: frame.id,
-    scriptRange: { start: idx, end: idx + searchStr.length },
-    timelineItemId: frame.id ? `frame-${frame.id}` : null,
-  });
+  if (!view) return;
+  const span = resolveFrameScriptRange(view, frame);
+  if (span) {
+    view.dispatch({
+      selection: { anchor: span.from, head: span.from },
+      effects: EditorView.scrollIntoView(span.from, { y: 'center' }),
+    });
+    window.setPrevisSelectionState?.({
+      sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
+      shotId: frame.shotId ?? null,
+      frameId: frame.id,
+      scriptRange: { start: span.from, end: span.to },
+      timelineItemId: frame.id ? `frame-${frame.id}` : null,
+    });
+    return;
+  }
+  if (!frame.scriptLink) return;
 }
 
 export function getSelectedStoryboardFrame(): StoryboardFrame | null {
@@ -764,14 +767,21 @@ export function linkSelectedFrameToScript(): void {
     alertCG('Select a storyboard frame first.');
     return;
   }
-  const linkText = getScriptSelectionOrCurrentLine();
+  const sel = getCurrentScriptSelection();
+  const linkText = sel?.text || getScriptSelectionOrCurrentLine();
   if (!linkText) {
     alertCG('Select script text or place the cursor on a line to create a link.');
     return;
   }
-  frame.scriptLink = linkText;
+  if (sel?.text) {
+    applyScriptLinkRangeToFrame(frame, sel.text, sel.from, sel.to);
+  } else {
+    frame.scriptLink = linkText;
+    frame.scriptRange = undefined;
+  }
   updateInspector('storyboard-frame', frame);
   scheduleFountainRender();
+  window.dispatchEvent(new CustomEvent('storyboard-frames-changed'));
   alertCG('Frame link updated from current script selection.');
 }
 
@@ -1000,7 +1010,8 @@ function buildStoryboardDraftFrames(
 }
 
 export async function makeStoryboardFrameForText(): Promise<void> {
-  const text = getScriptSelectionOrCurrentLine();
+  const sel = getCurrentScriptSelection();
+  const text = sel?.text || getScriptSelectionOrCurrentLine();
   if (!text) {
     alertCG('Select text in the script editor first.');
     return;
@@ -1014,8 +1025,22 @@ export async function makeStoryboardFrameForText(): Promise<void> {
     label: `AI Frame: "${trunc}"`,
     scriptLink: text,
   };
+  if (sel) {
+    applyScriptLinkRangeToFrame(frame, text, sel.from, sel.to);
+  }
   storyboardFrames.push(frame);
-  createCoverageShotForFrame(frame);
+  const shot = createCoverageShotForFrame(frame);
+  const view = getCinegenScriptEditor()?.editorView;
+  if (shot && sel && view) {
+    try {
+      shot.scriptRange = {
+        start: view.state.doc.lineAt(sel.from).from,
+        end: view.state.doc.lineAt(sel.to).to,
+      };
+    } catch {
+      /* selection out of range */
+    }
+  }
   window.selectedStoryboardFrameId = frame.id;
   renderStoryboard();
   updateInspector('storyboard-frame', frame);

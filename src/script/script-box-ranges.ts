@@ -8,6 +8,8 @@ import {
 } from '@/workspace/shot-frame-bridge';
 import type { SceneShot } from '@/workspace/scene-types';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
+import { getStoryboardFrameFloatBlockHeightPx } from '@/script/script-frame-layout';
+import { markProjectDirty } from '@/services/project-service';
 
 export type ScriptBoxKind = 'scene' | 'shot' | 'frame';
 
@@ -292,6 +294,130 @@ export function allScriptBoxRanges(view: EditorView): ScriptBoxRange[] {
 /** Storyboard frame anchor ranges for floated script widgets. */
 export function getStoryboardFrameWrapRanges(view: EditorView): ScriptBoxRange[] {
   return computeShotAndFrameRanges(view).filter((range) => range.kind === 'frame');
+}
+
+function lineHeightPx(view: EditorView, lineFrom: number): number {
+  try {
+    return Math.max(1, view.lineBlockAt(lineFrom).height);
+  } catch {
+    return 20;
+  }
+}
+
+function maxFramesPerAnchorLine(
+  view: EditorView,
+  docText: string,
+  frames: StoryboardFrame[],
+  shotFrom: number,
+  shotTo: number
+): number {
+  const counts = new Map<number, number>();
+  for (const frame of frames) {
+    const pos = frameAnchorPos(docText, frame);
+    if (pos < shotFrom || pos > shotTo) continue;
+    try {
+      const lineFrom = view.state.doc.lineAt(pos).from;
+      counts.set(lineFrom, (counts.get(lineFrom) ?? 0) + 1);
+    } catch {
+      /* out of range */
+    }
+  }
+  let max = 0;
+  for (const count of counts.values()) max = Math.max(max, count);
+  return max;
+}
+
+function extendEndForFloatClearance(
+  view: EditorView,
+  shotFrom: number,
+  shotTo: number,
+  requiredPx: number,
+  sceneTo: number
+): number {
+  let endLineNo: number;
+  try {
+    endLineNo = view.state.doc.lineAt(Math.min(shotTo, view.state.doc.length)).number;
+  } catch {
+    return shotTo;
+  }
+
+  const startLineNo = view.state.doc.lineAt(shotFrom).number;
+  let totalPx = 0;
+  for (let lineNo = startLineNo; lineNo <= endLineNo; lineNo++) {
+    totalPx += lineHeightPx(view, view.state.doc.line(lineNo).from);
+  }
+
+  const doc = view.state.doc;
+  while (totalPx < requiredPx && endLineNo < doc.lines) {
+    const sceneEndLine = doc.lineAt(sceneTo).number;
+    if (endLineNo >= sceneEndLine) break;
+    endLineNo++;
+    totalPx += lineHeightPx(view, doc.line(endLineNo).from);
+  }
+
+  return doc.line(endLineNo).to;
+}
+
+/**
+ * Expand shot scriptRange boundaries so floated storyboard frames fit inside the shot box.
+ * Call after frames are added, removed, or re-anchored.
+ */
+export function reflowShotRangesForStoryboardFrames(view: EditorView): boolean {
+  const scenes = currentSceneData as Record<string, { coverage?: SceneShot[] }>;
+  const sceneRanges = computeSceneRanges(view);
+  const docText = view.state.doc.toString();
+  const floatBlockHeight = getStoryboardFrameFloatBlockHeightPx(view);
+  let changed = false;
+
+  for (const scene of sceneRanges) {
+    const coverage = scenes[scene.sceneId]?.coverage ?? [];
+    for (const shot of coverage) {
+      const frames = getFramesForShot(scene.sceneId, shot.id);
+      if (!frames.length) continue;
+
+      let minAnchor = Number.POSITIVE_INFINITY;
+      let maxAnchor = -1;
+      for (const frame of frames) {
+        const pos = frameAnchorPos(docText, frame);
+        if (pos < 0) continue;
+        try {
+          const line = view.state.doc.lineAt(pos);
+          minAnchor = Math.min(minAnchor, line.from);
+          maxAnchor = Math.max(maxAnchor, line.to);
+        } catch {
+          /* out of range */
+        }
+      }
+      if (!Number.isFinite(minAnchor)) continue;
+
+      const stackDepth = maxFramesPerAnchorLine(view, docText, frames, scene.from, scene.to);
+      const requiredPx = Math.max(floatBlockHeight, stackDepth * floatBlockHeight);
+
+      const currentStart =
+        shot.scriptRange?.start != null && shot.scriptRange.start >= scene.from
+          ? shot.scriptRange.start
+          : minAnchor;
+      const currentEnd =
+        shot.scriptRange?.end != null && shot.scriptRange.end <= scene.to
+          ? shot.scriptRange.end
+          : maxAnchor;
+
+      const start = snapToLineBoundary(view, Math.min(currentStart, minAnchor), 'start');
+      let end = snapToLineBoundary(view, Math.max(currentEnd, maxAnchor), 'end');
+      end = extendEndForFloatClearance(view, start, end, requiredPx, scene.to);
+
+      if (!shot.scriptRange || shot.scriptRange.start !== start || shot.scriptRange.end !== end) {
+        shot.scriptRange = { start, end };
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    markProjectDirty(['scenes']);
+    window.dispatchEvent(new CustomEvent('script-box-ranges-changed'));
+  }
+  return changed;
 }
 
 export function applyShotRangeUpdate(

@@ -5566,6 +5566,25 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen
   text-underline-offset: 2px;
 }
 
+/* Per-frame storyboard link spans (Make Frame for Text / link to script) */
+.cm-storyboard-link {
+  text-decoration: underline;
+  text-decoration-color: rgba(201, 160, 220, 0.8);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: pointer;
+}
+
+.cm-storyboard-link--selected {
+  background: rgba(201, 160, 220, 0.16);
+  outline: 1px solid rgba(201, 160, 220, 0.72);
+  outline-offset: 1px;
+  text-decoration-color: rgba(230, 200, 255, 0.95);
+}
+
 /* CM6 scene / shot box outlines in script editor */
 .cm-box-outline-layer {
   position: absolute;
@@ -5658,6 +5677,7 @@ cinegen-previs-timeline-dock.previs-timeline-dock--fullscreen
   cursor: pointer;
   position: relative;
   outline: none;
+  user-select: none;
 }
 
 .cm-storyboard-frame-box:focus,

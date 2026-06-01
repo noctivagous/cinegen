@@ -7,34 +7,21 @@ import {
   WidgetType,
 } from '@codemirror/view';
 import { Compartment, StateEffect, Range } from '@codemirror/state';
-import { getActiveProjectSettings, selectedStoryboardFrameId, storyboardFrames } from '@/data/project-data';
-import { getStoryboardFrameWrapRanges, type ScriptBoxRange } from '@/script/script-box-ranges';
+import { selectedStoryboardFrameId, storyboardFrames } from '@/data/project-data';
+import { getStoryboardFrameWrapRanges, reflowShotRangesForStoryboardFrames, type ScriptBoxRange } from '@/script/script-box-ranges';
+import {
+  getStoryboardFrameBoxSizePx,
+  getStoryboardFrameFloatBlockHeightPx,
+} from '@/script/script-frame-layout';
 import { CG_STORYBOARD_FRAME_SELECTED } from '@/events/shell-events';
 import { openStoryboardFrameEditor } from '@/storyboard/storyboard-bundle';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { selectStoryboardFrameById } from '@/workspace/shot-frame-bridge';
+import { blurStoryboardFrameThumbFocus } from '@/script/storyboard-link-ranges';
 
-/** Fixed width for every storyboard frame thumbnail in the script (height from project aspect). */
-const FRAME_WIDTH_EM = 11;
+export { getStoryboardFrameBoxSizePx } from '@/script/script-frame-layout';
 
 const refreshFrameWrapsEffect = StateEffect.define<null>();
-
-function aspectWidthOverHeight(ratio: string): number {
-  const parts = String(ratio || '16:9')
-    .split(':')
-    .map((p) => parseFloat(p.trim()));
-  if (parts.length === 2 && parts[0] > 0 && parts[1] > 0) return parts[0] / parts[1];
-  return 16 / 9;
-}
-
-export function getStoryboardFrameBoxSizePx(view: EditorView): { width: number; height: number } {
-  const fontSize = parseFloat(getComputedStyle(view.contentDOM).fontSize);
-  const em = Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 16;
-  const width = Math.round(em * FRAME_WIDTH_EM);
-  const aspect = aspectWidthOverHeight(getActiveProjectSettings().aspectRatio);
-  const height = Math.max(24, Math.round(width / aspect));
-  return { width, height };
-}
 
 function frameById(frameId: number | undefined): StoryboardFrame | undefined {
   if (frameId == null) return undefined;
@@ -77,7 +64,6 @@ class StoryboardFrameWrapWidget extends WidgetType {
     box.style.width = `${this._width}px`;
     box.style.height = `${this._height}px`;
     box.title = `${this._range.label} — click to inspect, double-click to edit`;
-    box.setAttribute('role', 'button');
 
     if (frame?.imageUrl) {
       const img = document.createElement('img');
@@ -114,6 +100,7 @@ class StoryboardFrameWrapWidget extends WidgetType {
         event.preventDefault();
         event.stopPropagation();
         activateFrame();
+        blurStoryboardFrameThumbFocus();
       });
 
       box.addEventListener('dblclick', (event) => {
@@ -134,13 +121,16 @@ class StoryboardFrameWrapWidget extends WidgetType {
 
 function buildFrameWrapDecorations(view: EditorView): DecorationSet {
   const { width, height } = getStoryboardFrameBoxSizePx(view);
+  const floatBlockHeight = getStoryboardFrameFloatBlockHeightPx(view);
   const selectedId = selectedStoryboardFrameId != null ? Number(selectedStoryboardFrameId) : null;
   const frames = getStoryboardFrameWrapRanges(view).sort((a, b) => a.from - b.from || a.frameId! - b.frameId!);
   const decos: Range<Decoration>[] = [];
+  const framesPerLine = new Map<number, number>();
 
   for (const range of frames) {
     try {
       const line = view.state.doc.lineAt(range.from);
+      framesPerLine.set(line.from, (framesPerLine.get(line.from) ?? 0) + 1);
       const selected = selectedId != null && range.frameId === selectedId;
       decos.push(
         Decoration.widget({
@@ -152,6 +142,15 @@ function buildFrameWrapDecorations(view: EditorView): DecorationSet {
     } catch {
       /* position out of range */
     }
+  }
+
+  for (const [lineFrom, count] of framesPerLine) {
+    const minHeight = count * floatBlockHeight;
+    decos.push(
+      Decoration.line({
+        attributes: { style: `min-height: ${minHeight}px` },
+      }).range(lineFrom)
+    );
   }
 
   return Decoration.set(decos, true);
@@ -176,6 +175,7 @@ const frameWrapsPlugin = ViewPlugin.fromClass(
         update.transactions.some((tr) => tr.effects.some((e) => e.is(refreshFrameWrapsEffect)))
       ) {
         this.decorations = buildFrameWrapDecorations(update.view);
+        update.view.requestMeasure();
       }
     }
     destroy() {
@@ -205,15 +205,18 @@ export function storyboardFrameWrapsExtension() {
 
 /** Toggle right-floated storyboard frame boxes in the script. */
 export function setStoryboardFrameWrapsEnabled(view: EditorView, enabled: boolean): void {
+  if (enabled) reflowShotRangesForStoryboardFrames(view);
   view.dispatch({
     effects: frameWrapsCompartment.reconfigure(enabled ? createFrameWrapsExtension() : []),
   });
   view.dom.classList.toggle('cm-storyboard-frames-visible', enabled);
+  if (enabled) view.requestMeasure();
 }
 
 /** Force frame-wrap remeasure (storyboard / aspect ratio changes). */
 export function refreshStoryboardFrameWraps(view: EditorView): void {
   view.dispatch({ effects: refreshFrameWrapsEffect.of(null) });
+  view.requestMeasure();
 }
 
 /** @deprecated alias for toolbar wiring */

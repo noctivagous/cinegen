@@ -386,18 +386,27 @@ export function syncFountainToProject(text: string, _projectId?: string): Script
   };
 }
 
-/** Re-sync scenes, breakdown, and starter shots from the current Fountain text (non-destructive where possible). */
+/** Silent re-sync from Fountain text (debounced editor changes, hydration). */
+export function syncBreakdownFromScript(): ScriptSyncResult | null {
+  const text = getProjectFountainText();
+  if (!text.trim()) return null;
+  const result = syncFountainToProject(text, activeProjectId || undefined);
+  markProjectDirty(['screenplay', 'scenes', 'breakdown', 'characters', 'locations']);
+  requestProjectTreeRefresh();
+  const renderBreakdown = (window as unknown as { renderBreakdownTable?: () => void }).renderBreakdownTable;
+  if (typeof renderBreakdown === 'function') renderBreakdown();
+  return result;
+}
+
+/** Manual toolbar action — syncs and confirms with alertCG. */
 export function refreshBreakdownFromScript(): ScriptSyncResult | null {
   const text = getProjectFountainText();
   if (!text.trim()) {
     alertCG('Paste or import screenplay text before refreshing the breakdown.');
     return null;
   }
-  const result = syncFountainToProject(text, activeProjectId || undefined);
-  markProjectDirty(['screenplay', 'scenes', 'breakdown', 'characters', 'locations']);
-  requestProjectTreeRefresh();
-  const renderBreakdown = (window as unknown as { renderBreakdownTable?: () => void }).renderBreakdownTable;
-  if (typeof renderBreakdown === 'function') renderBreakdown();
+  const result = syncBreakdownFromScript();
+  if (!result) return null;
   alertCG(
     `Breakdown refreshed: ${result.sceneCount} scene(s), ${result.shotsCreated} shot(s) in sync. Existing shot lists were kept where scenes already had coverage.`
   );

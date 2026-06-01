@@ -40,7 +40,7 @@ function runtimeLabel(): string {
   return formatPrevisDuration(Math.max(1, estimateProjectRuntimeSeconds()));
 }
 
-let scriptPrevisMarginCollapsed = readScriptPrevisMarginCollapsed();
+let scriptPrevisMarginCollapsed = false;
 const collapsedShotKeys: Set<string> = new Set();
 let activeMarginDrag: MarginDragTarget | null = null;
 
@@ -62,6 +62,7 @@ function writeScriptPrevisMarginCollapsed(value: boolean): void {
 }
 
 export function renderPrevisMargin(host: HTMLElement): void {
+  scriptPrevisMarginCollapsed = readScriptPrevisMarginCollapsed();
   const groups = groupStoryboardFramesByShot();
   const html = groups
     .map((group) => {

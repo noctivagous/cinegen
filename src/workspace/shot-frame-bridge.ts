@@ -623,6 +623,12 @@ export function buildPrevisTimelineTracks(): PrevisTimelineTracks {
   return tracks;
 }
 
+export function clearStoryboardFrameSelection(): void {
+  window.selectedStoryboardFrameId = null;
+  window.renderStoryboard?.();
+  emitStoryboardFrameSelected(null);
+}
+
 export function selectStoryboardFrameById(frameId: number): void {
   const frames = storyboardFrames as StoryboardFrame[];
   const frame = frames.find((f) => f.id === frameId);

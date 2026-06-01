@@ -7,6 +7,8 @@ export type StoryboardFrame = {
   durationSeconds?: number;
   label: string;
   scriptLink?: string;
+  /** Character span in Fountain text linked to this frame. */
+  scriptRange?: { start: number; end: number };
   notes?: string;
   imageUrl?: string;
   generatingStatus?: string;
