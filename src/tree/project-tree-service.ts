@@ -48,6 +48,13 @@ function getProjectData(): TreeProjectRoot {
   };
 }
 
+/** Keep runtime Scenes / Mood Boards folder flags aligned with features config toggles. */
+function syncDynamicFolderExpanded(name: string, expanded: boolean): void {
+  if (name !== 'Scenes' && name !== 'Mood Boards') return;
+  const folder = (getProjectData().children ?? []).find((n) => n.name === name);
+  if (folder) folder.expanded = expanded;
+}
+
 function getBreakdownData(): BreakdownRow[] {
   return (((window as unknown as Record<string, unknown>).breakdownData as BreakdownRow[]) ?? []);
 }
@@ -399,6 +406,7 @@ export function expandTreePathToName(
       if (n.children?.length && !n.expanded) {
         n.expanded = true;
         if (n.featureId) setFeatureExpanded(n.featureId, true);
+        if (n.name) syncDynamicFolderExpanded(n.name, true);
         changed = true;
       }
     });
@@ -421,6 +429,7 @@ export function expandProjectTreeToNode(target: TreeNode): boolean {
     if (path[i].children?.length && !path[i].expanded) {
       path[i].expanded = true;
       if (path[i].featureId) setFeatureExpanded(path[i].featureId!, true);
+      if (path[i].name) syncDynamicFolderExpanded(path[i].name!, true);
       changed = true;
     }
   }
@@ -442,6 +451,7 @@ export function toggleTreeNodeExpanded(node: TreeNode): boolean {
   const next = !node.expanded;
   node.expanded = next;
   if (node.featureId) setFeatureExpanded(node.featureId, next);
+  if (node.name) syncDynamicFolderExpanded(node.name, next);
   requestProjectTreeRefresh();
   if (node.name) setSelectedTreeName(node.name);
   return true;

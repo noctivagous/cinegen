@@ -219,13 +219,11 @@ export function mergeDynamicTreeNodes(displayTree: TreeNode[]): TreeNode[] {
     for (const node of nodes) {
       if (node.name === 'Mood Boards' && runtimeMood?.children?.length) {
         node.children = structuredClone(runtimeMood.children) as TreeNode[];
-        if (typeof runtimeMood.expanded === 'boolean') node.expanded = runtimeMood.expanded;
       }
       if (node.name === 'Scenes' && runtimeScenes) {
         const sceneNodes = (runtimeScenes.children ?? []).filter((c) => c.type === 'scene');
         if (sceneNodes.length) {
           node.children = structuredClone(sceneNodes) as TreeNode[];
-          if (typeof runtimeScenes.expanded === 'boolean') node.expanded = runtimeScenes.expanded;
         }
       }
       if (node.children?.length) mergeInto(node.children);
