@@ -5,10 +5,12 @@ import { CgLightElement } from '@/components/lit-base';
 import type { ModalityKey } from '@/types/globals';
 import {
   buildAudioSubmodalityMenu,
-  buildModelStatusMenu,
   positionAudioSubmodalityMenu,
-  positionModelStatusMenu,
   updateAudioSubmodalityIndicators,
+} from '@/services/status-bar-audio';
+import {
+  buildModelStatusMenu,
+  positionModelStatusMenu,
   updateModelStatusIndicators,
 } from '@/services/status-bar-service';
 

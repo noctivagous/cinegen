@@ -5,8 +5,8 @@ import {
   registerAiProvidersModal,
 } from '@/settings/ai-api-settings-bundle';
 import { installApiKeysSettingsBundleGlobals, initServerKeyStore } from '@/settings/api-keys-settings-bundle';
+import { updateAudioSubmodalityIndicators } from '@/services/status-bar-audio';
 import {
-  updateAudioSubmodalityIndicators,
   updateModelStatusIndicators,
 } from '@/services/status-bar-service';
 import { refreshAllProviderCatalogsOnLoad } from '@/services/provider-catalog-refresh';

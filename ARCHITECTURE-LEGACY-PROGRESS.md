@@ -20,17 +20,17 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 ### Architecture shape
 
 - `VERIFIED` Mixed architecture remains: modern Lit/store/services + legacy `window.*` bridge modules.
-- `UPDATED` Script wizard state/slides extracted to `wizard/` modules (`script-wizard-state.ts`, `script-wizard-bundle.ts`), but HTML rendering templates (~67 `script-wizard-form` blocks) remain in `toolbar/toolbar-modals-service.ts`.
+- `UPDATED` Script wizard state/slides extracted to `wizard/` modules (`script-wizard-state.ts`, `script-wizard-bundle.ts`). Visual/concept/asset/storyboard wizard slide templates extracted to `wizard-slides-*.ts` modules (5900+ lines across 4 modules). Toolkit modal service is now 664 lines with minimal orchestration.
 - `VERIFIED` `source/server/proxy.js` remains monolithic and owns multiple concerns (proxy, key/routing/settings APIs, agents routing).
 - `VERIFIED` Build still reports pre-existing circular chunk warnings involving setup assistant/workspace/modals/panels.
 
 ### Monolithic hotspots (current line counts)
 
-- `OPEN` `source/src/toolbar/toolbar-modals-service.ts` — 2757
+- `UPDATED` `source/src/toolbar/toolbar-modals-service.ts` — 664 (+ 341 in `toolbar-blank-project-wizard.ts`, + 550 in `wizard-slides-visual.ts`, + 568 in `wizard-slides-concept.ts`, + 358 in `wizard-slides-asset.ts`, + 377 in `wizard-slides-storyboard.ts`)
 - `OPEN` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2161
-- `UPDATED` `source/src/storyboard/storyboard-bundle.ts` — 782 (+ 371 in `storyboard-reference-bank.ts`, + 181 in `storyboard-frame-editor.ts`, + 257 in `storyboard-context-menus.ts`)
+- `UPDATED` `source/src/storyboard/storyboard-bundle.ts` — 444 (+ 371 in `storyboard-reference-bank.ts`, + 181 in `storyboard-frame-editor.ts`, + 257 in `storyboard-context-menus.ts`, + 377 in `storyboard-frame-operations.ts`)
 - `UPDATED` `source/src/workspace/workspace-bundle.ts` — 603 (decomposed: extracted overview panel + asset detail, removed `@ts-nocheck`)
-- `OPEN` `source/src/services/status-bar-service.ts` — 1192
+- `UPDATED` `source/src/services/status-bar-service.ts` — 808 (+ 425 in `status-bar-audio.ts`)
 - `OPEN` `source/server/proxy.js` — 1749
 
 ---
@@ -130,7 +130,7 @@ Progress note (2026-05-26):
 - Extracted setup-assistant routing test orchestration into `source/src/setup-assistant/setup-assistant-routing-tests.ts` (single-modality and vendor-wide connection tests, status updates, model-list persistence hooks), wired via `_saRoutingTestDeps()` in bundle.
 - Extracted setup-assistant UI rendering shell into `source/src/setup-assistant/setup-assistant-render.ts` (`renderSetupStep`, rail/body/footer rendering) while preserving existing step templates and event behavior in bundle.
 - Reduced setup-assistant bundle indirection by removing pass-through helper wrappers in `source/src/setup-assistant/setup-assistant-bundle.ts` and calling extracted module APIs directly (state, persistence, and connection-test helpers).
-- Phase B decomposition goals are complete for state/slide extraction; rendering templates remain inline in `toolbar-modals-service.ts` and would be a follow-up extraction pass.
+- Phase B decomposition goals are complete for state/slide extraction; rendering templates remain inline in `toolbar-modals-service.ts` and would be a follow-up extraction pass (completed in Phase D pass 2 — templates extracted to `wizard-slides-*.ts` modules).
 
 Progress note (2026-06-04):
 - Phase D workspace-bundle decomposition: extracted overview panel (~542 lines) into `workspace-overview-panel.ts`, asset detail panel (~247 lines) into `workspace-asset-detail-panel.ts`. Bundle shrank 1340→603 lines. Removed `@ts-nocheck`, fixed ~30 type errors — now compiles with strict TypeScript.
@@ -138,6 +138,10 @@ Progress note (2026-06-04):
 - Phase D storyboard extraction (pass 2): extracted reference bank management (22 functions, types, constants) into `storyboard-reference-bank.ts` (371 lines). Bundle shrank 1512→1167 lines. Added to CAST_ALLOWLIST for `(window as any).referenceGenerationStatus =` writes. Uses same names for imports so window.* global assignments in `installStoryboardBundleGlobals` work unchanged.
 - Phase D storyboard extraction (pass 3): extracted frame editor modal (6 functions, ~165 lines) into `storyboard-frame-editor.ts` (181 lines). Bundle shrank 1167→1006 lines. Module avoids circular deps by referencing `renderStoryboard`/`regenerateThumbnail` via `(window as any)` bridge (installed before user interaction).
 - Phase D storyboard extraction (pass 4): extracted storyboard + script context menus, chip creation, dismiss wiring (11 functions, ~257 lines) into `storyboard-context-menus.ts` (257 lines). Bundle shrank 1006→782 lines. Uses `window.*` bridge calls for `regenerateThumbnail`, `makeStoryboardFrameForText`, `linkSelectedFrameToScript`, etc. to avoid circular deps.
+- Phase D storyboard extraction (pass 5): extracted frame CRUD operations + image upload + script linking + regenerateThumbnail + draft linking (17 functions, ~377 lines) into `storyboard-frame-operations.ts` (377 lines). Bundle shrank 782→444 lines. Uses window bridge for `renderStoryboard`, `getSelectedStoryboardFrame`, `autogenBoardsEnabled`, etc.
+- Phase D status-bar extraction: extracted audio sub-modality concern (16 functions, ~425 lines) into `status-bar-audio.ts`. Main file shrank 1192→808 lines (32% reduction). Circular dependency accepted (audio module imports shared utilities from main file, main file imports audio-specific functions).
+- Phase D toolbar extraction (pass 1): extracted blank-project wizard (14 functions, ~340 lines) into `toolbar-blank-project-wizard.ts`. Main file shrank 2757→2444 lines (11% reduction).
+- Phase D toolbar extraction (pass 2): extracted 4 WIZARD_SLIDES arrays (~1850 lines of Lit `html` slide templates) into per-wizard modules: `wizard-slides-visual.ts` (550), `wizard-slides-concept.ts` (568), `wizard-slides-asset.ts` (358), `wizard-slides-storyboard.ts` (377). Main file shrank 2444→664 lines (73% reduction). Self-referencing arrays resolved via hoisted getter functions.
 - Phase C lint guard expansion: added `CAST_ALLOWLIST` for `(window as any).* =` / `(window as unknown as …).* =` write patterns; added `new Event(...)` to event literal patterns; both scripts now emit baseline audit counts (24 CineGen writes, 114 cast/direct writes, 95 event strings).
 
 ### Phase C — Legacy bridge retirement
@@ -202,7 +206,11 @@ Progress note (2026-05-26):
 - [x] Extract reference bank management from `storyboard-bundle.ts` into `storyboard-reference-bank.ts` (1512→1167 lines, 371-line new module).
 - [x] Extract storyboard frame editor modal into `storyboard-frame-editor.ts` (1167→1006 lines).
 - [x] Extract storyboard + script context menus into `storyboard-context-menus.ts` (1006→782 lines).
-- [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 2757, `setup-assistant-bundle.ts` 2161, `storyboard-bundle.ts` 782, `status-bar-service.ts` 1192).
+- [x] Extract frame CRUD + operations into `storyboard-frame-operations.ts` (782→444 lines).
+- [x] Extract audio sub-modality from `status-bar-service.ts` into `status-bar-audio.ts` (1192→808 lines).
+- [x] Extract blank-project wizard from `toolbar-modals-service.ts` into `toolbar-blank-project-wizard.ts` (2757→2444 lines).
+- [x] Extract 4 wizard slide arrays from `toolbar-modals-service.ts` into per-wizard modules (2444→664 lines).
+- [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 664, `setup-assistant-bundle.ts` 2161, `storyboard-bundle.ts` 444, `status-bar-service.ts` 808).
 - [ ] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
 
 ### Phase E — Next-wave legacy surface cleanup
