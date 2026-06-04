@@ -153,6 +153,60 @@ Completed: `ProductionContext` → UI project state adapter (`agent-context-adap
 
 ---
 
+## P1 — Agent Capability Layer
+
+Rationale: The 12 registered agent routes handle orchestration, but the filmmaker loop requires specific agent capabilities that translate between the app's structured data and what AI models actually consume. Each capability below bridges a constraint documented in `refs/` and `TASKS-2.md` (reference limits, clip duration caps, no 3D scene input, prompt structure requirements).
+
+- [ ] **Prompt Engineer Agent** — Builds the canonical 9-element prompt from all project data.
+  - Gathers data from: frame scriptLink, shot metadata, character descriptions, location descriptions, scene breakdown, scene notes, project treatment, style guide.
+  - Assembles in priority order: subject → action → scene → framing → camera movement → lens/optics → visual style → lighting → motion energy.
+  - Adapts prompt structure per provider (Runway ~1000 chars vs Veo structured vs Kling action-oriented).
+  - Truncates intelligently when exceeding provider character limits (keep subject+action+framing, drop motion energy).
+  - Logs which data sources contributed for debugging transparency.
+  - See `TASKS-2.md §9 — Prompt Assembly Architecture` for the full specification.
+
+- [ ] **Consistency Auditor Agent** — Compares generated output against reference images.
+  - Runs after every generation (storyboard frame, video clip, draft image).
+  - Compares generated image/clip against the reference images used in the prompt (character sheet, location plate, style ref).
+  - Flags: facial drift, costume changes, lighting mismatch, environment inconsistency.
+  - Emits typed error shapes: `{ type: 'facial_drift' | 'costume_change' | 'lighting_mismatch' | 'env_drift', severity: 'low'|'medium'|'high', description }`.
+  - Passes through human review queue when severity is `high`; auto-accepts `low` severity.
+  - Works without configured AI providers by skipping (human review only).
+
+- [ ] **Character Sheet Composer Agent** — Generates multi-view composites from single uploads.
+  - Accepts 1+ uploaded character images → generates a 4-to-6 view character sheet (front, profile, ¾, back, close-up face).
+  - Offers two layout presets: 2-row (top: full-body views, bottom: close-up portraits) and column-based.
+  - Uses the configured image generation provider (FLUX, DALL-E) to expand a single view into multiple angles.
+  - Saves the composite as a single reference image (conserves reference budget).
+  - Optionally splits composite into individual images when the target provider supports multi-ref (e.g., Kling Elements).
+  - See `TASKS-2.md §1 — Reference Budget & Provider Limits` for limits documentation.
+
+- [ ] **Image Fetch Agent** — Searches reference image APIs from project descriptions.
+  - Accepts a search query automatically extracted from project data (character desc, location desc, prop name, mood keyword).
+  - Dispatches to available backends in priority order: Unsplash → Pexels → Pixabay → Wikimedia Commons (fallback when no key).
+  - Returns images as options grid in the UI for user selection.
+  - Caches results server-side per query for 24 hours; deduplicates across departments.
+  - Tracks API quota usage and surfaces remaining requests to the user.
+  - See `TASKS-2.md §1 — Rate Limit & Caching Strategy`.
+
+- [ ] **Chaining / Sequence Assembly Agent** — Manages 5–10s clip chaining with last-frame carryover.
+  - Plans each shot as a sequence of 5–10 second generation segments.
+  - Seeds each new segment with the last frame of the previous segment as the start image.
+  - Carries the same reference image set (character sheet + location plate + style ref) across the full chain.
+  - Manages overlap frames (default: 2-frame overlap between segments for crossfade).
+  - **Extend-and-merge UX**: When the user clicks "Extend" on a generated clip, the agent generates the next segment using the last frame as seed, then ffmpeg concatenates the new segment onto the original. The user sees one continuous clip with an updated duration — never separate segments. This is the universal pattern across Runway, Kling, Luma, and Grok.
+  - Tracks chain integrity: warns when camera, style, or character reference changes mid-chain.
+  - See `TASKS-2.md §8.9 — Editor / Edit Decision List` for timeline integration.
+
+- [ ] **Reference Budget Manager** — Tracks provider reference limits and advises user.
+  - Maintains per-provider reference limits table (Runway: 3, Kling: 3–4, Veo: 3, Luma: 1–several).
+  - Before each generation: validates that the selected reference images fit within the provider's limit.
+  - Warns when too many references are selected: "Kling accepts up to 4 references. You have 6 selected. Use Character Sheet compositing to consolidate."
+  - Recommends character sheet compositing when multiple character references are needed.
+  - See `TASKS-2.md §1 — Reference Budget & Provider Limits`.
+
+---
+
 ## P1 — Wizard Completion and Contracts
 
 Completed: Concept/Mood-First wizard complete via `applyConceptWizardSceneKit()`. Beat Board wizard (8 slides) complete via `applyBeatBoardSceneKit()`. Shared wizard completion hook `runWizardCompletion()` in `source/src/wizard/wizard-completion-hook.ts` used by all five entry wizards.
@@ -385,15 +439,20 @@ Rationale: the server will be the backbone for provider keys, agent calls, `Prod
 
 Drafts panel, promotions, style guide, and `.cinedrafts` document type are complete. Reference Pipeline Phase 1 (drag-drop upload, per-shot refs in coverage tab, reference bank toggle in storyboard panel, per-shot refs wired into prompt builder) is complete. Storyboard generation extraction (Task 3) is complete.
 
-The active front is P1 work: remaining reference pipeline items, wizard completion, and storyboard polish.
+The active front is P1 work: remaining reference pipeline items, wizard completion, storyboard polish, and the **Agent Capability Layer** — the six new agent roles documented in the section above.
 
-Recommended next steps in order:
+### Revised next steps in order:
 
-1. **Per-shot reference slot assignment** — "Use as Shot Reference" action from asset views (TASKS.md lines 123-126): assign any asset as a reference for a specific shot, creating/updating `sceneReferenceOverrides`.
-2. **Stable reference IDs** — confirm ref slot IDs survive save/load cycles (TASKS.md lines 127-129).
-3. **Make Casting/Production Design agents use uploaded references** (TASKS.md lines 118-121).
-4. **Define wizard output contract** (`WizardOutput` interface) before Visual-First wizard (TASKS.md line 161-164).
-5. **Complete Start-from-Script wizard steps 3-8** (TASKS.md lines 165-173).
+1. **Prompt Engineer Agent** — Build the 9-element prompt from all project data sources (TASKS.md §P1 Agent Capability Layer). This is the central nervous system: every generation depends on it.
+2. **Character Sheet Composer Agent** — Build multi-view composites from single character uploads to conserve reference budget (TASKS.md §P1 Agent Capability Layer, TASKS-2.md §1 Reference Budget).
+3. **Image Fetch Agent** — Wire Unsplash/Pexels/Wikimedia API search from project descriptions (TASKS.md §P1 Agent Capability Layer, TASKS-2.md §1).
+4. **Per-shot reference slot assignment** — "Use as Shot Reference" action from asset views (TASKS.md lines 123-126).
+5. **Consistency Auditor Agent** — Compare generated output against reference images (TASKS.md §P1 Agent Capability Layer).
+6. **Stable reference IDs** — Confirm ref slot IDs survive save/load cycles (TASKS.md lines 127-129).
+7. **Reference Budget Manager** — Track provider limits and advise on character sheet compositing (TASKS.md §P1 Agent Capability Layer).
+8. **Define wizard output contract** (`WizardOutput` interface) before Visual-First wizard (TASKS.md line 161-164).
+9. **Complete Start-from-Script wizard steps 3-8** (TASKS.md lines 165-173).
+10. **Chaining / Sequence Assembly Agent** — Manage 5–10s clip segments with last-frame carryover (TASKS.md §P1 Agent Capability Layer, TASKS-2.md §8.9).
 
 ---
 
