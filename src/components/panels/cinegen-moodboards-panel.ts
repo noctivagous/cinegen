@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { CgLightElement } from '@/components/lit-base';
 import {
@@ -10,6 +10,10 @@ import {
   removeMoodBoardItem,
   toggleMoodBoardItemActive,
 } from '@/data/project-data';
+import {
+  moodBoardTypeForFile,
+  moodBoardSourceForFile,
+} from '@/moodboards/moodboard-files';
 import {
   queueMoodBoardGeneration,
   getGenerationPromptPlaceholder,
@@ -23,9 +27,48 @@ export class CinegenMoodboardsPanel extends CgLightElement {
   @property({ type: String }) boardId = '';
   @property({ type: String }) typeFilter = 'all';
 
+  @state() private _dragOver = false;
+
   connectedCallback(): void {
     super.connectedCallback();
     this.classList.add('moodboards-panel', 'flex', 'flex-col', 'min-h-0');
+  }
+
+  private _onDragOver(e: DragEvent): void {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    this._dragOver = true;
+  }
+
+  private _onDragLeave(): void {
+    this._dragOver = false;
+  }
+
+  private async _onDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    this._dragOver = false;
+    if (!this.boardId) return;
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const type = moodBoardTypeForFile(file);
+      try {
+        const source = await moodBoardSourceForFile(type, file);
+        addMoodBoardItem(this.boardId, {
+          type,
+          label: file.name || 'Untitled',
+          source,
+          active: true,
+          notes: '',
+          order: this._getItems().length + i,
+          metadata: { uploadedAt: Date.now() },
+        });
+      } catch {
+        // skip unreadable files silently
+      }
+    }
+    this._notifyItemsChanged();
   }
 
   private _getItems(): MoodBoardItem[] {
@@ -123,7 +166,13 @@ export class CinegenMoodboardsPanel extends CgLightElement {
           <i class="fa-solid fa-plus" aria-hidden="true"></i> Add Item
         </button>
       </div>
-      <div class="moodboards-items-grid">
+      <div
+        class="moodboards-items-grid"
+        style=${this._dragOver ? 'outline:2px dashed var(--accent,#4fc3f7);outline-offset:-2px;' : ''}
+        @dragover=${this._onDragOver}
+        @dragleave=${this._onDragLeave}
+        @drop=${this._onDrop}
+      >
         ${repeat(
           items,
           (item) => item.id,

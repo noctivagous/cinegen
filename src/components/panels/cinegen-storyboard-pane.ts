@@ -63,8 +63,8 @@ export class CinegenStoryboardPane extends CgLightElement {
             role="tab"
             aria-selected=${this._tab === 'storyboard' ? 'true' : 'false'}
             @click=${() => {
-              this._tab = 'storyboard';
-            }}
+        this._tab = 'storyboard';
+      }}
           >
             Storyboard Frames
           </button>
@@ -74,8 +74,8 @@ export class CinegenStoryboardPane extends CgLightElement {
             role="tab"
             aria-selected=${this._tab === 'player' ? 'true' : 'false'}
             @click=${() => {
-              this._tab = 'player';
-            }}
+        this._tab = 'player';
+      }}
           >
             Storyboard Video Player
           </button>
@@ -141,7 +141,7 @@ export class CinegenStoryboardPane extends CgLightElement {
         <div class="storyboard-view-bar sidebar-view-bar">
           <div class="sidebar-view-group" role="group" aria-label="Storyboard layout">
             ${STORYBOARD_LAYOUT_OPTIONS.map(
-              (opt) => html`
+        (opt) => html`
                 <button
                   type="button"
                   class="sidebar-view-btn ${this._layout === opt.value ? 'active' : ''}"
@@ -153,7 +153,7 @@ export class CinegenStoryboardPane extends CgLightElement {
                   <span>${opt.label}</span>
                 </button>
               `
-            )}
+      )}
           </div>
           <label class="storyboard-thumb-size-control">
             <span class="storyboard-thumb-size-label">Thumbnail size</span>

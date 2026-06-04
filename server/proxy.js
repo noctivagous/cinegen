@@ -188,6 +188,10 @@ function handleKeyApi(req, res) {
 
         saveStoredKeys(stored);
 
+        if (_agentModule) {
+          try { _agentModule.reload?.(); } catch { /* ignore */ }
+        }
+
         const merged = augmentVendorsWithEnvKeys(stored);
         json(res, 200, maskVendorsForClient(merged));
       } catch (e) {
@@ -463,7 +467,7 @@ function handleConnections(req, res) {
 }
 
 /* ── Atomic directory writes for .cine packages ───────────────────────────── */
-const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|cinescratchpad|json)$/;
+const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|cinescratchpad|cinedrafts|json)$/;
 
 /**
  * Write a batch of documents atomically into a .cine directory.

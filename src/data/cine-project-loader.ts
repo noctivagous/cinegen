@@ -177,6 +177,7 @@ export function parseCineManifest(
   if (file.documents.modelRoutingRules) assertDocExtension(file.documents.modelRoutingRules, '.cinemodelrouting', sourceLabel);
   if (file.documents.agentLog) assertDocExtension(file.documents.agentLog, '.cineagentlog', sourceLabel);
   if (file.documents.scratchpad) assertDocExtension(file.documents.scratchpad, '.cinescratchpad', sourceLabel);
+  if (file.documents.drafts) assertDocExtension(file.documents.drafts, '.cinedrafts', sourceLabel);
   if (file.documents.features) assertDocExtension(file.documents.features, '.cinefeatures', sourceLabel);
   return file;
 }
@@ -533,6 +534,9 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
   const scratchPad = documents.scratchpad
     ? loadJsonDoc(packageBasename, documents.scratchpad)
     : undefined;
+  const drafts = documents.drafts
+    ? loadJsonDoc(packageBasename, documents.drafts)
+    : undefined;
   const projectFeatures = loadFeaturesDoc(packageBasename, documents.features);
 
   if (documents.assetDetails) {
@@ -612,6 +616,7 @@ function loadCinePackage(manifest: CineProjectManifest, packageBasename: string)
     modelRoutingRules,
     agentLog,
     scratchPad,
+    drafts,
     projectFeatures,
     screenplay: loadScreenplayDoc(packageBasename, documents.screenplay),
     treatment: loadTreatmentDoc(packageBasename, documents.treatment),
@@ -682,6 +687,7 @@ export type AppliedCineProject = {
   projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
   projectAnnotations?: import('@/data/project-data').CineAnnotationsDoc;
   scratchPad?: Record<string, unknown>;
+  drafts?: Record<string, unknown>;
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {
@@ -778,6 +784,7 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
       ? (doc.annotations as unknown as import('@/data/project-data').CineAnnotationsDoc)
       : { format: 'cine-annotations', version: 1, marks: [] }),
     scratchPad: doc.scratchPad ?? { format: 'cine-scratchpad', version: 1, entries: [] },
+    drafts: doc.drafts ?? { format: 'cine-drafts', version: 1, entries: [] },
     projectFeatures: doc.projectFeatures,
   };
 }

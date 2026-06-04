@@ -17,6 +17,7 @@ import { getFramesForShot, getShotForFrame } from '@/workspace/shot-frame-bridge
 import { assetLibrary, currentSceneData, sceneReferenceOverrides, notifyStoryboardReferencesChanged } from '@/data/project-data';
 import { markProjectDirty } from '@/services/project-service';
 import { syncAssetLibraryToReferenceBank } from '@/storyboard/storyboard-reference-sync';
+import { isAcceptedReferenceFile, readFileAsDataUrl, promptReferenceSlot } from '@/assets/asset-upload-service';
 
 @customElement('cinegen-inspector')
 export class CinegenInspector extends CgLightElement {
@@ -25,6 +26,8 @@ export class CinegenInspector extends CgLightElement {
 
   @state() private _type: InspectorType = '';
   @state() private _data: unknown = null;
+  @state() private _charDropActive = false;
+  @state() private _locDropActive = false;
 
   private _shellUnsub: (() => void) | null = null;
 
@@ -71,14 +74,14 @@ export class CinegenInspector extends CgLightElement {
   private _renderChip(data: Record<string, unknown>) {
     return html`
       ${this._unsafeChips([{ type: String(data.type), label: String(data.label) }], {
-        title: 'Selected chip',
-      })}
+      title: 'Selected chip',
+    })}
       ${when(
-        data.mentionCount != null,
-        () => html`<p class="text-[10px] text-[var(--text-dim)] mt-2">
+      data.mentionCount != null,
+      () => html`<p class="text-[10px] text-[var(--text-dim)] mt-2">
             ${data.mentionCount} mention${data.mentionCount === 1 ? '' : 's'} in project
           </p>`
-      )}
+    )}
       <p class="text-[10px] text-[var(--text-dim)] mt-1">
         Single-click for destinations, or double-click for the default view.
       </p>
@@ -105,14 +108,14 @@ export class CinegenInspector extends CgLightElement {
         Regenerate Entire Scene
       </button>
       ${this._unsafeChips(
-        this._extractChips([
-          data.title,
-          ...coverage.map((s) => s.label),
-          ...broll.map((b) => b.label),
-          data.notes,
-        ]),
-        { title: 'Chips in scene' }
-      )}
+      this._extractChips([
+        data.title,
+        ...coverage.map((s) => s.label),
+        ...broll.map((b) => b.label),
+        data.notes,
+      ]),
+      { title: 'Chips in scene' }
+    )}
     `;
   }
 
@@ -133,7 +136,7 @@ export class CinegenInspector extends CgLightElement {
             <div class="text-[10px] text-[var(--text-dim)] mb-1">Storyboard frames</div>
             <ul class="space-y-1">
               ${frames.map(
-                (frame, idx) => html`
+          (frame, idx) => html`
                   <li>
                     <button
                       type="button"
@@ -144,7 +147,7 @@ export class CinegenInspector extends CgLightElement {
                     </button>
                   </li>
                 `
-              )}
+        )}
             </ul>
           </div>`
         : nothing}
@@ -184,8 +187,8 @@ export class CinegenInspector extends CgLightElement {
         </button>
       </div>
       ${this._unsafeChips(this._extractChips([data.label, data.type, data.scriptLink]), {
-        title: 'Chips in shot',
-      })}
+          title: 'Chips in shot',
+        })}
     `;
   }
 
@@ -231,22 +234,22 @@ export class CinegenInspector extends CgLightElement {
     return html`
       <div class="text-[10px] text-[var(--text-dim)] mb-2">Active shot configuration</div>
       ${when(
-        !filled.length,
-        () => html`<div class="italic text-[var(--text-dim)]">
+      !filled.length,
+      () => html`<div class="italic text-[var(--text-dim)]">
             No selections yet.<br />Click options in the workspace panels.
           </div>`,
-        () =>
-          repeat(
-            filled,
-            ([k]) => k,
-            ([k, abbr]) => {
-              const sec = clData[k as string];
-              const item = sec?.items?.find((i: { abbr: string }) => i.abbr === abbr);
-              const title = sec?.title
-                ?.replace(' Techniques', '')
-                .replace(' Composition', '')
-                .replace(' Types & Framing', '');
-              return html`
+      () =>
+        repeat(
+          filled,
+          ([k]) => k,
+          ([k, abbr]) => {
+            const sec = clData[k as string];
+            const item = sec?.items?.find((i: { abbr: string }) => i.abbr === abbr);
+            const title = sec?.title
+              ?.replace(' Techniques', '')
+              .replace(' Composition', '')
+              .replace(' Types & Framing', '');
+            return html`
                 <div class="property-row">
                   <span class="text-[10px]"
                     ><i class="fa-solid ${sec?.icon || ''}"></i> ${title}</span
@@ -256,15 +259,15 @@ export class CinegenInspector extends CgLightElement {
                   >
                 </div>
               `;
-            }
-          )
-      )}
+          }
+        )
+    )}
       ${when(
-        unsetCount > 0,
-        () => html`<div class="text-[10px] text-[var(--text-dim)] mt-2">
+      unsetCount > 0,
+      () => html`<div class="text-[10px] text-[var(--text-dim)] mt-2">
             ${unsetCount} section${unsetCount > 1 ? 's' : ''} not set
           </div>`
-      )}
+    )}
       <button type="button" class="btn-ai w-full text-xs mt-4" @click=${() => window.buildCameraPrompt?.()}>
         Build Shot Prompt
       </button>
@@ -275,19 +278,26 @@ export class CinegenInspector extends CgLightElement {
     const name = String(data.name || '');
     const charEntry = Array.isArray(assetLibrary.characters)
       ? (assetLibrary.characters as Record<string, unknown>[]).find(
-          (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
-        )
+        (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
+      )
       : null;
     const refs = charEntry?.references as Record<string, unknown> | undefined;
     const hasRefs = refs && typeof refs === 'object';
 
     return html`
-      <div class="text-center text-lg">${name}</div>
-      <p class="text-xs mt-2">Available in 12 scenes</p>
-      ${this._unsafeChips(this._extractChips([data.name, data.desc]), {
+      <div
+        style=${this._charDropActive ? 'outline:2px dashed var(--accent,#4fc3f7);outline-offset:2px;border-radius:4px;' : ''}
+        @dragover=${this._onCharDragOver}
+        @dragleave=${this._onCharDragLeave}
+        @drop=${(e: DragEvent) => void this._onCharDrop(e)}
+      >
+        <div class="text-center text-lg">${name}</div>
+        <p class="text-xs mt-2">Available in 12 scenes</p>
+        ${this._unsafeChips(this._extractChips([data.name, data.desc]), {
         title: 'Chips in asset',
       })}
-      ${hasRefs ? this._renderCharacterRefSlots(name, refs!) : ''}
+        ${hasRefs ? this._renderCharacterRefSlots(name, refs!) : ''}
+      </div>
     `;
   }
 
@@ -304,23 +314,23 @@ export class CinegenInspector extends CgLightElement {
       <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
       <div class="grid gap-2" style="grid-template-columns: repeat(3, 1fr);">
         ${fields.map(
-          (f) => html`
+      (f) => html`
             <div>
               <cg-reference-upload
                 label=${f.label}
                 field=${f.key}
                 currentUrl=${(f.key === 'costume'
-                  ? (Array.isArray(refs[f.key]) ? (refs[f.key] as string[])[0] : '')
-                  : String(refs[f.key] || '')
-                )}
+          ? (Array.isArray(refs[f.key]) ? (refs[f.key] as string[])[0] : '')
+          : String(refs[f.key] || '')
+        )}
                 @cg-file-loaded=${(e: CustomEvent) =>
-                  this._onCharRefUploaded(name, e.detail.field, e.detail.dataUrl)}
+          this._onCharRefUploaded(name, e.detail.field, e.detail.dataUrl)}
                 @cg-file-removed=${(e: CustomEvent) =>
-                  this._onCharRefRemoved(name, e.detail.field)}
+          this._onCharRefRemoved(name, e.detail.field)}
               ></cg-reference-upload>
             </div>
           `
-        )}
+    )}
       </div>
     `;
   }
@@ -360,34 +370,41 @@ export class CinegenInspector extends CgLightElement {
     const name = String(data.name || '');
     const locEntry = Array.isArray(assetLibrary.locations)
       ? (assetLibrary.locations as Record<string, unknown>[]).find(
-          (l) => String(l.name || '').toLowerCase() === name.toLowerCase()
-        )
+        (l) => String(l.name || '').toLowerCase() === name.toLowerCase()
+      )
       : null;
     const refArray = locEntry?.references;
     const refUrls = Array.isArray(refArray) ? (refArray as string[]) : [];
 
     return html`
-      <div class="text-center">
-        <i class="fa-solid ${data.icon} text-6xl"></i>
-      </div>
-      <div class="font-bold mt-2">${name}</div>
-      ${this._unsafeChips(this._extractChips([data.name, data.tags]), {
+      <div
+        style=${this._locDropActive ? 'outline:2px dashed var(--accent,#4fc3f7);outline-offset:2px;border-radius:4px;' : ''}
+        @dragover=${this._onLocDragOver}
+        @dragleave=${this._onLocDragLeave}
+        @drop=${(e: DragEvent) => void this._onLocDrop(e)}
+      >
+        <div class="text-center">
+          <i class="fa-solid ${data.icon} text-6xl"></i>
+        </div>
+        <div class="font-bold mt-2">${name}</div>
+        ${this._unsafeChips(this._extractChips([data.name, data.tags]), {
         title: 'Chips in location',
       })}
-      <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
-      <div class="flex flex-wrap gap-2">
-        ${refUrls.map(
-          (url) => html`
+        <div class="mt-4 mb-2 text-[10px] font-bold" style="color:var(--text-dim,#888);">REFERENCE IMAGES</div>
+        <div class="flex flex-wrap gap-2">
+          ${refUrls.map(
+      (url) => html`
             <div style="position:relative;">
               <img src=${url} alt="Location ref" style="width:72px;height:72px;object-fit:cover;border-radius:4px;" />
             </div>
           `
-        )}
-        <cg-reference-upload
-          label="Add"
-          field="loc-ref"
-          @cg-file-loaded=${(e: CustomEvent) => this._onLocRefUploaded(name, e.detail.dataUrl)}
-        ></cg-reference-upload>
+    )}
+          <cg-reference-upload
+            label="Add"
+            field="loc-ref"
+            @cg-file-loaded=${(e: CustomEvent) => this._onLocRefUploaded(name, e.detail.dataUrl)}
+          ></cg-reference-upload>
+        </div>
       </div>
     `;
   }
@@ -400,6 +417,56 @@ export class CinegenInspector extends CgLightElement {
     (entry.references as string[]).push(dataUrl);
     syncAssetLibraryToReferenceBank();
     markProjectDirty(['assetLibrary', 'storyboard']);
+  }
+
+  // ── Drag-drop handlers for character/location drop zones ──
+
+  private _onCharDragOver(e: DragEvent): void {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    this._charDropActive = true;
+  }
+
+  private _onCharDragLeave(): void {
+    this._charDropActive = false;
+  }
+
+  private async _onCharDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    this._charDropActive = false;
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    const file = files[0];
+    if (!isAcceptedReferenceFile(file)) return;
+    const slotKey = promptReferenceSlot();
+    if (!slotKey) return;
+
+    const dataUrl = await readFileAsDataUrl(file);
+    const name = this._data ? String((this._data as Record<string, unknown>).name || '') : '';
+    this._onCharRefUploaded(name, slotKey, dataUrl);
+  }
+
+  private _onLocDragOver(e: DragEvent): void {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    this._locDropActive = true;
+  }
+
+  private _onLocDragLeave(): void {
+    this._locDropActive = false;
+  }
+
+  private async _onLocDrop(e: DragEvent): Promise<void> {
+    e.preventDefault();
+    this._locDropActive = false;
+    const files = e.dataTransfer?.files;
+    if (!files?.length) return;
+    const file = files[0];
+    if (!isAcceptedReferenceFile(file)) return;
+
+    const dataUrl = await readFileAsDataUrl(file);
+    const name = this._data ? String((this._data as Record<string, unknown>).name || '') : '';
+    this._onLocRefUploaded(name, dataUrl);
   }
 
   private _renderStoryboardFrame(data: Record<string, unknown>) {
@@ -457,9 +524,9 @@ export class CinegenInspector extends CgLightElement {
         >${this._escape(data.notes || '')}</textarea>
       </div>
       ${this._unsafeChips(
-        this._extractChips([data.label, data.notes, data.scriptLink]),
-        { title: 'Chips in frame' }
-      )}
+          this._extractChips([data.label, data.notes, data.scriptLink]),
+          { title: 'Chips in frame' }
+        )}
       <div class="flex gap-2 mt-2">
         <button
           type="button"
@@ -517,24 +584,24 @@ export class CinegenInspector extends CgLightElement {
         Story guide — fed to AI for script and scene generation.
       </p>
       ${repeat(
-        rows,
-        ([label]) => label,
-        ([label, value]) =>
-          when(
-            value,
-            () => html`<div class="property-row">
+      rows,
+      ([label]) => label,
+      ([label, value]) =>
+        when(
+          value,
+          () => html`<div class="property-row">
               <span>${this._escape(label)}</span>
               <span class="text-[10px] text-right max-w-[140px]">${this._escape(value)}</span>
             </div>`
-          )
-      )}
+        )
+    )}
       ${when(
-        synopsis,
-        () => html`<p class="text-[10px] mt-2 text-[var(--text-dim)]">Synopsis</p>
+      synopsis,
+      () => html`<p class="text-[10px] mt-2 text-[var(--text-dim)]">Synopsis</p>
             <p class="text-[10px] mt-1">
               ${this._escape(synopsis.slice(0, 200))}${synopsis.length > 200 ? '…' : ''}
             </p>`
-      )}
+    )}
     `;
   }
 
@@ -546,14 +613,14 @@ export class CinegenInspector extends CgLightElement {
     const sceneKey = (window.currentSceneId as string) || 'scene1';
     const onField =
       (slotId: string, field: 'label' | 'prompt' | 'notes') =>
-      (e: Event) => {
-        window.updateReferenceSlotField?.(
-          slotId,
-          field,
-          (e.target as HTMLInputElement).value,
-          sceneKey
-        );
-      };
+        (e: Event) => {
+          window.updateReferenceSlotField?.(
+            slotId,
+            field,
+            (e.target as HTMLInputElement).value,
+            sceneKey
+          );
+        };
 
     return html`
       <div class="text-[10px] text-[var(--text-dim)] mb-2">${label}</div>
@@ -563,13 +630,13 @@ export class CinegenInspector extends CgLightElement {
         @click=${() => window.generateStoryboardReferences?.()}
       ><i class="fa-solid fa-id-card"></i> Generate References for Scene</button>
       ${when(
-        !slots.length,
-        () => html`<div class="italic text-[var(--text-dim)]">No references yet. Generate references first.</div>`,
-        () =>
-          repeat(
-            slots,
-            (slot: any) => String(slot.id),
-            (slot: any) => html`
+      !slots.length,
+      () => html`<div class="italic text-[var(--text-dim)]">No references yet. Generate references first.</div>`,
+      () =>
+        repeat(
+          slots,
+          (slot: any) => String(slot.id),
+          (slot: any) => html`
               <div class="bevel-sunken p-2 mb-2">
                 <div class="property-row">
                   <span>Label</span>
@@ -588,17 +655,17 @@ export class CinegenInspector extends CgLightElement {
                     <i class="fa-solid fa-arrows-rotate"></i> Regenerate
                   </button>
                   ${slot.locked
-                    ? html`<button class="toolbar-btn text-[10px]" @click=${() => window.unlockReferenceSlot?.(String(slot.id), sceneKey)}>
+              ? html`<button class="toolbar-btn text-[10px]" @click=${() => window.unlockReferenceSlot?.(String(slot.id), sceneKey)}>
                         <i class="fa-solid fa-lock-open"></i>
                       </button>`
-                    : html`<button class="toolbar-btn text-[10px]" @click=${() => window.lockReferenceSlot?.(String(slot.id), sceneKey)}>
+              : html`<button class="toolbar-btn text-[10px]" @click=${() => window.lockReferenceSlot?.(String(slot.id), sceneKey)}>
                         <i class="fa-solid fa-lock"></i>
                       </button>`}
                 </div>
               </div>
             `
-          )
-      )}
+        )
+    )}
     `;
   }
 
@@ -609,32 +676,32 @@ export class CinegenInspector extends CgLightElement {
     return html`
       <div class="text-[10px] mb-2">Deleted storyboard frames (${items.length})</div>
       ${when(
-        !items.length,
-        () => html`<div class="italic text-[var(--text-dim)]">Scrap Bin is empty.</div>`,
-        () => html`
+      !items.length,
+      () => html`<div class="italic text-[var(--text-dim)]">Scrap Bin is empty.</div>`,
+      () => html`
           ${repeat(
-            preview,
-            (item, i) => `${item.label}-${i}`,
-            (item) => html`
+        preview,
+        (item, i) => `${item.label}-${i}`,
+        (item) => html`
               <div class="property-row">
                 <span class="max-w-[110px] truncate">${item.label}</span>
                 <span class="text-[10px] text-[var(--text-dim)]">SC ${item.scene}</span>
               </div>
             `
-          )}
+      )}
           ${when(
-            items.length > 8,
-            () => html`<div class="text-[10px] text-[var(--text-dim)] mt-2">
+        items.length > 8,
+        () => html`<div class="text-[10px] text-[var(--text-dim)] mt-2">
                 ...and ${items.length - 8} more
               </div>`
-          )}
+      )}
           <button
             type="button"
             class="toolbar-btn text-[10px] mt-2 w-full"
             @click=${() => window.restoreLastDeletedFrame?.()}
           ><i class="fa-solid fa-trash-arrow-up"></i> Restore Last Deleted</button>
         `
-      )}
+    )}
     `;
   }
 

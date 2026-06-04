@@ -2,6 +2,7 @@
 
 > Research scope: how autonomous / agentic AI systems can operate within a video-making app like CineGen, in light of model limitations (5–10 s reliable clip length, no true 3D scene input, prompt-driven control, consistency challenges). What agent roles make sense, how they should orchestrate, and where human-in-the-loop is mandatory.
 
+
 ---
 
 ## 1. The Core Tension: What Agents Promise vs. What Models Deliver
@@ -288,12 +289,14 @@ behind a suggestion) and offer alternatives, not just a single output.
 │  ├─ Script Agent                               │
 │  ├─ Storyboard Agent                           │
 │  ├─ Character / Casting Agent                  │
-│  ├─ Location / Set Agent                       │
+│  ├─ Location / Set Agent
+|  ├─ Production Design Agent                  │
+│  ├─ Cinematographer - Lighting, Camera, Production of Video. 
 │  ├─ Prompt Engineer Agent                      │
 │  ├─ Generation Agent (Model Router)            │
 │  ├─ Consistency Auditor Agent                  │
 │  ├─ Sequence Assembly Agent                    │
-│  ├─ Audio Agent                                │
+│  ├─ Sound Agent - Production of Audio                              │
 │  └─ Finish / Color Agent                       │
 ├─────────────────────────────────────────────┤
 │  Shared Production Context (Store)             │

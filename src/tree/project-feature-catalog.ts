@@ -133,6 +133,15 @@ const SCRATCHPAD_CATALOG: FeatureCatalogNode = {
   desc: 'Generative scratch surface — free-form ideation and prompt experiments',
 };
 
+const DRAFTS_CATALOG: FeatureCatalogNode = {
+  id: 'drafts',
+  name: 'Drafts',
+  type: 'folder',
+  icon: 'fa-flask',
+  view: 'drafts',
+  desc: 'Generative sketchbook — experiment freely, promote to shots, boards, or references',
+};
+
 let _catalog: FeatureCatalogNode[] | null = null;
 
 export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
@@ -148,7 +157,7 @@ export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
       dynamicChildren: true,
       children: [],
     };
-    _catalog = [...withoutScenes, MOOD_BOARDS_CATALOG, SCRATCHPAD_CATALOG, scenes];
+    _catalog = [...withoutScenes, MOOD_BOARDS_CATALOG, SCRATCHPAD_CATALOG, DRAFTS_CATALOG, scenes];
   }
   return _catalog;
 }
@@ -209,11 +218,11 @@ export function catalogNodeToTreeNode(node: FeatureCatalogNode, expanded = false
   return tree;
 }
 
-/** Default blank-project features: mood boards + scratchpad. */
-export const BLANK_PROJECT_ENABLED_IDS = new Set(['mood-boards', 'scratchpad']);
+/** Default blank-project features: mood boards + scratchpad + drafts. */
+export const BLANK_PROJECT_ENABLED_IDS = new Set(['mood-boards', 'scratchpad', 'drafts']);
 
 export function buildBlankProjectFeaturesOrder(): string[] {
-  return ['mood-boards', 'scratchpad'];
+  return ['mood-boards', 'scratchpad', 'drafts'];
 }
 
 export function buildAllEnabledFeaturesConfig(): { version: 1; enabled: Record<string, boolean>; order: string[] } {

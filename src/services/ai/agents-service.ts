@@ -138,6 +138,36 @@ export interface AgentHealthStatus {
   configured: boolean;
 }
 
+// ── Typed agent errors ─────────────────────────────────────────────────────────
+
+export type AgentErrorCode =
+  | 'NO_LLM_CONFIGURED'
+  | 'MISSING_KEY'
+  | 'API_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'NETWORK_ERROR'
+  | 'UNKNOWN_AGENT';
+
+export interface AgentError {
+  code: AgentErrorCode;
+  message: string;
+  status: number | null;
+  retryable: boolean;
+}
+
+function isAgentError(err: unknown): err is AgentError {
+  return typeof err === 'object' && err !== null && 'code' in err && 'retryable' in err;
+}
+
+function createAgentError(
+  code: AgentErrorCode,
+  message: string,
+  retryable: boolean,
+  status: number | null,
+): AgentError {
+  return { code, message, status, retryable };
+}
+
 // ── Base URL helper ───────────────────────────────────────────────────────────
 
 function baseUrl(): string {
@@ -148,14 +178,55 @@ async function agentFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error ?? `Agent API error (${res.status}): ${path}`);
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl()}${path}`, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options,
+    });
+  } catch (err) {
+    throw createAgentError(
+      'NETWORK_ERROR',
+      err instanceof Error ? err.message : 'Failed to reach agent API',
+      true,
+      null,
+    );
   }
+
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    const text = await res.text().catch(() => '');
+    throw createAgentError(
+      'INVALID_RESPONSE',
+      `Agent returned non-JSON response (${res.status}): ${text.slice(0, 200)}`,
+      false,
+      res.status,
+    );
+  }
+
+  if (!res.ok) {
+    const errorData = data as Record<string, unknown> | undefined;
+    const serverCode = errorData?.code as string | undefined;
+    const serverMessage = (errorData?.error as string) ?? `Agent API error (${res.status})`;
+
+    if (res.status === 503 || res.status === 502 || res.status === 504) {
+      throw createAgentError(
+        (serverCode as AgentErrorCode) || 'API_ERROR',
+        serverMessage,
+        true,
+        res.status,
+      );
+    }
+    throw createAgentError(
+      (serverCode as AgentErrorCode) || 'API_ERROR',
+      serverMessage,
+      res.status >= 500,
+      res.status,
+    );
+  }
+
   return data as T;
 }
 

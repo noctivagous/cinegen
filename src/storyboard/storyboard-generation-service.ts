@@ -18,8 +18,9 @@ import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { getCinegenStoryboard } from '@/panels/panel-hosts';
 import { alertCG } from '@/utils/alert-cg';
 import { CG_STORYBOARD_FRAMES_CHANGED } from '@/events/shell-events';
-import type { CineScratchPadEntry } from '@/data/project-data';
-import { cameraLightingSelections, cameraLightingData, selectCameraItem } from '@/camera/camera-lighting-bundle';
+import { cameraLightingSelections, cameraLightingData } from '@/camera/camera-lighting-bundle';
+// Side-effect import: registers <cinegen-generation-progress> custom element before first use.
+import '@/components/modals/cinegen-generation-progress';
 
 export interface ShotStoryboardEntry {
   sceneId: string;
@@ -176,6 +177,33 @@ export async function generateAllShotStoryboards(): Promise<void> {
 }
 
 const _imageService = new ImageGenerationService();
+
+/**
+ * Generate an image for a given storyboard frame.
+ * Uses frame.userPromptOverride if set, otherwise builds prompt via buildStoryboardPrompt.
+ */
+export async function generateFrameImage(frame: StoryboardFrame): Promise<string> {
+  const route = resolveModalityVendorRoute('image');
+  if (!route) {
+    throw new Error('No image generation provider configured. Open Settings → AI Models & Modalities to set one up.');
+  }
+  const { vendor, model } = route;
+  let prompt: string;
+  let size: string;
+  let refImages: string[];
+  if (frame.userPromptOverride) {
+    prompt = frame.userPromptOverride;
+    size = '1024x1024';
+    refImages = [];
+  } else {
+    const result = buildStoryboardPrompt(frame);
+    prompt = result.prompt;
+    size = result.size;
+    refImages = result.refImageUrls;
+    frame.generatedPrompt = prompt;
+  }
+  return generateFrameImageForPrompt(prompt, size, refImages, vendor, model);
+}
 
 /** Generate an image via the configured provider and return a data URL. */
 async function generateFrameImageForPrompt(
@@ -350,4 +378,30 @@ function getSizeForAspectRatio(aspectRatio?: string): string {
     '16:9': '1024x576', '2.39:1': '1024x432', '1:1': '1024x1024',
   };
   return ASPECT_RATIO_TO_SIZE[aspectRatio || ''] || '1024x576';
+}
+
+/**
+ * Build inline draft frames from the script scene content.
+ * Pure builder — no side effects, no mutations.
+ */
+export function buildStoryboardDraftFrames(
+  scene: string,
+  sceneHeading: string,
+  anchor: string | undefined,
+  sceneBodyLines: string[]
+): StoryboardFrame[] {
+  const cleanedHeading = sceneHeading || `Scene ${scene}`;
+  const snippets = sceneBodyLines.slice(0, 3);
+  const labels = [
+    `AI Draft - Establishing shot (${cleanedHeading})`,
+    `AI Draft - Action beat (${cleanedHeading})`,
+    `AI Draft - Character beat (${cleanedHeading})`,
+  ];
+  return labels.map((label, idx) => ({
+    id: Date.now() + idx,
+    scene,
+    label,
+    scriptLink: snippets[idx] || anchor,
+    notes: `AI draft frame ${idx + 1}. Adjust framing, lens intent, and movement as needed.\nStyle: ${STORYBOARD_STYLE_PROMPT}`,
+  }));
 }

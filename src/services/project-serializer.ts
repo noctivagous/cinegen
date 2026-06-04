@@ -51,6 +51,7 @@ const DOC_TYPE_TO_FILENAME: Record<string, string> = {
   costTracking: 'cost-tracking.cinecosttracking',
   agentLog: 'agent-log.cineagentlog',
   scratchpad: 'scratchpad.cinescratchpad',
+  drafts: 'drafts.cinedrafts',
 };
 
 /**
@@ -90,6 +91,7 @@ export function serializeAppliedProject(
   const agentLogFilename = 'agent-log.cineagentlog';
   const annotationsFilename = 'annotations.cineannotations';
   const scratchpadFilename = 'scratchpad.cinescratchpad';
+  const draftsFilename = 'drafts.cinedrafts';
 
   const manifest: CineProjectManifest = {
     format: 'cinegen-package',
@@ -116,6 +118,7 @@ export function serializeAppliedProject(
       agentLog: agentLogFilename,
       annotations: annotationsFilename,
       scratchpad: scratchpadFilename,
+      drafts: draftsFilename,
     },
     settings: (applied as any).settings || {},
   };
@@ -174,6 +177,7 @@ export function serializeAppliedProject(
     [agentLogFilename]: JSON.stringify(applied.agentLog ?? [], null, 2),
     [annotationsFilename]: JSON.stringify(applied.projectAnnotations ?? { format: 'cine-annotations', version: 1, marks: [] }, null, 2),
     [scratchpadFilename]: JSON.stringify(applied.scratchPad ?? { format: 'cine-scratchpad', version: 1, entries: [] }, null, 2),
+    [draftsFilename]: JSON.stringify(applied.drafts ?? { format: 'cine-drafts', version: 1, entries: [] }, null, 2),
   };
 
   // If incremental, keep only the dirty document types; otherwise serialize all.

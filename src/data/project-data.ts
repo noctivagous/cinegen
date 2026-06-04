@@ -58,6 +58,31 @@ export interface CineAnnotationsDoc {
   marks: AnnotationMark[];
 }
 
+/**
+ * Draft entry — a single image/video generation experiment on the generative scratch surface.
+ * Append-only: `tags` and `promotedTo` are the only writable fields after creation.
+ */
+export interface CineProjectDraft {
+  id: string;
+  prompt: string;
+  provider?: string;
+  modelId?: string;
+  outputUrl?: string;
+  thumbnailUrl?: string;
+  createdAt: number;
+  tags?: string[];
+  promotedTo?: {
+    type: 'frame' | 'moodboard' | 'reference' | 'shot';
+    targetId: string;
+  };
+}
+
+export type CineDraftsDoc = {
+  format: 'cine-drafts';
+  version: 1;
+  entries: CineProjectDraft[];
+};
+
 /** Script annotation sidecar — breakdown highlights persisted per project. */
 /** ScratchPad entry — a single ideation/text scratch on the generative surface. */
 export interface CineScratchPadEntry {
@@ -91,6 +116,33 @@ export function getProjectScratchPad(): CineScratchPadDoc {
 
 export function setProjectScratchPad(doc: CineScratchPadDoc): void {
   projectScratchPad = doc;
+}
+
+/** Drafts — append-only generative experiments. */
+export let projectDrafts: CineDraftsDoc = { format: 'cine-drafts', version: 1, entries: [] };
+
+export function getProjectDrafts(): CineDraftsDoc {
+  return projectDrafts;
+}
+
+export function setProjectDrafts(doc: CineDraftsDoc): void {
+  projectDrafts = doc;
+}
+
+/** Append a new draft entry (immutable after creation except tags/promotedTo). */
+export function appendProjectDraft(draft: CineProjectDraft): void {
+  projectDrafts = { ...projectDrafts, entries: [...projectDrafts.entries, draft] };
+}
+
+/** Update mutable fields on a draft entry (tags and promotedTo only). */
+export function patchProjectDraft(
+  id: string,
+  patch: Pick<Partial<CineProjectDraft>, 'tags' | 'promotedTo'>
+): void {
+  projectDrafts = {
+    ...projectDrafts,
+    entries: projectDrafts.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+  };
 }
 
 export let projectAnnotations: CineAnnotationsDoc = { format: 'cine-annotations', version: 1, marks: [] };
@@ -536,6 +588,10 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
   projectScratchPad = applied.scratchPad && typeof applied.scratchPad === 'object'
     ? (applied.scratchPad as CineScratchPadDoc)
     : { format: 'cine-scratchpad', version: 1, entries: [] };
+
+  projectDrafts = applied.drafts && typeof applied.drafts === 'object'
+    ? (applied.drafts as CineDraftsDoc)
+    : { format: 'cine-drafts', version: 1, entries: [] };
 
   projectAnnotations = applied.projectAnnotations && typeof applied.projectAnnotations === 'object'
     ? (applied.projectAnnotations as CineAnnotationsDoc)

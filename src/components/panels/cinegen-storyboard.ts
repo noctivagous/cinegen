@@ -146,15 +146,15 @@ export class CinegenStoryboard extends CgLightElement {
       >
         <div class="frame-image frame-part-frame" style="position:relative;overflow:hidden">
           ${hasImage
-            ? html`<img src=${frame.imageUrl} alt=${escHtml(frame.label)}
+        ? html`<img src=${frame.imageUrl} alt=${escHtml(frame.label)}
                      style="width:100%;height:100%;object-fit:cover" />`
-            : html`<i class="fa-solid fa-video"></i>`}
+        : html`<i class="fa-solid fa-video"></i>`}
           ${isGenerating ? html`
             <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff;font-size:11px;z-index:2">
               <i class="fa-solid fa-circle-notch fa-spin" style="font-size:20px"></i>
               <span>${isError
-                ? html`<span style="color:#f66">${escHtml(frame.generatingStatus!.replace('error:', ''))}</span>`
-                : escHtml(frame.generatingStatus!)}</span>
+          ? html`<span style="color:#f66">${escHtml(frame.generatingStatus!.replace('error:', ''))}</span>`
+          : escHtml(frame.generatingStatus!)}</span>
             </div>
           ` : ''}
         </div>
@@ -166,8 +166,8 @@ export class CinegenStoryboard extends CgLightElement {
         </div>
         <div class="frame-notes frame-part-notes">
           ${frame.notes
-            ? escHtml(frame.notes)
-            : html`<span class="frame-notes-empty">No notes</span>`}
+        ? escHtml(frame.notes)
+        : html`<span class="frame-notes-empty">No notes</span>`}
         </div>
       </div>
     `;
@@ -194,10 +194,10 @@ export class CinegenStoryboard extends CgLightElement {
           </header>
           <div class="storyboard-shot-group-frames">
             ${repeat(
-              group.frames,
-              (f) => f.id,
-              (frame) => this._frameTemplate(frame, SHOT_INDEX_IN_GROUP.get(frame.id) ?? 1)
-            )}
+        group.frames,
+        (f) => f.id,
+        (frame) => this._frameTemplate(frame, SHOT_INDEX_IN_GROUP.get(frame.id) ?? 1)
+      )}
           </div>
         </section>
       `

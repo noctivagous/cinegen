@@ -225,7 +225,21 @@ export function applyBeatBoardSceneKit(): {
     });
   }
 
-  // 3. Build and apply WizardOutput
+  // 3. Gather mood board items from beat assetNeeds
+  const moodBoardItems: import('@/wizard/wizard-output-types').WizardMoodBoardItem[] = [];
+  for (const beat of beats) {
+    for (const need of beat.assetNeeds || []) {
+      if (!need.trim()) continue;
+      moodBoardItems.push({
+        type: 'text',
+        label: need.trim(),
+        source: need.trim(),
+        notes: `Suggested by beat: ${beat.title}`,
+      });
+    }
+  }
+
+  // 4. Build and apply WizardOutput
   const output: WizardOutput = {
     fountainText,
     sceneOverrides,
@@ -246,12 +260,13 @@ export function applyBeatBoardSceneKit(): {
       visualTone: s.styleMood || undefined,
       colorPalette: s.colorPalette.length ? [...s.colorPalette] : undefined,
     },
+    moodBoardItems: moodBoardItems.length ? moodBoardItems : undefined,
     featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
   };
 
   applyWizardOutput(output);
 
-  // 4. Beat-specific shot enrichment (richer than the generic camera-notes path in applyWizardOutput)
+  // 5. Beat-specific shot enrichment (richer than the generic camera-notes path in applyWizardOutput)
   const { currentSceneData } = require('@/data/project-data') as typeof import('@/data/project-data');
   const scenes = Object.values(currentSceneData as Record<string, any>);
   let shotsCreated = 0;

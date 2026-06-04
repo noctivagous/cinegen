@@ -49,13 +49,15 @@ import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { patchAppShellState } from '@/stores/app-shell';
 import { storageService } from '@/services/persistence';
 import { emitAiInteractionLog } from '@/services/ai/interaction-log';
-import { ImageGenerationService } from '@/services/ai/image-generation-service';
-import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
-import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
+
 import { CG_TREE_NODE_SELECT, emitStoryboardFrameSelected } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
-import { generateAllShotStoryboards } from '@/storyboard/storyboard-generation-service';
+import {
+  generateAllShotStoryboards,
+  generateFrameImage,
+  buildStoryboardDraftFrames,
+} from '@/storyboard/storyboard-generation-service';
 import {
   STORYBOARD_GENERATION_MODE_STORAGE_KEY,
   STORYBOARD_REFERENCE_STORAGE_KEY,
@@ -987,29 +989,6 @@ function extractSceneBodyLines(script: string, sceneNumber: number): string[] {
     .filter((line) => line && !/^[A-Z0-9 .'\-()]+$/.test(line));
 }
 
-function buildStoryboardDraftFrames(
-  scene: string,
-  sceneHeading: string,
-  anchor: string | undefined,
-  sceneBodyLines: string[]
-): StoryboardFrame[] {
-  const cleanedHeading = sceneHeading || `Scene ${scene}`;
-  const snippets = sceneBodyLines.slice(0, 3);
-  const labels = [
-    `AI Draft - Establishing shot (${cleanedHeading})`,
-    `AI Draft - Action beat (${cleanedHeading})`,
-    `AI Draft - Character beat (${cleanedHeading})`,
-  ];
-
-  return labels.map((label, idx) => ({
-    id: Date.now() + idx,
-    scene,
-    label,
-    scriptLink: snippets[idx] || anchor,
-    notes: `AI draft frame ${idx + 1}. Adjust framing, lens intent, and movement as needed.\nStyle: ${STORYBOARD_STYLE_PROMPT}`,
-  }));
-}
-
 export async function makeStoryboardFrameForText(): Promise<void> {
   const sel = getCurrentScriptSelection();
   const text = sel?.text || getScriptSelectionOrCurrentLine();
@@ -1053,118 +1032,6 @@ export async function makeStoryboardFrameForText(): Promise<void> {
   if (autogenBoardsEnabled) {
     await regenerateThumbnail(frame);
   }
-}
-
-/* ── Image generation helpers ─────────────────────────────────────────────── */
-
-const imageGenerationService = new ImageGenerationService();
-
-async function fetchImageAsDataUrl(url: string): Promise<string> {
-  const res = await fetch(url, { mode: 'cors' });
-  if (!res.ok) throw new Error(`Failed to fetch image: HTTP ${res.status}`);
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function generateFrameImage(frame: StoryboardFrame): Promise<string> {
-  const route = resolveModalityVendorRoute('image');
-  if (!route) {
-    throw new Error('No image generation provider configured. Open Settings → AI Models & Modalities to set one up.');
-  }
-
-  const { vendor, model } = route;
-
-  // Build prompt: user override takes precedence, otherwise use enriched builder
-  let prompt: string;
-  let size: string;
-  let refImages: string[];
-
-  if (frame.userPromptOverride) {
-    prompt = frame.userPromptOverride;
-    size = '1024x1024';
-    refImages = [];
-  } else {
-    const result = buildStoryboardPrompt(frame);
-    prompt = result.prompt;
-    size = result.size;
-    refImages = result.refImageUrls;
-    frame.generatedPrompt = prompt;
-  }
-
-  if (vendor.providerId === 'fal-ai') {
-    const body: Record<string, unknown> = { prompt };
-    if (refImages.length) body.image_urls = refImages;
-    const res = await fetch(proxyPath(`/${model}`), {
-      method: 'POST',
-      headers: buildProxyHeaders(vendor),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as { error?: { message?: string } })?.error?.message || `API error (HTTP ${res.status})`);
-    }
-    const data = await res.json();
-    const imgUrl = data.images?.[0]?.url || data.image?.url;
-    if (imgUrl) return fetchImageAsDataUrl(imgUrl);
-    throw new Error('No image URL in fal.ai response');
-  }
-
-  const result = await imageGenerationService.generate({
-    vendor,
-    model,
-    prompt,
-    count: 1,
-    size,
-  });
-
-  if (!result.response.ok) {
-    const errMsg =
-      (result.data as { error?: { message?: string } } | null)?.error?.message ||
-      result.rawText ||
-      `API error (HTTP ${result.response.status})`;
-    throw new Error(errMsg);
-  }
-
-  const data = result.data as { data?: Array<{ b64_json?: string; url?: string }> } | null;
-  const b64 = data?.data?.[0]?.b64_json;
-  if (b64) return `data:image/png;base64,${b64}`;
-  const url = data?.data?.[0]?.url;
-  if (url) return fetchImageAsDataUrl(url);
-  throw new Error('No image data in API response');
-}
-
-function referenceDescriptorText(sceneKey: string): string {
-  const effective = resolveEffectiveReferences(sceneKey);
-  const bits: string[] = [];
-  const charNames = effective.characters.slice(0, 2).map((s) => s.label).join(', ');
-  if (charNames) bits.push(`Consistent character appearance reference: ${charNames}.`);
-  const loc = effective.locations[0]?.label;
-  if (loc) bits.push(`Primary location reference: ${loc}.`);
-  const env = effective.interiors[0]?.label || effective.exteriors[0]?.label;
-  if (env) bits.push(`Environment reference: ${env}.`);
-  return bits.join(' ');
-}
-
-function referenceImageUrls(sceneKey: string): string[] {
-  const effective = resolveEffectiveReferences(sceneKey);
-  const urls: string[] = [];
-  for (const category of REFERENCE_CATEGORIES) {
-    for (const slot of effective[category]) {
-      if (slot.imageUrl) urls.push(slot.imageUrl);
-    }
-  }
-  return urls;
-}
-
-function extractStoryboardStyleFromNotes(notes?: string): string {
-  if (!notes) return '';
-  const match = notes.match(/style\s*:\s*(.+)/i);
-  return match?.[1]?.trim() || '';
 }
 
 export async function regenerateThumbnail(frame: StoryboardFrame): Promise<void> {

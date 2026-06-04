@@ -18,6 +18,7 @@ server/app-state.json
 server/projects/
 server/agents.db
 server/production-context.json
+server/settings.json
 
 # Vite
 .vite/

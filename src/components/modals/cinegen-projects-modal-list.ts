@@ -8,7 +8,7 @@ import { projectRegistry } from '@/data/project-data';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
-import { duplicateBundledProject } from '@/services/project-service';
+import { duplicateBundledProject, exportProject } from '@/services/project-service';
 
 export const CG_PROJECT_OPEN = 'cg-project-open';
 
@@ -145,18 +145,18 @@ export class CinegenProjectsModalList extends CgLightElement {
         </button>
       </div>
       ${repeat(
-        this._projects,
-        (proj) => proj.id,
-        (proj) => {
-          const isActive = proj.id === activeId;
-          const isWritable = !!proj.writable;
-          const statusLabel = isWritable ? 'Local' : 'Sample';
-          return html`
+      this._projects,
+      (proj) => proj.id,
+      (proj) => {
+        const isActive = proj.id === activeId;
+        const isWritable = !!proj.writable;
+        const statusLabel = isWritable ? 'Local' : 'Sample';
+        return html`
             <div
               class=${classMap({
-                'projects-modal-project-card': true,
-                'is-active': isActive,
-              })}
+          'projects-modal-project-card': true,
+          'is-active': isActive,
+        })}
               aria-current=${isActive ? 'true' : 'false'}
             >
               <button
@@ -172,16 +172,16 @@ export class CinegenProjectsModalList extends CgLightElement {
                   >
                   <span
                     class=${classMap({
-                      'project-status-badge': true,
-                      'project-status-badge--local': isWritable,
-                      'project-status-badge--sample': !isWritable,
-                    })}
+          'project-status-badge': true,
+          'project-status-badge--local': isWritable,
+          'project-status-badge--sample': !isWritable,
+        })}
                     title=${isWritable ? 'Writable local project' : 'Read-only bundled sample'}
                   >${statusLabel}</span>
                 </div>
               </button>
               ${!isWritable
-                ? html`
+            ? html`
                     <button
                       type="button"
                       class="projects-modal-project-duplicate-btn"
@@ -191,11 +191,20 @@ export class CinegenProjectsModalList extends CgLightElement {
                       <i class="fa-solid fa-copy" aria-hidden="true"></i> Duplicate
                     </button>
                   `
-                : ''}
+            : html`
+                    <button
+                      type="button"
+                      class="projects-modal-project-download-btn"
+                      title="Download project as .cine.zip"
+                      @click=${(e: Event) => { e.stopPropagation(); void this._downloadProject(proj.id); }}
+                    >
+                      <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    </button>
+                  `}
             </div>
           `;
-        }
-      )}
+      }
+    )}
     `;
   }
 
@@ -207,6 +216,15 @@ export class CinegenProjectsModalList extends CgLightElement {
         detail: { projectId },
       })
     );
+  }
+
+  private async _downloadProject(projectId: string): Promise<void> {
+    try {
+      await exportProject(projectId);
+    } catch (err: unknown) {
+      const { alertCG } = await import('@/utils/alert-cg');
+      alertCG(`Download failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   private async _duplicateProject(projectId: string): Promise<void> {

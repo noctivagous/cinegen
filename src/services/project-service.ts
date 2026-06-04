@@ -32,6 +32,7 @@ import {
   moodBoards,
   projectData,
   projectScratchPad,
+  projectDrafts,
   projectRegistry,
   projectScreenplay,
   projectTreatment,
@@ -511,6 +512,7 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
     },
     projectFeatures: structuredClone(getProjectFeaturesConfig()),
     scratchPad: structuredClone(projectScratchPad),
+    drafts: structuredClone(projectDrafts),
     generationQueue: structuredClone(generationQueue),
     reviewQueue: [],
     agentLog: [],
@@ -703,6 +705,38 @@ export async function exportProject(projectId = activeProjectId): Promise<void> 
 
   // Flush dirty state before export
   await triggerProjectSave();
+
+  // Fetch manifest preview
+  let manifest: Record<string, unknown> | null = null;
+  try {
+    manifest = await fetchExportManifest(projectId);
+  } catch {
+    // proceed without preview
+  }
+
+  if (manifest) {
+    const name = String(manifest.name || entry.name || 'project');
+    const sceneCount = Number(manifest.sceneCount ?? 0);
+    const shotCount = Number(manifest.shotCount ?? 0);
+    const frameCount = Number(manifest.frameCount ?? 0);
+    const charCount = Number(manifest.charCount ?? 0);
+    const locCount = Number(manifest.locCount ?? 0);
+    const extUrls = Array.isArray(manifest.externalUrls) ? manifest.externalUrls as string[] : [];
+    const lines = [
+      `Export "${name}" as .cine.zip`,
+      '',
+      `Scenes: ${sceneCount}`,
+      `Shots: ${shotCount}`,
+      `Storyboard frames: ${frameCount}`,
+      `Characters: ${charCount}`,
+      `Locations: ${locCount}`,
+    ];
+    if (extUrls.length) {
+      lines.push('', `External references: ${extUrls.length} (may expire)`);
+    }
+    const confirmed = confirm(lines.join('\n'));
+    if (!confirmed) return;
+  }
 
   // Fetch the zip
   const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/export`);
