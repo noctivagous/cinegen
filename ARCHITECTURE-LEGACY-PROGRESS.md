@@ -27,11 +27,11 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 ### Monolithic hotspots (current line counts)
 
 - `UPDATED` `source/src/toolbar/toolbar-modals-service.ts` — 664 (+ 341 in `toolbar-blank-project-wizard.ts`, + 550 in `wizard-slides-visual.ts`, + 568 in `wizard-slides-concept.ts`, + 358 in `wizard-slides-asset.ts`, + 377 in `wizard-slides-storyboard.ts`)
-- `OPEN` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2161
+- `UPDATED` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2161→843 (templates → `templates.ts`, events → `events.ts`)
 - `UPDATED` `source/src/storyboard/storyboard-bundle.ts` — 444 (+ 371 in `storyboard-reference-bank.ts`, + 181 in `storyboard-frame-editor.ts`, + 257 in `storyboard-context-menus.ts`, + 377 in `storyboard-frame-operations.ts`)
 - `UPDATED` `source/src/workspace/workspace-bundle.ts` — 603 (decomposed: extracted overview panel + asset detail, removed `@ts-nocheck`)
 - `UPDATED` `source/src/services/status-bar-service.ts` — 808 (+ 425 in `status-bar-audio.ts`)
-- `OPEN` `source/server/proxy.js` — 1749
+- `UPDATED` `source/server/proxy.js` — 1749→60 (decomposed into 9 lib modules)
 
 ---
 
@@ -200,7 +200,7 @@ Progress note (2026-05-26):
 
 ### Phase D — Structural cleanup
 
-- [ ] Break `source/server/proxy.js` into route-focused modules.
+- [x] Break `source/server/proxy.js` into route-focused modules.
 - [x] Extract overview panel + asset detail panel from `workspace-bundle.ts` (1340→603 lines, `@ts-nocheck` removed).
 - [x] Extract storyboard generation service from `storyboard-bundle.ts` (1633→1512 lines, 6 dead functions removed).
 - [x] Extract reference bank management from `storyboard-bundle.ts` into `storyboard-reference-bank.ts` (1512→1167 lines, 371-line new module).
@@ -210,7 +210,8 @@ Progress note (2026-05-26):
 - [x] Extract audio sub-modality from `status-bar-service.ts` into `status-bar-audio.ts` (1192→808 lines).
 - [x] Extract blank-project wizard from `toolbar-modals-service.ts` into `toolbar-blank-project-wizard.ts` (2757→2444 lines).
 - [x] Extract 4 wizard slide arrays from `toolbar-modals-service.ts` into per-wizard modules (2444→664 lines).
-- [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 664, `setup-assistant-bundle.ts` 2161, `storyboard-bundle.ts` 444, `status-bar-service.ts` 808).
+- [x] Extract template functions from `setup-assistant-bundle.ts` into `setup-assistant-templates.ts` (2161→843 lines, 61% reduction).
+- [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 664, `setup-assistant-bundle.ts` 843, `storyboard-bundle.ts` 444, `status-bar-service.ts` 808).
 - [x] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
 
 Progress note (2026-06-04):
@@ -220,6 +221,28 @@ Progress note (2026-06-04):
   - `init-setup-assistant.ts`: removed redundant `import '@/components/modals/cinegen-setup-assistant-modal'` (already dynamically loaded by `modal-loader.ts`; broke one edge of Cycle 1).
   - `vite.config.ts`: excluded `modal-loader.ts` from `modals-lazy` chunk into entry chunk (hub module that all 3 cycles pivoted through; broke all remaining indirect cycles).
 - Verified with `npm run build`: zero circular chunk warnings, zero re-export warnings.
+
+Progress note (2026-06-04):
+- Decomposed monolithic `server/proxy.js` (1749 lines) into 9 route-focused lib modules:
+  - `server/lib/proxy-utils.js` — paths, CORS, json(), readBody(), appState persistence, CINE_DOC_RE
+  - `server/lib/key-store.js` — key CRUD, env merge, `handleKeyApi` (imports shared provider-registry)
+  - `server/lib/routing-store.js` — routing CRUD, `handleRoutingApi`
+  - `server/lib/settings-store.js` — generic settings store, `handleSettingsStore`
+  - `server/lib/state-ws.js` — app state API + WebSocket state sync (merged to avoid circular dep)
+  - `server/lib/proxy-forward.js` — AI provider proxy forwarding
+  - `server/lib/project-store.js` — atomic writes, project CRUD, import/export
+  - `server/lib/agent-handler.js` — 14 agent routes + production context helpers
+  - `server/lib/health.js` — health + connections endpoints
+- `server/proxy.js` reduced from 1749→60 lines as a thin router with 4 exports
+- Zero code duplication — each function moved verbatim, no behavioral changes
+- Verified all API endpoints respond correctly via dev server: `/api/health`, `/api/connections`, `/api/settings/keys`, `/api/settings/routing`, `/api/state/app-shell`, `/api/projects`
+
+Progress note (2026-06-04):
+- Decomposed `setup-assistant-bundle.ts` (2161→843 lines, 61% reduction) by extracting two new modules:
+  - `setup-assistant-templates.ts` (652 lines) — all step template functions (`tmplProviders`, `tmplCoverage`, `tmplModels`, `tmplDone`, `tmplWelcome`, plus ~20 helper functions). Accepts bundle-local state via a `TemplateDeps` context object.
+  - `setup-assistant-events.ts` (544 lines) — all event wiring, provider CRUD, model selectors, save helpers, and connection test handlers. Accepts bundle state/actions via an `EventDeps` context object.
+- Bundle now focuses on orchestration: state variables, open/close, navigation, render wiring, routing-test deps adapter, and the init/exports layer.
+- Template and event modules use context-object pattern to avoid tight coupling to bundle-local state.
 
 ### Phase E — Next-wave legacy surface cleanup
 
