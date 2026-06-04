@@ -2760,6 +2760,19 @@ cg-panel-modal .cg-panel-modal-close {
   background: rgba(0, 0, 0, 0.12);
 }
 
+.tree-group-outline--togglable {
+  padding-top: 0;
+  position: relative;
+}
+
+.tree-group-header {
+  padding-left: 4px !important;
+  border-bottom: 1px solid var(--border-light, #333);
+  margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  cursor: default;
+}
+
 .tree-item {
   padding: 3px 4px 3px 20px;
   cursor: pointer;

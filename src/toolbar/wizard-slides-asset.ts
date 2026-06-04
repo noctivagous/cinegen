@@ -283,7 +283,7 @@ export const ASSET_WIZARD_SLIDES: WizardSlide[] = [
           props: (payload.props || []).map((p: any) => ({
             id: p.id, name: p.name, description: p.description || '',
           })),
-          featureBranches: ['production-office', 'casting', 'production-design', 'mood-boards'],
+          featureBranches: ['production-office', 'casting', 'production-design', 'studio-space/mood-boards'],
         });
         host.requestUpdate();
       };

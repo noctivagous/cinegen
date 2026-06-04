@@ -32,7 +32,7 @@ const CHIP_NAV_CONFIG = {
       { id: 'script', label: 'Script', icon: 'fa-scroll' },
       { id: 'script-info', label: 'Script Info', icon: 'fa-list' },
       { id: 'breakdown', label: 'Breakdown Sheets', icon: 'fa-table-list' },
-      { id: 'global-assets', label: 'Global Assets — Characters', icon: 'fa-cube', assetTab: 0 },
+      { id: 'studio-space/global-assets', label: 'Global Assets — Characters', icon: 'fa-cube', assetTab: 0 },
       { id: 'sound-adr', label: 'Sound — ADR / Loop Group', icon: 'fa-microphone' }
     ]
   },
@@ -43,7 +43,7 @@ const CHIP_NAV_CONFIG = {
       { id: 'global', label: 'Global view — all mentions', icon: 'fa-globe' },
       { id: 'script', label: 'Script', icon: 'fa-scroll' },
       { id: 'breakdown', label: 'Breakdown Sheets', icon: 'fa-table-list' },
-      { id: 'global-assets', label: 'Global Assets — Locations', icon: 'fa-cube', assetTab: 1 }
+      { id: 'studio-space/global-assets', label: 'Global Assets — Locations', icon: 'fa-cube', assetTab: 1 }
     ]
   },
   prop: {
@@ -53,7 +53,7 @@ const CHIP_NAV_CONFIG = {
       { id: 'global', label: 'Global view — all mentions', icon: 'fa-globe' },
       { id: 'script', label: 'Script', icon: 'fa-scroll' },
       { id: 'breakdown', label: 'Breakdown Sheets', icon: 'fa-table-list' },
-      { id: 'global-assets', label: 'Global Assets — Props', icon: 'fa-cube', assetTab: 2 }
+      { id: 'studio-space/global-assets', label: 'Global Assets — Props', icon: 'fa-cube', assetTab: 2 }
     ]
   },
   wardrobe: {
@@ -74,13 +74,13 @@ const CHIP_NAV_CONFIG = {
       { id: 'global', label: 'Global view — all mentions', icon: 'fa-globe' },
       { id: 'script', label: 'Script', icon: 'fa-scroll' },
       { id: 'breakdown', label: 'Breakdown Sheets', icon: 'fa-table-list' },
-      { id: 'global-assets', label: 'Global Assets — Effects', icon: 'fa-cube', assetTab: 4 }
+      { id: 'studio-space/global-assets', label: 'Global Assets — Effects', icon: 'fa-cube', assetTab: 4 }
     ]
   },
   vehicle: {
-    defaultDest: 'global-assets',
+    defaultDest: 'studio-space/global-assets',
     destinations: [
-      { id: 'global-assets', label: 'Global Assets — Vehicles', icon: 'fa-car', assetTab: 3 },
+      { id: 'studio-space/global-assets', label: 'Global Assets — Vehicles', icon: 'fa-car', assetTab: 3 },
       { id: 'global', label: 'Global view — all mentions', icon: 'fa-globe' },
       { id: 'script', label: 'Script', icon: 'fa-scroll' }
     ]
@@ -280,7 +280,7 @@ function collectChipMentions(chipType, label) {
   if (lib) {
     lib.forEach((item) => {
       if (chipLabelMatches(item.name, label, chipType)) {
-        push('Global Assets', item.name, { dest: 'global-assets', assetTab: { character: 0, location: 1, prop: 2, vehicle: 3, effect: 4 }[chipType] ?? 0 });
+        push('Global Assets', item.name, { dest: 'studio-space/global-assets', assetTab: { character: 0, location: 1, prop: 2, vehicle: 3, effect: 4 }[chipType] ?? 0 });
       }
     });
   }
@@ -400,8 +400,8 @@ function navigateChipDestination(destId, chipType, label, mentionMeta) {
     return;
   }
 
-  if (destId === 'global-assets') {
-    const tab = mentionMeta?.assetTab ?? CHIP_NAV_CONFIG[chipType]?.destinations?.find((d) => d.id === 'global-assets')?.assetTab ?? 0;
+  if (destId === 'studio-space/global-assets') {
+    const tab = mentionMeta?.assetTab ?? CHIP_NAV_CONFIG[chipType]?.destinations?.find((d) => d.id === 'studio-space/global-assets')?.assetTab ?? 0;
     activateTreeNodeByName('Library Browser');
     window.switchAssetTab?.(tab);
     return;

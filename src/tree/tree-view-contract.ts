@@ -16,8 +16,10 @@ export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] 
   moodboards: {},
   'moodboard-detail': { requiredFields: ['boardId'] },
   scratchpad: {},
+  drafts: {},
   'asset-detail': { requiredFields: ['detailKey'] },
   'review-queue': {},
+  'beat-board': {},
 };
 
 export const SUPPORTED_TREE_VIEWS = new Set(Object.keys(TREE_VIEW_REQUIREMENTS));
@@ -42,6 +44,7 @@ export const LEGACY_NODE_VIEW_CONTRACT = [
   { nodeType: 'audio', view: 'asset-detail', required: { detailKey: '(detail key)' } },
   { nodeType: 'production', view: 'asset-detail', required: { detailKey: '(detail key)' } },
   { nodeType: 'folder', view: 'overview' },
+  { nodeType: 'beatboard', view: 'beat-board' },
   { nodeType: 'moodboard', view: 'moodboards', required: { boardId: '(board id)' } },
   { nodeType: 'moodboard-item', view: 'moodboards', required: { boardId: '(board id)', itemId: '(item id)' } },
 ];

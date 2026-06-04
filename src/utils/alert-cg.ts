@@ -68,8 +68,8 @@ function _openAlertCG(message: string, title = 'Notice'): void {
 
   if (titleEl) titleEl.textContent = title;
   if (messageEl) {
-    messageEl.innerHTML = '';
-    messageEl.appendChild(document.createTextNode(message));
+    messageEl.textContent = message;
+    messageEl.style.userSelect = 'text';
   }
   if (iconEl) {
     iconEl.className = 'fa-solid fa-circle-info';

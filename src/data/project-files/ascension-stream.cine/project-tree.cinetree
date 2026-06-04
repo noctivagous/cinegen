@@ -619,49 +619,87 @@
       "type": "tree-divider"
     },
     {
-      "name": "Global Assets",
-      "type": "folder",
-      "icon": "fa-cube",
-      "view": "overview",
+      "name": "Studio Space",
+      "type": "studio-group",
+      "icon": "fa-wand-magic-sparkles",
       "expanded": true,
       "children": [
         {
-          "name": "Footage",
-          "type": "bin",
-          "icon": "fa-photo-film",
-          "view": "asset-detail",
-          "detailKey": "footage-bin",
-          "desc": "Generated and imported footage by scene"
-        },
-        {
-          "name": "Audio",
-          "type": "bin",
-          "icon": "fa-music",
-          "view": "asset-detail",
-          "detailKey": "audio-bin",
-          "desc": "Production sound, SFX, ADR, and score"
-        },
-        {
-          "name": "Graphics",
-          "type": "bin",
-          "icon": "fa-image",
-          "view": "asset-detail",
-          "detailKey": "graphics-bin",
-          "desc": "Title cards, lower thirds, and graphics"
-        },
-        {
-          "name": "Library Browser",
-          "type": "assets",
+          "name": "Global Assets",
+          "type": "folder",
           "icon": "fa-cube",
-          "view": "assets",
-          "desc": "Characters, locations, props, wardrobe, sets, and effects"
+          "view": "overview",
+          "expanded": true,
+          "children": [
+            {
+              "name": "Footage",
+              "type": "bin",
+              "icon": "fa-photo-film",
+              "view": "asset-detail",
+              "detailKey": "footage-bin",
+              "desc": "Generated and imported footage by scene"
+            },
+            {
+              "name": "Audio",
+              "type": "bin",
+              "icon": "fa-music",
+              "view": "asset-detail",
+              "detailKey": "audio-bin",
+              "desc": "Production sound, SFX, ADR, and score"
+            },
+            {
+              "name": "Graphics",
+              "type": "bin",
+              "icon": "fa-image",
+              "view": "asset-detail",
+              "detailKey": "graphics-bin",
+              "desc": "Title cards, lower thirds, and graphics"
+            },
+            {
+              "name": "Library Browser",
+              "type": "assets",
+              "icon": "fa-cube",
+              "view": "assets",
+              "desc": "Characters, locations, props, wardrobe, sets, and effects"
+            },
+            {
+              "name": "Scrap Bin",
+              "type": "scrap",
+              "icon": "fa-trash-can",
+              "view": "default",
+              "desc": "Deleted storyboard frames and discarded takes"
+            }
+          ]
         },
         {
-          "name": "Scrap Bin",
-          "type": "scrap",
-          "icon": "fa-trash-can",
-          "view": "default",
-          "desc": "Deleted storyboard frames and discarded takes"
+          "name": "Mood Boards",
+          "type": "folder",
+          "icon": "fa-images",
+          "view": "moodboards",
+          "desc": "Visual DNA, reference stills, and mood research",
+          "dynamicChildren": true,
+          "children": []
+        },
+        {
+          "name": "ScratchPad",
+          "type": "folder",
+          "icon": "fa-pen-fancy",
+          "view": "scratchpad",
+          "desc": "Generative scratch surface — free-form ideation and prompt experiments"
+        },
+        {
+          "name": "Drafts",
+          "type": "folder",
+          "icon": "fa-flask",
+          "view": "drafts",
+          "desc": "Generative sketchbook — experiment freely, promote to shots, boards, or references"
+        },
+        {
+          "name": "Beatboard",
+          "type": "folder",
+          "icon": "fa-clapperboard",
+          "view": "beat-board",
+          "desc": "Beat-based storyboarding and scene planning"
         }
       ]
     }

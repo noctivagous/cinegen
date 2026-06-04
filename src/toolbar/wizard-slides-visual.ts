@@ -471,7 +471,7 @@ export const VISUAL_WIZARD_SLIDES: WizardSlide[] = [
             lightingMood: payload.style?.lightingMood || undefined,
             visualTone: payload.style?.notes || undefined,
           },
-          featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
+          featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'studio-space/mood-boards'],
         });
         renderEntryWizardSlide('visual-wizard-modal', 7);
       };

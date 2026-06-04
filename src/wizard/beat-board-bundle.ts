@@ -261,7 +261,7 @@ export function applyBeatBoardSceneKit(): {
       colorPalette: s.colorPalette.length ? [...s.colorPalette] : undefined,
     },
     moodBoardItems: moodBoardItems.length ? moodBoardItems : undefined,
-    featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'mood-boards'],
+    featureBranches: ['production-office', 'scenes', 'casting', 'production-design', 'cinematography', 'studio-space/mood-boards'],
   };
 
   applyWizardOutput(output);

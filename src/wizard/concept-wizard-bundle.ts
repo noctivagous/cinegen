@@ -258,7 +258,7 @@ export function applyConceptWizardSceneKit(): {
       role: arch.role,
       description: `${arch.archetype}: ${arch.description} (${arch.vibe})`,
     })),
-    featureBranches: ['mood-boards', 'production-office', 'scenes', 'casting', 'production-design', 'cinematography'],
+    featureBranches: ['studio-space/mood-boards', 'production-office', 'scenes', 'casting', 'production-design', 'cinematography'],
   };
 
   applyWizardOutput(output);

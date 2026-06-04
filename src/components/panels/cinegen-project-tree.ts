@@ -71,7 +71,6 @@ export class CinegenProjectTree extends CgLightElement {
       'tree-item': true,
       'tree-item--toplevel': level === 0 && Boolean(section),
       [`tree-section-${section}`]: Boolean(section),
-      'tree-item--global-assets': node.name === 'Global Assets',
       'tree-item--scene': node.type === 'scene',
       selected,
     };
@@ -110,6 +109,32 @@ export class CinegenProjectTree extends CgLightElement {
           aria-label="Script, storyboard, and combined views"
         >
           ${this._renderNodes(node.children, level + 1, section)}
+        </div>`,
+      ];
+    }
+
+    if (node.type === 'studio-group' && node.children?.length) {
+      const hasChildren = Boolean(node.children?.length);
+      return [
+        html`<div
+          class=${classMap({
+            'tree-group-outline': true,
+            'tree-group-outline--togglable': true,
+            [`tree-section-${section}`]: Boolean(section),
+          })}
+          role="group"
+          aria-label="Studio Space"
+        >
+          <div class="tree-item tree-group-header">
+            ${hasChildren
+              ? html`<span class="toggle" @click=${(e: Event) => this._onToggle(node, e)}
+                  >${node.expanded ? '▼' : '▶'}</span
+                >`
+              : nothing}
+            <i class="fa-solid ${node.icon ?? 'fa-wand-magic-sparkles'}"></i>
+            <span class="tree-label-folder">Studio Space</span>
+          </div>
+          ${node.expanded ? this._renderNodes(node.children, level + 1, section) : nothing}
         </div>`,
       ];
     }

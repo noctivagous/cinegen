@@ -66,7 +66,7 @@ function catalogFromRaw(node: RawNode, parentPath: string): FeatureCatalogNode |
   const rawChildren = Array.isArray(node.children) ? (node.children as RawNode[]) : [];
   const childPath = node.type === 'group' ? parentPath : id;
 
-  if (id === 'scenes' || name === 'Scenes') {
+  if (node.dynamicChildren === true) {
     out.dynamicChildren = true;
     out.children = [];
     return out;
@@ -113,33 +113,13 @@ function parseAscensionCatalog(): FeatureCatalogNode[] {
   }
 }
 
-const MOOD_BOARDS_CATALOG: FeatureCatalogNode = {
-  id: 'mood-boards',
-  name: 'Mood Boards',
+const BEATBOARD_CATALOG: FeatureCatalogNode = {
+  id: 'studio-space/beatboard',
+  name: 'Beatboard',
   type: 'folder',
-  icon: 'fa-images',
-  view: 'moodboards',
-  desc: 'Visual DNA, reference stills, and mood research',
-  dynamicChildren: true,
-  children: [],
-};
-
-const SCRATCHPAD_CATALOG: FeatureCatalogNode = {
-  id: 'scratchpad',
-  name: 'ScratchPad',
-  type: 'folder',
-  icon: 'fa-pen-fancy',
-  view: 'scratchpad',
-  desc: 'Generative scratch surface — free-form ideation and prompt experiments',
-};
-
-const DRAFTS_CATALOG: FeatureCatalogNode = {
-  id: 'drafts',
-  name: 'Drafts',
-  type: 'folder',
-  icon: 'fa-flask',
-  view: 'drafts',
-  desc: 'Generative sketchbook — experiment freely, promote to shots, boards, or references',
+  icon: 'fa-clapperboard',
+  view: 'beat-board',
+  desc: 'Beat-based storyboarding and scene planning',
 };
 
 let _catalog: FeatureCatalogNode[] | null = null;
@@ -147,7 +127,7 @@ let _catalog: FeatureCatalogNode[] | null = null;
 export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
   if (!_catalog) {
     const fromSample = parseAscensionCatalog();
-    const withoutScenes = fromSample.filter((n) => n.id !== 'scenes');
+    const withoutScenes = fromSample.filter((n) => n.id !== 'scenes' && n.id !== 'studio-space');
     const scenes = fromSample.find((n) => n.id === 'scenes') ?? {
       id: 'scenes',
       name: 'Scenes',
@@ -157,7 +137,50 @@ export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
       dynamicChildren: true,
       children: [],
     };
-    _catalog = [...withoutScenes, MOOD_BOARDS_CATALOG, SCRATCHPAD_CATALOG, DRAFTS_CATALOG, scenes];
+    const studioSpace = fromSample.find((n) => n.id === 'studio-space') ?? {
+      id: 'studio-space',
+      name: 'Studio Space',
+      type: 'studio-group',
+      icon: 'fa-wand-magic-sparkles',
+      children: [
+        {
+          id: 'studio-space/global-assets',
+          name: 'Global Assets',
+          type: 'folder',
+          icon: 'fa-cube',
+          view: 'overview',
+          children: [],
+        },
+        {
+          id: 'studio-space/mood-boards',
+          name: 'Mood Boards',
+          type: 'folder',
+          icon: 'fa-images',
+          view: 'moodboards',
+          desc: 'Visual DNA, reference stills, and mood research',
+          dynamicChildren: true,
+          children: [],
+        },
+        {
+          id: 'studio-space/scratchpad',
+          name: 'ScratchPad',
+          type: 'folder',
+          icon: 'fa-pen-fancy',
+          view: 'scratchpad',
+          desc: 'Generative scratch surface — free-form ideation and prompt experiments',
+        },
+        {
+          id: 'studio-space/drafts',
+          name: 'Drafts',
+          type: 'folder',
+          icon: 'fa-flask',
+          view: 'drafts',
+          desc: 'Generative sketchbook — experiment freely, promote to shots, boards, or references',
+        },
+        BEATBOARD_CATALOG,
+      ],
+    };
+    _catalog = [...withoutScenes, studioSpace, scenes];
   }
   return _catalog;
 }
@@ -218,11 +241,16 @@ export function catalogNodeToTreeNode(node: FeatureCatalogNode, expanded = false
   return tree;
 }
 
-/** Default blank-project features: mood boards + scratchpad + drafts. */
-export const BLANK_PROJECT_ENABLED_IDS = new Set(['mood-boards', 'scratchpad', 'drafts']);
+/** Default blank-project features: Studio Space group + mood boards + scratchpad + drafts. */
+export const BLANK_PROJECT_ENABLED_IDS = new Set([
+  'studio-space',
+  'studio-space/mood-boards',
+  'studio-space/scratchpad',
+  'studio-space/drafts',
+]);
 
 export function buildBlankProjectFeaturesOrder(): string[] {
-  return ['mood-boards', 'scratchpad', 'drafts'];
+  return ['studio-space', 'studio-space/mood-boards', 'studio-space/scratchpad', 'studio-space/drafts'];
 }
 
 export function buildAllEnabledFeaturesConfig(): { version: 1; enabled: Record<string, boolean>; order: string[] } {

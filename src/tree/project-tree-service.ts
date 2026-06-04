@@ -48,10 +48,25 @@ function getProjectData(): TreeProjectRoot {
   };
 }
 
+function findProjectDataNodeByName(name: string): TreeNode | null {
+  const walk = (nodes: TreeNode[] | undefined): TreeNode | null => {
+    if (!nodes?.length) return null;
+    for (const n of nodes) {
+      if (n.name === name) return n;
+      if (n.children?.length) {
+        const found = walk(n.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return walk(getProjectData().children);
+}
+
 /** Keep runtime Scenes / Mood Boards folder flags aligned with features config toggles. */
 function syncDynamicFolderExpanded(name: string, expanded: boolean): void {
   if (name !== 'Scenes' && name !== 'Mood Boards') return;
-  const folder = (getProjectData().children ?? []).find((n) => n.name === name);
+  const folder = findProjectDataNodeByName(name);
   if (folder) folder.expanded = expanded;
 }
 
@@ -171,7 +186,7 @@ export function getProjectTreeChildren(): TreeNode[] {
 function ensureMoodBoardTreeNodes(): void {
   const projectData = getProjectData();
   const top = projectData.children ?? [];
-  let mbFolder = top.find((n) => n.name === 'Mood Boards');
+  let mbFolder = findProjectDataNodeByName('Mood Boards');
   if (!mbFolder) {
     mbFolder = {
       name: 'Mood Boards',

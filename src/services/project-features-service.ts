@@ -202,7 +202,7 @@ function buildCatalogTreeNodes(config: ProjectFeaturesConfig): TreeNode[] {
     const out: TreeNode[] = [];
     for (const cat of sorted) {
       if (!isFeatureEnabled(cat.id, config)) continue;
-      const expanded = expandedMap[cat.id] ?? false;
+      const expanded = expandedMap[cat.id] ?? (cat.type === 'studio-group');
       const tree = catalogNodeToTreeNode(cat, expanded);
       if (cat.dynamicChildren) {
         tree.children = [];
@@ -223,12 +223,23 @@ export function setFeatureExpanded(featureId: string, expanded: boolean): void {
   setProjectFeaturesConfig(next);
 }
 
+function findNodeByNameRecursive(nodes: TreeNode[], name: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.name === name) return node;
+    if (node.children?.length) {
+      const found = findNodeByNameRecursive(node.children, name);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 /** Merge runtime dynamic nodes (mood boards, scenes) into display tree. */
 export function mergeDynamicTreeNodes(displayTree: TreeNode[]): TreeNode[] {
   const runtimeRoot = projectData;
   const runtimeChildren = (runtimeRoot.children ?? []) as TreeNode[];
 
-  const runtimeMood = runtimeChildren.find((n) => n.name === 'Mood Boards');
+  const runtimeMood = findNodeByNameRecursive(runtimeChildren, 'Mood Boards');
   const runtimeScenes = findScenesFolder(runtimeChildren);
 
   const mergeInto = (nodes: TreeNode[]) => {
@@ -358,12 +369,23 @@ export function normalizeConfigForProject(applied: {
   return config;
 }
 
+function findNodeByNameInTree(nodes: TreeNode[], name: string): TreeNode | null {
+  for (const n of nodes) {
+    if (n.name === name) return n;
+    if (n.children?.length) {
+      const found = findNodeByNameInTree(n.children, name);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export function getFirstEnabledTreeNodeName(): string | null {
   const tree = buildDisplayProjectTree();
   const findFirst = (nodes: TreeNode[]): TreeNode | null => {
     for (const n of nodes) {
       if (n.type === 'tree-divider') continue;
-      if (n.type === 'folder' || n.type === 'moodboard' || n.type === 'script') return n;
+      if (n.type === 'folder' || n.type === 'studio-group' || n.type === 'moodboard' || n.type === 'script') return n;
       if (n.children?.length) {
         const inner = findFirst(n.children);
         if (inner) return inner;
@@ -375,7 +397,7 @@ export function getFirstEnabledTreeNodeName(): string | null {
   const node = findFirst(tree);
   if (!node) return null;
   if (node.type === 'moodboard' || node.name === 'Mood Boards') {
-    const mb = tree.find((n) => n.name === 'Mood Boards');
+    const mb = findNodeByNameInTree(tree, 'Mood Boards');
     const board = mb?.children?.find((c) => c.type === 'moodboard');
     return board?.name ?? mb?.name ?? node.name;
   }

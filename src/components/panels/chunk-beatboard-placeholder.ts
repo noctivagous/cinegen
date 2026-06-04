@@ -1,0 +1,1 @@
+import './cinegen-beatboard-placeholder';
