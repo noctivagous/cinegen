@@ -157,11 +157,11 @@ Completed: `ProductionContext` → UI project state adapter (`agent-context-adap
 
 Rationale: The 12 registered agent routes handle orchestration, but the filmmaker loop requires specific agent capabilities that translate between the app's structured data and what AI models actually consume. Each capability below bridges a constraint documented in `refs/` and `TASKS-2.md` (reference limits, clip duration caps, no 3D scene input, prompt structure requirements).
 
-- [ ] **Prompt Engineer Agent** — Builds the canonical 9-element prompt from all project data.
-  - Gathers data from: frame scriptLink, shot metadata, character descriptions, location descriptions, scene breakdown, scene notes, project treatment, style guide.
-  - Assembles in priority order: subject → action → scene → framing → camera movement → lens/optics → visual style → lighting → motion energy.
+- [ ] **Prompt Engineer Agent** — Builds the canonical 10-element prompt from all project data.
+  - Gathers data from: frame scriptLink, shot metadata, **performance direction (expression/emotion per take)**, character descriptions, location descriptions, scene breakdown, scene notes, project treatment, style guide.
+  - Assembles in priority order: subject → action → **performance** → scene → framing → camera movement → lens/optics → visual style → lighting → motion energy.
   - Adapts prompt structure per provider (Runway ~1000 chars vs Veo structured vs Kling action-oriented).
-  - Truncates intelligently when exceeding provider character limits (keep subject+action+framing, drop motion energy).
+  - Truncates intelligently when exceeding provider character limits (keep subject+action+performance+framing, drop motion energy).
   - Logs which data sources contributed for debugging transparency.
   - See `TASKS-2.md §9 — Prompt Assembly Architecture` for the full specification.
 

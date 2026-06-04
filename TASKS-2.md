@@ -687,15 +687,16 @@ This is the app's central nervous system. Every generation — storyboard frame,
 Per industry research (Runway, Kling, Veo, Sora prompting guides) and the internal `storyboard-generation-research.md`, a high-quality generation prompt requires 6–9 ordered elements:
 
 ```
-[1] SUBJECT       — who/what (from character hub descriptions, not just names)
-[2] ACTION        — what they're doing (from Fountain scriptLink + scene breakdown)
-[3] SCENE / ENV   — setting, time of day, weather (from location desc + breakdown)
-[4] FRAMING       — shot type, camera angle (from shot config dropdowns)
-[5] CAMERA MOVE   — dolly, track, crane, orbit (from shot config dropdowns)
-[6] LENS/OPTICS   — focal length, DOF, anamorphic, film grain (from shot config + style guide)
-[7] VISUAL STYLE  — pencil illustration, cinematic, monochrome (from frame notes + project treatment)
-[8] LIGHTING      — lighting technique, atmosphere, color palette (from style guide + shot config)
-[9] MOTION ENERGY — slow motion, static, handheld (from shot config + scene tone)
+[1] SUBJECT        — who/what (from character hub descriptions, not just names)
+[2] ACTION         — what they're doing (from Fountain scriptLink + scene breakdown)
+[3] PERFORMANCE    — emotional delivery, expression, acting direction (new: from shot notes or per-take selector)
+[4] SCENE / ENV   — setting, time of day, weather (from location desc + breakdown)
+[5] FRAMING       — shot type, camera angle (from shot config dropdowns)
+[6] CAMERA MOVE   — dolly, track, crane, orbit (from shot config dropdowns)
+[7] LENS/OPTICS   — focal length, DOF, anamorphic, film grain (from shot config + style guide)
+[8] VISUAL STYLE  — pencil illustration, cinematic, monochrome (from frame notes + project treatment)
+[9] LIGHTING      — lighting technique, atmosphere, color palette (from style guide + shot config)
+[10] MOTION ENERGY — slow motion, static, handheld (from shot config + scene tone)
 ```
 
 ### Data Sources (priority order, most-specific-first)
@@ -704,13 +705,115 @@ Per industry research (Runway, Kling, Veo, Sora prompting guides) and the intern
 |----------|--------|-------------|---------|
 | 1 | Frame scriptLink | Fountain action/dialogue line | "Sarah pushes open the cafe door" |
 | 2 | Linked shot metadata | `shotType`, `cameraAngle`, `cameraMovement`, `lens`, `lightingTechnique`, `composition`, `atmosphereTags` | "Low angle, dolly in, 35mm" |
-| 3 | Character Hub descriptions | `CharacterGuideEntry.desc` (not just name) | "Sarah — mid-30s, dark wavy hair, leather jacket" |
-| 4 | Location Scout descriptions | `LocationGuideEntry.desc` | "Coffee shop — exposed brick, Edison bulbs" |
-| 5 | Scene breakdown | `time`, `props`, `wardrobe`, `sfx` per scene | "NIGHT, umbrella, raincoat, rain" |
-| 6 | Scene master notes | `scene.notes`, `scene.master.prompt` | "Keep atmosphere tense, minimal dialogue" |
-| 7 | Project treatment | `genre`, `tone`, `notes` ("Notes for AI") | "Neo-noir thriller, desaturated, rain-slicked" |
-| 8 | Style guide | `styleGuide.colorPalette`, `lightingMood` | "Cool blue shadows, warm amber pools" |
-| 9 | Reference images | Up to 4 ref image URLs (character sheet, location plate, style ref) | `refImageUrls[]` |
+| 3 | **Performance direction** | **New: `ShotTake.expression` / `ShotTake.emotion`** | **"determined, eyes narrowed, jaw clenched"** |
+| 4 | Character Hub descriptions | `CharacterGuideEntry.desc` (not just name) | "Sarah — mid-30s, dark wavy hair, leather jacket" |
+| 5 | Location Scout descriptions | `LocationGuideEntry.desc` | "Coffee shop — exposed brick, Edison bulbs" |
+| 6 | Scene breakdown | `time`, `props`, `wardrobe`, `sfx` per scene | "NIGHT, umbrella, raincoat, rain" |
+| 7 | Scene master notes | `scene.notes`, `scene.master.prompt` | "Keep atmosphere tense, minimal dialogue" |
+| 8 | Project treatment | `genre`, `tone`, `notes` ("Notes for AI") | "Neo-noir thriller, desaturated, rain-slicked" |
+| 9 | Style guide | `styleGuide.colorPalette`, `lightingMood` | "Cool blue shadows, warm amber pools" |
+| 10 | Reference images | Up to 4 ref image URLs (character sheet, location plate, style ref) | `refImageUrls[]` |
+
+### Expression Sheet & Performance Palette
+
+Rather than generic emoji, the app uses an expression palette organized around the **Five Elements (Wuxing)** emotional framework. Each emotional category has a color identity, a set of expressions, and corresponding prompt descriptions. The element names are never shown — only the color coding and descriptive labels.
+
+#### The Five Expression Categories
+
+| Color | Category Label | Core Emotions | Prompt Language |
+|-------|---------------|---------------|-----------------|
+| 🟢 Green | **Growth & Drive** | Anger, Irritation, Assertion, Motivation, Frustration | "explosive anger, veins in neck, shouting" / "quiet determination, jaw set" |
+| 🔴 Red | **Connection & Vitality** | Joy, Excitement, Laughter, Restlessness, Mania | "radiant smile, eyes crinkling with joy" / "manic energy, scattered focus" |
+| 🟡 Yellow | **Center & Reflection** | Pensiveness, Worry, Overthinking, Care, Contemplation | "furrowed brow, lost in thought" / "nervous fidgeting, anxious glance" |
+| ⚪ White | **Release & Discernment** | Grief, Sadness, Melancholy, Letting Go, Detachment | "tears streaming, hollow gaze" / "quiet sorrow, distant look" |
+| 🔵 Blue | **Depth & Wisdom** | Fear, Terror, Stillness, Willpower, Paranoia | "eyes wide with terror, frozen" / "calm resolve, unshakeable will" |
+
+#### Expression Palette UI
+
+```
+┌─ Performance ──────────────────────────────────┐
+│                                                  │
+│  Character Default: [Sarah]                      │
+│  ← Inherited from Casting (can override)         │
+│                                                  │
+│  ┌─── Expression Grid ───────────────────────┐   │
+│  │                                            │   │
+│  │  🟢 Assertion     🟢 Frustration          │   │
+│  │  🟢 Determination  🟢 Irritation          │   │
+│  │                                            │   │
+│  │  🔴 Joy           🔴 Excitement           │   │
+│  │  🔴 Laughter      🔴 Restlessness         │   │
+│  │                                            │   │
+│  │  🟡 Contemplation 🟡 Worry                │   │
+│  │  🟡 Overthinking  🟡 Care                 │   │
+│  │                                            │   │
+│  │  ⚪ Sadness       ⚪ Melancholy            │   │
+│  │  ⚪ Detachment    ⚪ Sorrow                │   │
+│  │                                            │   │
+│  │  🔵 Fear          🔵 Terror                │   │
+│  │  🔵 Stillness     🔵 Willpower             │   │
+│  └────────────────────────────────────────────┘   │
+│                                                  │
+│  Selected: 🔴 Joy                                 │
+│  Prompt desc: "radiant smile, eyes crinkling     │
+│  with joy, warm open expression"                  │
+│                                                  │
+│  [Apply to Shot]  [Set as Character Default]     │
+│                                                  │
+└──────────────────────────────────────────────────┘
+```
+
+#### Beat Sequence: Emotional Arc Across a Shot
+
+For longer shots or scenes, the user can drag expressions into a timeline strip to define emotional beats:
+
+```
+Shot: CU-SARAH-01  Duration: 8s
+┌─── Beat Sequence ──────────────────────────────┐
+│                                                 │
+│  [🔵 Stillness] → [🟡 Worry] → [🔴 Fear] → [🟢 Determination]
+│    0s─2s           2s─4s        4s─6s          6s─8s
+│                                                 │
+│  Resulting prompt:                              │
+│  "...expression shifts from calm stillness to   │
+│   nervous worry, then eyes widen with fear,     │
+│   before settling into hard determination..."    │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+Each beat generates a temporal prompt fragment in the PERFORMANCE element:
+```
+[0-2s] calm stillness, unshakeable resolve
+[2-4s] nervous worry, furrowed brow, darting eyes
+[4-6s] eyes widening in fear, sharp intake
+[6-8s] determination hardens features, jaw sets
+```
+
+#### Character Default Expression Range
+
+In Casting, each character defines a default "emotional range" — which categories they naturally fall into. This auto-populates the shot-level expression palette:
+
+- **Sarah**: Default range 🟢 Growth & Drive + 🟡 Center & Reflection — her palette shows these categories prominently; other categories are available but collapsed
+- **Marcus**: Default range 🔵 Depth & Wisdom + ⚪ Release & Discernment
+- **Ensemble characters**: All categories available, no default bias
+
+#### Data Storage
+
+```typescript
+interface CharacterExpressionRange {
+  characterId: string;
+  dominantCategories: ('growth' | 'connection' | 'center' | 'release' | 'depth')[];
+  defaultExpression: string; // the prompt descriptor
+}
+
+interface ShotBeat {
+  timeMs: number;        // start time of this beat in ms
+  expression: string;    // prompt descriptor
+  category: string;      // color category reference
+  durationMs: number;    // how long this beat lasts
+}
+```
 
 ### Prompt Builder Architecture
 
@@ -723,7 +826,7 @@ interface BuildPromptInput {
 }
 
 interface GeneratedPrompt {
-  text: string;           // The 9-element prompt, truncated to provider limit
+  text: string;           // The 10-element prompt, truncated to provider limit
   dimensions: { w, h };   // Derived from projectSettings.aspectRatio
   refImageUrls: string[]; // Up to 4, respecting provider limit
   sourceLog: string[];    // Which data sources contributed (for debugging)
@@ -760,10 +863,10 @@ Every generated prompt should be visible to the user before generation runs:
 ### Truncation Strategy
 
 Provider character limits vary (1000–5000). When the assembled prompt exceeds the limit:
-1. Keep elements [1] SUBJECT + [2] ACTION + [4] FRAMING (highest information density)
-2. Summarize [7] VISUAL STYLE to a single keyword ("cinematic" → "cine")
-3. Drop [9] MOTION ENERGY if scene is described as "static" (default motion)
-4. Never truncate [8] LIGHTING — this is the most common consistency anchor across shots
+1. Keep elements [1] SUBJECT + [2] ACTION + [3] PERFORMANCE + [5] FRAMING (highest information density)
+2. Summarize [8] VISUAL STYLE to a single keyword ("cinematic" → "cine")
+3. Drop [10] MOTION ENERGY if scene is described as "static" (default motion)
+4. Never truncate [9] LIGHTING — this is the most common consistency anchor across shots
 5. Log what was truncated in `sourceLog`
 
 ---
