@@ -9,10 +9,12 @@ import {
   setShotDurationSeconds,
   buildPrevisTimelineTracks,
 } from '@/workspace/shot-frame-bridge';
-import { notifyStoryboardFramesChanged, previsSelectionState, setPrevisSelectionState } from '@/data/project-data';
+import { notifyStoryboardFramesChanged, previsSelectionState, setPrevisSelectionState, storyboardFrames } from '@/data/project-data';
 import { SCRIPT_PREVIS_MARGIN_COLLAPSED_KEY } from '@/constants/storage-keys';
 import { storageService } from '@/services/persistence';
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
+import { renderTimeline } from '@/timeline/timeline-bundle';
+import { selectStoryboardFrameById } from '@/workspace/shot-frame-bridge';
 import { jumpScriptToAnchor } from './fountain-bundle';
 
 type MarginDragTarget = {
@@ -135,7 +137,7 @@ function finishMarginResize(): void {
   window.removeEventListener('mouseup', finishMarginResize);
   notifyStoryboardFramesChanged();
   buildPrevisTimelineTracks();
-  window.renderTimeline?.();
+  renderTimeline?.();
   window.dispatchEvent(new CustomEvent('previs-timing-changed'));
   // Re-render is triggered by the previs-timing-changed event listener
 }
@@ -202,9 +204,9 @@ export function handlePrevisMarginClick(event: Event): void {
   const frameBlock = target.closest<HTMLElement>('.previs-frame-block');
   if (frameBlock?.dataset.frameId) {
     const frameId = parseInt(frameBlock.dataset.frameId, 10);
-    const frame = (window.storyboardFrames || []).find((item: any) => item.id === frameId);
+    const frame = storyboardFrames.find((item: any) => item.id === frameId);
     if (frame) {
-      window.selectStoryboardFrameById?.(frameId);
+      selectStoryboardFrameById?.(frameId);
       jumpScriptToAnchor(frame.scriptLink || '');
       setPrevisSelectionState({
         sceneId: frameBlock.dataset.sceneId || null,

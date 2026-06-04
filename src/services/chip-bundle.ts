@@ -172,7 +172,7 @@ function activateTreeNodeByName(name) {
   return false;
 }
 
-function getChipAtScriptCaret() {
+export function getChipAtScriptCaret() {
   const view = getCinegenScriptEditor()?.editorView;
   if (!view) return null;
   const text = view.state.doc.toString();
@@ -471,7 +471,7 @@ function showChipContextMenu(chipEl, clientX, clientY) {
   showChipContextMenuAt(chipType, label, clientX, clientY);
 }
 
-function showChipContextMenuAt(chipType, label, clientX, clientY) {
+export function showChipContextMenuAt(chipType, label, clientX, clientY) {
   const config = CHIP_NAV_CONFIG[chipType];
   const menu = document.getElementById('chip-context-menu');
   if (!menu || typeof menu.open !== 'function' || !config || !label) return;
@@ -494,12 +494,12 @@ function showChipContextMenuAt(chipType, label, clientX, clientY) {
   });
 }
 
-function hideChipContextMenu() {
+export function hideChipContextMenu() {
   document.getElementById('chip-context-menu')?.close?.();
   chipContextState = null;
 }
 
-function extractChipsFromText(text) {
+export function extractChipsFromText(text) {
   if (!text) return [];
   return findNonOverlappingMatches(text, getProjectRegistryMatchTokens()).map((m) => ({
     type: m.type,
@@ -507,7 +507,7 @@ function extractChipsFromText(text) {
   }));
 }
 
-function extractChipsFromTexts(texts) {
+export function extractChipsFromTexts(texts) {
   const seen = new Set();
   const chips = [];
   texts.forEach((text) => {
@@ -522,7 +522,7 @@ function extractChipsFromTexts(texts) {
   return chips;
 }
 
-function renderInspectorChipsSection(chips, opts = {}) {
+export function renderInspectorChipsSection(chips, opts = {}) {
   if (!chips || !chips.length) return '';
   const title = opts.title || 'Chips';
   const chipsHtml = chips
@@ -616,7 +616,7 @@ function collectStoryboardFrameMentions(frame) {
   return { chips, mentions };
 }
 
-function navigateStoryboardDestination(destId, frame) {
+export function navigateStoryboardDestination(destId, frame) {
   hideSbContextMenu?.();
 
   if (destId === 'script') {

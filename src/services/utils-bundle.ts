@@ -17,7 +17,7 @@ let scriptPaneTab = 'script';
 let scriptInfoWardrobe: any[] = [];
 let scriptEditorInsertBarVisible = false;
 
-function normalizeEntityName(value: any) {
+export function normalizeEntityName(value: any) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 

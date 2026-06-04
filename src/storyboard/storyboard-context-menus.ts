@@ -1,6 +1,6 @@
 import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinations';
 import { getCinegenScriptEditor, getCinegenStoryboard } from '@/panels/panel-hosts';
-import { getCurrentScriptSelection } from '@/script/fountain-bundle';
+import { getCurrentScriptSelection, scheduleFountainRender } from '@/script/fountain-bundle';
 import { alertCG } from '@/utils/alert-cg';
 import { escHtml } from '@/utils/html';
 
@@ -25,7 +25,7 @@ export function showStoryboardContextMenu(frame: StoryboardFrame, clientX: numbe
   const menu = document.getElementById('storyboard-context-menu') as any;
   if (!menu || typeof menu.open !== 'function' || !frame) return;
 
-  window.hideChipContextMenu?.();
+  hideChipContextMenu?.();
   window.storyboardContextState = { frameId: frame.id };
 
   const thumbLabel = frame.imageUrl ? 'Regenerate Thumbnail' : 'Generate Thumbnail';
@@ -44,7 +44,7 @@ export function showStoryboardContextMenu(frame: StoryboardFrame, clientX: numbe
       if (destId === 'regenerate-thumbnail') {
         (window as any).regenerateThumbnail?.(frame);
       } else {
-        window.navigateStoryboardDestination?.(destId, frame);
+        navigateStoryboardDestination?.(destId, frame);
       }
     },
   });
@@ -77,10 +77,10 @@ export function showScriptContextMenu(clientX: number, clientY: number): void {
   const menu = document.getElementById('script-context-menu') as any;
   if (!menu || typeof menu.open !== 'function') return;
 
-  const atChip = window.getChipAtScriptCaret?.();
+  const atChip = getChipAtScriptCaret?.();
   if (atChip) {
     hideScriptContextMenu();
-    window.showChipContextMenuAt?.(atChip.type, atChip.label, clientX, clientY);
+    showChipContextMenuAt?.(atChip.type, atChip.label, clientX, clientY);
     return;
   }
 
@@ -88,7 +88,7 @@ export function showScriptContextMenu(clientX: number, clientY: number): void {
   const selectedText = (window as any).getScriptSelectionOrCurrentLine?.() || '';
   const sel = getCurrentScriptSelection();
   const hasSelection = sel && sel.from !== sel.to;
-  const existingChips = hasSelection ? window.extractChipsFromText?.(selectedText) || [] : [];
+  const existingChips = hasSelection ? extractChipsFromText?.(selectedText) || [] : [];
 
   const items: Array<{ id: string; label: string; icon: string }> = [
     { id: 'make-storyboard-frame-for-text', label: 'Make Storyboard Frame', icon: 'fa-image' },
@@ -197,12 +197,12 @@ export function makeChipFromSelection(): void {
     } else if (result.type === 'wardrobe') {
       const w = window as any;
       if (!Array.isArray(w.scriptInfoWardrobe)) w.scriptInfoWardrobe = [];
-      const name = window.normalizeEntityName?.(result.label) || result.label;
+      const name = normalizeEntityName?.(result.label) || result.label;
       if (!w.scriptInfoWardrobe.some((s: string) => s.toLowerCase() === name.toLowerCase())) {
         w.scriptInfoWardrobe.push(name);
       }
     }
-    window.scheduleFountainRender?.();
+    scheduleFountainRender?.();
     alertCG(`Chip "${result.label}" created as ${result.type}.`);
   };
   okBtn.addEventListener('click', (e) => { e.stopPropagation(); const lbl = labelInput.value.trim(); if (!lbl) { labelInput.focus(); return; } close({ type: typeSelect.value, label: lbl }); });

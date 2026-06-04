@@ -14,6 +14,8 @@ import {
   deletedStoryboardFrames,
   storyboardVisibility,
   previsSelectionState,
+  setPrevisSelectionState,
+  selectedStoryboardFrameId,
 } from '@/data/project-data';
 import {
   backfillStoryboardPrompts,
@@ -270,7 +272,7 @@ export function highlightScriptForFrame(frame: StoryboardFrame): void {
       selection: { anchor: span.from, head: span.from },
       effects: EditorView.scrollIntoView(span.from, { y: 'center' }),
     });
-    window.setPrevisSelectionState?.({
+    setPrevisSelectionState({
       sceneId: frame.scene ? `scene${String(frame.scene).padStart(2, '0')}` : null,
       shotId: frame.shotId ?? null,
       frameId: frame.id,
@@ -283,8 +285,8 @@ export function highlightScriptForFrame(frame: StoryboardFrame): void {
 }
 
 export function getSelectedStoryboardFrame(): StoryboardFrame | null {
-  if (!window.selectedStoryboardFrameId) return null;
-  return storyboardFrames.find((frame) => frame.id === window.selectedStoryboardFrameId) || null;
+  if (!selectedStoryboardFrameId) return null;
+  return storyboardFrames.find((frame) => frame.id === selectedStoryboardFrameId) || null;
 }
 
 export function getScriptSelectionOrCurrentLine(): string {

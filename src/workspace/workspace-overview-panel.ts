@@ -4,6 +4,7 @@
  */
 import { escHtml } from '@/utils/html';
 import type { TreeNode } from '@/tree/tree-types';
+import { getTreeSectionKeyForNode } from '@/tree/project-tree-service';
 import { workspaceState } from '@/workspace/workspace-state';
 import { getCinegenOverviewPanel } from '@/panels/panel-hosts';
 import { switchView } from '@/workspace/view-routing';
@@ -34,8 +35,8 @@ const escapeHtml = escHtml;
 
 function _sectionKeyForNode(node: TreeNode | null): string | null {
   if (!node) return null;
-  if (typeof window.getTreeSectionKeyForNode === 'function') {
-    return window.getTreeSectionKeyForNode(node);
+  if (getTreeSectionKeyForNode) {
+    return getTreeSectionKeyForNode(node);
   }
   return null;
 }
