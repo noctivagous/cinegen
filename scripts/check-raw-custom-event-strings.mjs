@@ -46,6 +46,7 @@ const ALLOWLIST = new Set([
 const EVENT_LITERAL_PATTERNS = [
   /(?:addEventListener|removeEventListener)\(\s*(['"`])([^'"`]+)\1/g,
   /new\s+CustomEvent\(\s*(['"`])([^'"`]+)\1/g,
+  /new\s+Event\(\s*(['"`])([^'"`]+)\1/g,
 ];
 
 function normalizeRelativePath(absolutePath) {
@@ -102,18 +103,49 @@ async function main() {
   }
 
   if (!violations.length) {
-    console.log('raw custom-event string guard passed.');
-    return;
+    console.log('raw custom-event string guard — passed.');
+  } else {
+    console.error('raw custom-event string guard FAILED.\n');
+    console.error('Use exported event constants/helpers instead of raw custom-event literals.');
+    console.error('If migration is temporary, add file to allowlist with tracker note.\n');
+    for (const violation of violations) {
+      console.error(`- ${violation.file}:${violation.line} (${violation.eventName})`);
+      console.error(`  ${violation.snippet}`);
+    }
+    console.error('');
+    process.exitCode = 1;
   }
 
-  console.error('raw custom-event string guard failed.\n');
-  console.error('Use exported event constants/helpers instead of raw custom-event literals.');
-  console.error('If migration is temporary, add file to allowlist with tracker note.\n');
-  for (const violation of violations) {
-    console.error(`- ${violation.file}:${violation.line} (${violation.eventName})`);
-    console.error(`  ${violation.snippet}`);
+  // ——— Allowlisted-file audit (warning only, no failure) ———
+  const allowlistedHits = [];
+
+  for (const filePath of files) {
+    const relativePath = normalizeRelativePath(filePath);
+    if (!ALLOWLIST.has(relativePath)) continue;
+    const content = await readFile(filePath, 'utf8');
+    const lines = content.split(/\r?\n/);
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex];
+      for (const pattern of EVENT_LITERAL_PATTERNS) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(line)) !== null) {
+          const eventName = match[2];
+          if (!isCustomEventName(eventName)) continue;
+          allowlistedHits.push({
+            file: relativePath,
+            line: lineIndex + 1,
+            eventName,
+          });
+        }
+      }
+    }
   }
-  process.exitCode = 1;
+
+  const uniqueEvents = new Set(allowlistedHits.map(v => v.eventName));
+  const fileCount = new Set(allowlistedHits.map(v => v.file)).size;
+  console.log(`Allowlisted raw event strings: ${allowlistedHits.length} occurrences (${uniqueEvents.size} unique names) across ${fileCount} file(s).`);
 }
 
 main().catch((error) => {

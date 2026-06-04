@@ -1,6 +1,6 @@
 # Cinegen Architecture Progressive Fix Tracker
 
-Last verified: 2026-06-03
+Last verified: 2026-06-04
 Source baseline: `planning/architecture-audit-report-2026-05-25.md`
 
 This is a living reference for incremental cleanup until legacy bundles and global bridges are removed.
@@ -28,8 +28,8 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 
 - `OPEN` `source/src/toolbar/toolbar-modals-service.ts` — 2757
 - `OPEN` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2161
-- `OPEN` `source/src/storyboard/storyboard-bundle.ts` — 1512
-- `OPEN` `source/src/workspace/workspace-bundle.ts` — 1340
+- `UPDATED` `source/src/storyboard/storyboard-bundle.ts` — 782 (+ 371 in `storyboard-reference-bank.ts`, + 181 in `storyboard-frame-editor.ts`, + 257 in `storyboard-context-menus.ts`)
+- `UPDATED` `source/src/workspace/workspace-bundle.ts` — 603 (decomposed: extracted overview panel + asset detail, removed `@ts-nocheck`)
 - `OPEN` `source/src/services/status-bar-service.ts` — 1192
 - `OPEN` `source/server/proxy.js` — 1749
 
@@ -43,6 +43,9 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 - `UPDATED` `escHtml` duplication removed; canonical function now only in `source/src/utils/html.ts`.
 - `UPDATED` Raw `cg-tree-node-select` listener replaced with constant usage in storyboard flow.
 - `UPDATED` Dead file `source/src/legacy/script-order.ts` removed.
+- `UPDATED` `workspace-bundle.ts` decomposed: overview panel extracted to `workspace-overview-panel.ts`, asset detail panel to `workspace-asset-detail-panel.ts`. Bundle shrank 1340→603 lines and `@ts-nocheck` removed — compiles with strict TypeScript.
+- `UPDATED` `storyboard-bundle.ts` extracted `generateFrameImage` / `buildStoryboardDraftFrames` into `storyboard-generation-service.ts`; removed 6 dead functions. Bundle shrank 1633→1512 lines.
+- `UPDATED` Lint guards expanded: `(window as any).* =` and `(window as unknown as …).* =` write patterns now caught; `new Event(...)` added to custom-event patterns; both scripts emit allowlisted-file audit counts.
 
 ### Provider/routing SSOT (second pass)
 
@@ -129,6 +132,14 @@ Progress note (2026-05-26):
 - Reduced setup-assistant bundle indirection by removing pass-through helper wrappers in `source/src/setup-assistant/setup-assistant-bundle.ts` and calling extracted module APIs directly (state, persistence, and connection-test helpers).
 - Phase B decomposition goals are complete for state/slide extraction; rendering templates remain inline in `toolbar-modals-service.ts` and would be a follow-up extraction pass.
 
+Progress note (2026-06-04):
+- Phase D workspace-bundle decomposition: extracted overview panel (~542 lines) into `workspace-overview-panel.ts`, asset detail panel (~247 lines) into `workspace-asset-detail-panel.ts`. Bundle shrank 1340→603 lines. Removed `@ts-nocheck`, fixed ~30 type errors — now compiles with strict TypeScript.
+- Phase D storyboard extraction (pass 1): moved `generateFrameImage` and `buildStoryboardDraftFrames` into `storyboard-generation-service.ts`; removed 6 dead functions/stubs from bundle. Bundle shrank 1633→1512 lines.
+- Phase D storyboard extraction (pass 2): extracted reference bank management (22 functions, types, constants) into `storyboard-reference-bank.ts` (371 lines). Bundle shrank 1512→1167 lines. Added to CAST_ALLOWLIST for `(window as any).referenceGenerationStatus =` writes. Uses same names for imports so window.* global assignments in `installStoryboardBundleGlobals` work unchanged.
+- Phase D storyboard extraction (pass 3): extracted frame editor modal (6 functions, ~165 lines) into `storyboard-frame-editor.ts` (181 lines). Bundle shrank 1167→1006 lines. Module avoids circular deps by referencing `renderStoryboard`/`regenerateThumbnail` via `(window as any)` bridge (installed before user interaction).
+- Phase D storyboard extraction (pass 4): extracted storyboard + script context menus, chip creation, dismiss wiring (11 functions, ~257 lines) into `storyboard-context-menus.ts` (257 lines). Bundle shrank 1006→782 lines. Uses `window.*` bridge calls for `regenerateThumbnail`, `makeStoryboardFrameForText`, `linkSelectedFrameToScript`, etc. to avoid circular deps.
+- Phase C lint guard expansion: added `CAST_ALLOWLIST` for `(window as any).* =` / `(window as unknown as …).* =` write patterns; added `new Event(...)` to event literal patterns; both scripts now emit baseline audit counts (24 CineGen writes, 114 cast/direct writes, 95 event strings).
+
 ### Phase C — Legacy bridge retirement
 
 - [ ] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
@@ -177,12 +188,21 @@ Progress note (2026-05-26):
   - strengthened lint guards by adding `source/scripts/check-raw-custom-event-strings.mjs` and wiring it into `npm run lint:legacy-globals` to block new raw custom-event string literals outside a temporary legacy allowlist
 - [x] Remove unused barrels only after integration confirmation.
 - [x] Add lint guards (`check-window-cinegen-writes.mjs` + `check-raw-custom-event-strings.mjs`) blocking new globals and raw event strings; wired into build pipeline.
-- [ ] Introduce stricter lint checks beyond current guard coverage (e.g., detect existing violations in allowlisted files, add ESLint rules).
+- [x] Introduce stricter lint checks beyond current guard coverage:
+  - Expanded `check-window-cinegen-writes.mjs` to catch `(window as any).xxx =` and `(window as unknown as …).xxx =` write patterns (previously missed), with a separate `CAST_ALLOWLIST`.
+  - Added `new Event(...)` to event literal patterns in `check-raw-custom-event-strings.mjs`.
+  - Both scripts now emit allowlisted-file audit counts (warn-level, non-failing) showing total legacy writes/events remaining.
+  - Current baseline: 24 CineGen writes (6 files), 114 cast/direct writes (15 files), 95 raw event strings (33 files).
 
 ### Phase D — Structural cleanup
 
 - [ ] Break `source/server/proxy.js` into route-focused modules.
-- [ ] Continue modularizing large workspace/storyboard/status-bar bundles.
+- [x] Extract overview panel + asset detail panel from `workspace-bundle.ts` (1340→603 lines, `@ts-nocheck` removed).
+- [x] Extract storyboard generation service from `storyboard-bundle.ts` (1633→1512 lines, 6 dead functions removed).
+- [x] Extract reference bank management from `storyboard-bundle.ts` into `storyboard-reference-bank.ts` (1512→1167 lines, 371-line new module).
+- [x] Extract storyboard frame editor modal into `storyboard-frame-editor.ts` (1167→1006 lines).
+- [x] Extract storyboard + script context menus into `storyboard-context-menus.ts` (1006→782 lines).
+- [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 2757, `setup-assistant-bundle.ts` 2161, `storyboard-bundle.ts` 782, `status-bar-service.ts` 1192).
 - [ ] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
 
 ### Phase E — Next-wave legacy surface cleanup

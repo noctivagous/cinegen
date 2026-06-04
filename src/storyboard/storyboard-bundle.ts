@@ -13,18 +13,12 @@ import {
   storyboardFrames,
   deletedStoryboardFrames,
   storyboardVisibility,
-  storyboardReferenceBank,
-  sceneReferenceOverrides,
-  referenceGenerationStatus,
   previsSelectionState,
 } from '@/data/project-data';
-import { STORYBOARD_FRAME_DESTINATIONS } from '@/storyboard/storyboard-destinations';
 import {
   backfillStoryboardPrompts,
   buildStoryboardPrompt,
-  buildReferenceSlotPrompt,
   getReferenceImageUrls,
-  STORYBOARD_STYLE_PROMPT,
 } from '@/storyboard/storyboard-prompt-builder';
 import { EditorView } from '@codemirror/view';
 import { resolveFrameScriptRange, applyScriptLinkRangeToFrame } from '@/script/storyboard-link-ranges';
@@ -48,9 +42,8 @@ import {
 import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { patchAppShellState } from '@/stores/app-shell';
 import { storageService } from '@/services/persistence';
-import { emitAiInteractionLog } from '@/services/ai/interaction-log';
 
-import { CG_TREE_NODE_SELECT, CG_STORYBOARD_REFERENCES_CHANGED, emitStoryboardFrameSelected } from '@/events/shell-events';
+import { CG_TREE_NODE_SELECT, emitStoryboardFrameSelected } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 import {
@@ -60,8 +53,41 @@ import {
 } from '@/storyboard/storyboard-generation-service';
 import {
   STORYBOARD_GENERATION_MODE_STORAGE_KEY,
-  STORYBOARD_REFERENCE_STORAGE_KEY,
 } from '@/constants/storage-keys';
+import {
+  openStoryboardFrameEditor,
+  closeStoryboardFrameEditor,
+  initStoryboardFrameEditor,
+} from '@/storyboard/storyboard-frame-editor';
+import {
+  showStoryboardContextMenu,
+  hideStoryboardContextMenu,
+  initStoryboardNavigation,
+  showScriptContextMenu,
+  hideScriptContextMenu,
+  makeChipFromSelection,
+  wireScriptContextMenuDismiss,
+  syncScriptSelectionToStoryboard,
+} from '@/storyboard/storyboard-context-menus';
+import {
+  generateStoryboardReferences,
+  regenerateReferenceSlot,
+  lockReferenceSlot,
+  unlockReferenceSlot,
+  updateReferenceSlotField,
+  enableReferenceSlot,
+  hydrateReferenceStateFromStorage,
+  normalizedReferenceBank,
+  syncReferenceGateControls,
+  sceneKeyFromCurrentScene,
+  currentSceneNumber,
+  emitStoryboardRunLog,
+  extractSceneHeading,
+  extractSceneBodyLines,
+  validateRequiredReferenceSlots,
+  generateStoryboardReferencesForScene,
+} from '@/storyboard/storyboard-reference-bank';
+export type { ReferenceCategory, StoryboardReferenceSlot } from '@/storyboard/storyboard-reference-bank';
 
 function refreshShotFrameTree(): void {
   requestProjectTreeRefresh();
@@ -148,62 +174,6 @@ interface StoryboardFrame {
   userPromptOverride?: string;
 }
 
-type ReferenceCategory = 'characters' | 'locations' | 'interiors' | 'exteriors';
-interface StoryboardReferenceSlot {
-  id: string;
-  category: ReferenceCategory;
-  label: string;
-  prompt: string;
-  imageUrl?: string;
-  notes?: string;
-  locked?: boolean;
-  enabled?: boolean;
-  source: 'ai' | 'user';
-  updatedAt?: string;
-}
-
-const REFERENCE_CATEGORIES: ReferenceCategory[] = ['characters', 'locations', 'interiors', 'exteriors'];
-const STORYBOARD_REFERENCE_KEY = STORYBOARD_REFERENCE_STORAGE_KEY;
-
-export function showStoryboardContextMenu(frame: StoryboardFrame, clientX: number, clientY: number): void {
-  const menu = document.getElementById('storyboard-context-menu') as any;
-  if (!menu || typeof menu.open !== 'function' || !frame) return;
-
-  hideChipContextMenu();
-  storyboardContextState = { frameId: frame.id };
-
-  const thumbLabel = frame.imageUrl ? 'Regenerate Thumbnail' : 'Generate Thumbnail';
-  menu.open({
-    x: clientX,
-    y: clientY,
-    items: [
-      { id: 'regenerate-thumbnail', label: thumbLabel, icon: 'fa-arrows-rotate' },
-      ...STORYBOARD_FRAME_DESTINATIONS.map((d) => ({
-        id: d.id,
-        label: d.label,
-        icon: d.icon,
-      })),
-    ],
-    onSelect: (destId: string) => {
-      if (destId === 'regenerate-thumbnail') {
-        regenerateThumbnail(frame);
-      } else {
-        navigateStoryboardDestination(destId, frame);
-      }
-    },
-  });
-}
-
-export function hideStoryboardContextMenu(): void {
-  (document.getElementById('storyboard-context-menu') as any)?.close?.();
-  storyboardContextState = null;
-}
-
-export function initStoryboardNavigation() {
-  getCinegenStoryboard()?.wireContextMenuDismiss();
-}
-
-
 // ==================== EXISTING FUNCTIONS (enhanced) ====================
 export function applyStoryboardVisibilityClasses() {
   getCinegenStoryboard()?.syncVisibilityClasses();
@@ -229,14 +199,6 @@ export function initAutogenCheckbox(): void {
   autogenBoardsEnabled = cb.checked;
   cb.addEventListener('change', () => {
     autogenBoardsEnabled = cb.checked;
-  });
-}
-
-function emitStoryboardRunLog(event: string, payload: Record<string, unknown>): void {
-  emitAiInteractionLog({
-    capability: 'image',
-    level: 'info',
-    message: `🧪 Storyboard ${event}: ${JSON.stringify(payload)}`,
   });
 }
 
@@ -285,315 +247,6 @@ function initStoryboardGenerationModeControls(): void {
       setStoryboardGenerationMode(select.value === 'auto' ? 'auto' : 'review');
     });
   });
-}
-
-function syncReferenceGateControls(): void {
-  const sceneKey = sceneKeyFromCurrentScene();
-  const script = getCurrentScriptText();
-  const heading = extractSceneHeading(script, Number(currentSceneNumber()));
-  const gate = validateRequiredReferenceSlots(sceneKey, heading);
-  const status =
-    (window as any).referenceGenerationStatus === 'generating'
-      ? 'Generating references'
-      : gate.ok
-        ? 'Ready'
-        : 'References required';
-
-  const badge = document.getElementById('storyboard-reference-gate-status');
-  if (badge) badge.textContent = status;
-  const inline = document.getElementById('storyboard-reference-gate-status-inline');
-  if (inline) inline.textContent = status;
-  const btn = document.getElementById('generate-scene-frames-btn') as HTMLButtonElement | null;
-  if (btn) {
-    const generating = (window as any).referenceGenerationStatus === 'generating';
-    btn.disabled = generating;
-    btn.title = gate.ok
-      ? 'Generate scene frames'
-      : `Will auto-fill references first (${gate.reason || 'references required'})`;
-  }
-}
-
-function normalizedReferenceBank(): Record<ReferenceCategory, StoryboardReferenceSlot[]> {
-  const bank = storyboardReferenceBank as Record<string, unknown>;
-  for (const category of REFERENCE_CATEGORIES) {
-    if (!Array.isArray(bank[category])) bank[category] = [];
-  }
-  return bank as Record<ReferenceCategory, StoryboardReferenceSlot[]>;
-}
-
-function saveReferenceState(): void {
-  storageService.setItem(
-    STORYBOARD_REFERENCE_KEY,
-    JSON.stringify({
-      referenceBank: storyboardReferenceBank,
-      sceneReferenceOverrides,
-      referenceGenerationStatus,
-    })
-  );
-  window.dispatchEvent(new CustomEvent(CG_STORYBOARD_REFERENCES_CHANGED));
-  syncReferenceGateControls();
-}
-
-function hydrateReferenceStateFromStorage(): void {
-  const raw = storageService.getItem(STORYBOARD_REFERENCE_KEY);
-  if (!raw) return;
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed?.referenceBank && typeof parsed.referenceBank === 'object') {
-      Object.assign(storyboardReferenceBank as Record<string, unknown>, parsed.referenceBank);
-    }
-    if (parsed?.sceneReferenceOverrides && typeof parsed.sceneReferenceOverrides === 'object') {
-      Object.assign(sceneReferenceOverrides as Record<string, unknown>, parsed.sceneReferenceOverrides);
-    }
-    if (typeof parsed?.referenceGenerationStatus === 'string') {
-      (window as any).referenceGenerationStatus = parsed.referenceGenerationStatus;
-    }
-  } catch {
-    // no-op: invalid local cache
-  }
-}
-
-function sceneKeyFromCurrentScene(): string {
-  return window.currentSceneId || 'scene1';
-}
-
-function currentSceneNumber(): string {
-  const id = window.currentSceneId;
-  return id ? String(parseInt(id.replace('scene', ''), 10)) : '1';
-}
-
-function inferSceneEnvironment(sceneHeading: string): 'interiors' | 'exteriors' {
-  const h = (sceneHeading || '').toUpperCase();
-  if (h.includes('EXT.')) return 'exteriors';
-  return 'interiors';
-}
-
-function resolveEffectiveReferences(sceneKey: string): Record<ReferenceCategory, StoryboardReferenceSlot[]> {
-  const bank = normalizedReferenceBank();
-  const overridesRaw = (sceneReferenceOverrides as Record<string, unknown>)[sceneKey];
-  const overrides = (overridesRaw && typeof overridesRaw === 'object'
-    ? (overridesRaw as Record<string, StoryboardReferenceSlot[]>)
-    : {}) as Record<ReferenceCategory, StoryboardReferenceSlot[]>;
-  return {
-    characters: Array.isArray(overrides.characters) && overrides.characters.length ? overrides.characters : bank.characters,
-    locations: Array.isArray(overrides.locations) && overrides.locations.length ? overrides.locations : bank.locations,
-    interiors: Array.isArray(overrides.interiors) && overrides.interiors.length ? overrides.interiors : bank.interiors,
-    exteriors: Array.isArray(overrides.exteriors) && overrides.exteriors.length ? overrides.exteriors : bank.exteriors,
-  };
-}
-
-function validateRequiredReferenceSlots(sceneKey: string, sceneHeading: string): { ok: boolean; reason?: string } {
-  const effective = resolveEffectiveReferences(sceneKey);
-  const requiredEnv = inferSceneEnvironment(sceneHeading);
-  if (!effective.characters.length) return { ok: false, reason: 'Missing character reference' };
-  if (!effective.locations.length) return { ok: false, reason: 'Missing location reference' };
-  if (!effective[requiredEnv].length) {
-    return { ok: false, reason: `Missing ${requiredEnv === 'interiors' ? 'interior' : 'exterior'} reference` };
-  }
-  return { ok: true };
-}
-
-function makeReferenceSlot(category: ReferenceCategory, label: string, prompt: string): StoryboardReferenceSlot {
-  return {
-    id: `${category}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    category,
-    label,
-    prompt,
-    source: 'ai',
-    enabled: true,
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function extractCharacterCandidates(lines: string[]): string[] {
-  const out: string[] = [];
-  for (const line of lines) {
-    const upper = line.trim();
-    if (!upper || upper.length > 40) continue;
-    if (/^[A-Z][A-Z0-9 .'\-()]+$/.test(upper)) {
-      const cleaned = upper.replace(/\(.*?\)/g, '').trim();
-      if (cleaned && !out.includes(cleaned)) out.push(cleaned);
-    }
-  }
-  return out.slice(0, 2);
-}
-
-async function generateReferenceSlotImage(slot: StoryboardReferenceSlot): Promise<void> {
-  const pseudoFrame: StoryboardFrame = {
-    id: Date.now(),
-    scene: currentSceneNumber(),
-    label: slot.label,
-    scriptLink: slot.prompt,
-    notes: `Style: ${STORYBOARD_STYLE_PROMPT}`,
-    userPromptOverride: buildReferenceSlotPrompt(slot),
-  };
-  slot.imageUrl = await generateFrameImage(pseudoFrame);
-  slot.updatedAt = new Date().toISOString();
-}
-
-async function ensureReferenceCategoryFilled(
-  sceneKey: string,
-  category: ReferenceCategory,
-  slots: StoryboardReferenceSlot[]
-): Promise<void> {
-  const bank = normalizedReferenceBank();
-  const existing = bank[category];
-  for (const slot of slots) {
-    const already = existing.find((s) => s.label.toLowerCase() === slot.label.toLowerCase());
-    const target = already || slot;
-    if (!already) existing.push(target);
-    if (!target.imageUrl && !target.locked) {
-      await generateReferenceSlotImage(target);
-    }
-  }
-  (sceneReferenceOverrides as Record<string, unknown>)[sceneKey] ??= {};
-  const sceneOverride = (sceneReferenceOverrides as Record<string, any>)[sceneKey];
-  if (!Array.isArray(sceneOverride[category])) sceneOverride[category] = [];
-}
-
-function selectedSceneHeadingAndLines(): { sceneHeading: string; sceneBodyLines: string[] } {
-  const scene = Number(currentSceneNumber());
-  const script = getCurrentScriptText();
-  return {
-    sceneHeading: extractSceneHeading(script, scene),
-    sceneBodyLines: extractSceneBodyLines(script, scene),
-  };
-}
-
-export async function generateStoryboardReferences(): Promise<void> {
-  await generateStoryboardReferencesForScene(sceneKeyFromCurrentScene());
-}
-
-async function generateStoryboardReferencesForScene(sceneKey: string): Promise<void> {
-  const { sceneHeading, sceneBodyLines } = selectedSceneHeadingAndLines();
-  (window as any).referenceGenerationStatus = 'generating';
-  saveReferenceState();
-  emitStoryboardRunLog('references-started', { sceneKey });
-  try {
-    const characterCandidates = extractCharacterCandidates(sceneBodyLines);
-    const locationLabel = sceneHeading
-      ? sceneHeading.replace(/^\s*(INT\.|EXT\.|EST\.|INT\/EXT\.)\s*/i, '').split(' - ')[0].trim()
-      : `Scene ${currentSceneNumber()} Location`;
-    const envCategory = inferSceneEnvironment(sceneHeading);
-
-    const slotBatches: Array<{ category: ReferenceCategory; slots: StoryboardReferenceSlot[] }> = [
-      {
-        category: 'characters',
-        slots: (characterCandidates.length ? characterCandidates : ['Primary Character']).map((name) =>
-          makeReferenceSlot('characters', name, `${name}, consistent appearance reference for scene continuity`)
-        ),
-      },
-      {
-        category: 'locations',
-        slots: [
-          makeReferenceSlot(
-            'locations',
-            locationLabel || 'Primary Location',
-            `${locationLabel || 'Primary location'} environment reference, maintain set continuity`
-          ),
-        ],
-      },
-      {
-        category: envCategory,
-        slots: [
-          makeReferenceSlot(
-            envCategory,
-            envCategory === 'interiors' ? 'Interior Lighting Reference' : 'Exterior Lighting Reference',
-            envCategory === 'interiors'
-              ? 'Interior scene reference, consistent set dressing and practical lighting'
-              : 'Exterior scene reference, consistent environment and daylight/weather cues'
-          ),
-        ],
-      },
-    ];
-
-    for (const batch of slotBatches) {
-      await ensureReferenceCategoryFilled(sceneKey, batch.category, batch.slots);
-    }
-
-    (window as any).referenceGenerationStatus = 'ready';
-    saveReferenceState();
-    emitStoryboardRunLog('references-ready', { sceneKey });
-  } catch (error) {
-    (window as any).referenceGenerationStatus = 'error';
-    saveReferenceState();
-    emitStoryboardRunLog('references-failed', {
-      sceneKey,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
-}
-
-function findReferenceSlot(slotId: string, sceneKey?: string): StoryboardReferenceSlot | null {
-  const bank = normalizedReferenceBank();
-  if (sceneKey) {
-    const sceneOverride = (sceneReferenceOverrides as Record<string, any>)[sceneKey];
-    if (sceneOverride && typeof sceneOverride === 'object') {
-      for (const category of REFERENCE_CATEGORIES) {
-        const slots = Array.isArray(sceneOverride[category]) ? sceneOverride[category] : [];
-        const found = slots.find((s: StoryboardReferenceSlot) => s.id === slotId);
-        if (found) return found;
-      }
-    }
-  }
-  for (const category of REFERENCE_CATEGORIES) {
-    const found = bank[category].find((s) => s.id === slotId);
-    if (found) return found;
-  }
-  return null;
-}
-
-export async function regenerateReferenceSlot(slotId: string, sceneKey?: string): Promise<void> {
-  const slot = findReferenceSlot(slotId, sceneKey);
-  if (!slot) return;
-  slot.locked = false;
-  await generateReferenceSlotImage(slot);
-  saveReferenceState();
-  emitStoryboardRunLog('reference-regenerated', { slotId, sceneKey: sceneKey || sceneKeyFromCurrentScene() });
-  updateInspector('storyboard-reference-category', {
-    type: 'storyboard-reference-category',
-    name: 'Storyboard References',
-    sceneKey: sceneKey || sceneKeyFromCurrentScene(),
-    category: slot.category,
-  });
-}
-
-export function lockReferenceSlot(slotId: string, sceneKey?: string): void {
-  const slot = findReferenceSlot(slotId, sceneKey);
-  if (!slot) return;
-  slot.locked = true;
-  slot.updatedAt = new Date().toISOString();
-  saveReferenceState();
-}
-
-export function unlockReferenceSlot(slotId: string, sceneKey?: string): void {
-  const slot = findReferenceSlot(slotId, sceneKey);
-  if (!slot) return;
-  slot.locked = false;
-  slot.updatedAt = new Date().toISOString();
-  saveReferenceState();
-}
-
-export function updateReferenceSlotField(
-  slotId: string,
-  field: 'label' | 'prompt' | 'notes',
-  value: string,
-  sceneKey?: string
-): void {
-  const slot = findReferenceSlot(slotId, sceneKey);
-  if (!slot) return;
-  slot[field] = value;
-  slot.updatedAt = new Date().toISOString();
-  saveReferenceState();
-}
-
-export function enableReferenceSlot(slotId: string, enabled: boolean, sceneKey?: string): void {
-  const slot = findReferenceSlot(slotId, sceneKey);
-  if (!slot) return;
-  slot.enabled = enabled;
-  slot.updatedAt = new Date().toISOString();
-  saveReferenceState();
 }
 
 export function initStoryboardVisibilityToggles(): void {
@@ -977,29 +630,6 @@ export async function generateBoards(): Promise<void> {
   }
 }
 
-function extractSceneHeading(script: string, sceneNumber: number): string {
-  if (!script || !Number.isFinite(sceneNumber) || sceneNumber < 1) return '';
-  const lines = script.split('\n');
-  const sceneLines = lines.filter((line) => /^\s*(INT\.|EXT\.|EST\.|INT\/EXT\.)/i.test(line.trim()));
-  return sceneLines[sceneNumber - 1]?.trim() || '';
-}
-
-function extractSceneBodyLines(script: string, sceneNumber: number): string[] {
-  if (!script || !Number.isFinite(sceneNumber) || sceneNumber < 1) return [];
-  const lines = script.split('\n');
-  const headingIdxs: number[] = [];
-  lines.forEach((line, idx) => {
-    if (/^\s*(INT\.|EXT\.|EST\.|INT\/EXT\.)/i.test(line.trim())) headingIdxs.push(idx);
-  });
-  const start = headingIdxs[sceneNumber - 1];
-  if (start == null) return [];
-  const next = headingIdxs[sceneNumber] ?? lines.length;
-  return lines
-    .slice(start + 1, next)
-    .map((line) => line.trim())
-    .filter((line) => line && !/^[A-Z0-9 .'\-()]+$/.test(line));
-}
-
 export async function makeStoryboardFrameForText(): Promise<void> {
   const sel = getCurrentScriptSelection();
   const text = sel?.text || getScriptSelectionOrCurrentLine();
@@ -1086,367 +716,6 @@ export async function regenerateThumbnail(frame: StoryboardFrame): Promise<void>
       error: msg,
     });
   }
-}
-
-function refreshFrameEditorPromptDisplay(): void {
-  const modal = document.getElementById('storyboard-frame-editor');
-  if (!modal || modal.hidden) return;
-  const data: StoryboardFrame = (modal as any)._frameData;
-  if (!data) return;
-
-  const promptText = modal.querySelector<HTMLElement>('.sfe-prompt-text');
-  const autoBadge = modal.querySelector<HTMLElement>('.sfe-prompt-badge--auto');
-  const overrideBadge = modal.querySelector<HTMLElement>('.sfe-prompt-badge--override');
-  const overrideTextarea = modal.querySelector<HTMLTextAreaElement>('.sfe-input-override');
-
-  // Show generated or override prompt
-  const displayPrompt = data.userPromptOverride || data.generatedPrompt;
-  if (promptText) {
-    promptText.textContent = displayPrompt || '(Prompt will be generated when you click Regenerate Thumbnail)';
-  }
-
-  // Toggle badges
-  if (autoBadge) autoBadge.classList.toggle('hidden', !!data.userPromptOverride);
-  if (overrideBadge) overrideBadge.classList.toggle('hidden', !data.userPromptOverride);
-
-  // Sync override textarea
-  if (overrideTextarea) {
-    overrideTextarea.value = data.userPromptOverride || '';
-  }
-}
-
-export function openStoryboardFrameEditor(frame: StoryboardFrame): void {
-  const modal = document.getElementById('storyboard-frame-editor');
-  if (!modal) return;
-  (modal as any)._frameData = { ...frame };
-  modal.hidden = false;
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
-  window.selectedStoryboardFrameId = frame.id;
-  renderStoryboard();
-  syncFrameEditorForm();
-
-  emitStoryboardFrameSelected(frame.id);
-
-  const preview = modal.querySelector('.sfe-preview');
-  if (preview) {
-    if (frame.imageUrl) {
-      preview.innerHTML = `<img src="${escHtml(frame.imageUrl)}" alt="${escHtml(frame.label)}" style="width:100%;height:100%;object-fit:cover;display:block" />`;
-    } else {
-      preview.innerHTML = `<div class="sfe-preview-placeholder"><i class="fa-solid fa-video"></i><span>Frame preview</span></div>`;
-    }
-  }
-
-  const regenBtn = modal.querySelector<HTMLElement>('.sfe-regenerate-btn');
-  if (regenBtn) {
-    regenBtn.innerHTML = frame.imageUrl
-      ? '<i class="fa-solid fa-arrows-rotate"></i> Regenerate Thumbnail'
-      : '<i class="fa-solid fa-arrows-rotate"></i> Generate Thumbnail';
-  }
-
-  refreshFrameEditorPromptDisplay();
-}
-
-export function closeStoryboardFrameEditor(): void {
-  const modal = document.getElementById('storyboard-frame-editor');
-  if (!modal) return;
-  modal.hidden = true;
-  modal.setAttribute('aria-hidden', 'true');
-  (modal as any)._frameData = null;
-  document.body.style.overflow = '';
-}
-
-function syncFrameEditorForm(): void {
-  const modal = document.getElementById('storyboard-frame-editor');
-  if (!modal || modal.hidden) return;
-  const data: StoryboardFrame = (modal as any)._frameData;
-  if (!data) return;
-  const labelInput = modal.querySelector<HTMLInputElement>('.sfe-input-label');
-  const sceneInput = modal.querySelector<HTMLInputElement>('.sfe-input-scene');
-  const anchorInput = modal.querySelector<HTMLInputElement>('.sfe-input-anchor');
-  const notesTextarea = modal.querySelector<HTMLTextAreaElement>('.sfe-input-notes');
-  if (labelInput) { labelInput.value = data.label || ''; }
-  if (sceneInput) { sceneInput.value = data.scene || ''; }
-  if (anchorInput) { anchorInput.value = data.scriptLink || ''; }
-  if (notesTextarea) { notesTextarea.value = data.notes || ''; }
-}
-
-function wireFrameEditor(): void {
-  const modal = document.getElementById('storyboard-frame-editor');
-  if (!modal) return;
-  if (modal.dataset.sfeWired === '1') return;
-  modal.dataset.sfeWired = '1';
-
-  const backdropClose = () => {
-    const frame = (modal as any)._frameData;
-    if (frame) {
-      window.selectedStoryboardFrameId = frame.id;
-      renderStoryboard();
-    }
-    closeStoryboardFrameEditor();
-  };
-
-  modal.addEventListener('click', (e: MouseEvent) => {
-    const t = e.target as HTMLElement;
-    if (t.closest('[data-cg-close="storyboard-frame-editor"]')) {
-      backdropClose();
-      return;
-    }
-    if (t.closest('.sfe-regenerate-btn')) {
-      const frameData = (modal as any)._frameData;
-      if (frameData) {
-        const live = storyboardFrames.find((f) => f.id === frameData.id);
-        if (live) {
-          regenerateThumbnail(live).then(() => {
-            if (!live.generatingStatus && live.imageUrl) {
-              const preview = modal.querySelector('.sfe-preview');
-              if (preview) {
-                preview.innerHTML = `<img src="${escHtml(live.imageUrl)}" alt="${escHtml(live.label)}" style="width:100%;height:100%;object-fit:cover;display:block" />`;
-              }
-            }
-          });
-        }
-      }
-      return;
-    }
-  });
-
-  const syncField = (selector: string, field: keyof StoryboardFrame) => {
-    const el = modal.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
-    if (!el) return;
-    el.addEventListener('input', () => {
-      const data = (modal as any)._frameData;
-      if (!data) return;
-      data[field] = el.value;
-      const frame = storyboardFrames.find((f: StoryboardFrame) => f.id === data.id);
-      if (frame) {
-        (frame as any)[field] = el.value;
-      }
-      window.selectedStoryboardFrameId = data.id;
-      renderStoryboard();
-      updateInspector('storyboard-frame', data);
-    });
-  };
-
-  syncField('.sfe-input-label', 'label');
-  syncField('.sfe-input-scene', 'scene');
-  syncField('.sfe-input-anchor', 'scriptLink');
-  syncField('.sfe-input-notes', 'notes');
-
-  // Override textarea: store value and refresh prompt display
-  const overrideTextarea = modal.querySelector<HTMLTextAreaElement>('.sfe-input-override');
-  if (overrideTextarea) {
-    overrideTextarea.addEventListener('input', () => {
-      const data = (modal as any)._frameData;
-      if (!data) return;
-      data.userPromptOverride = overrideTextarea.value.trim() || undefined;
-      const frame = storyboardFrames.find((f: StoryboardFrame) => f.id === data.id);
-      if (frame) {
-        frame.userPromptOverride = data.userPromptOverride;
-      }
-      refreshFrameEditorPromptDisplay();
-      updateInspector('storyboard-frame', data);
-    });
-  }
-}
-
-export function initStoryboardFrameEditor(): void {
-  wireFrameEditor();
-}
-
-function insertAtCursor(text: string): void {
-  const view = getCinegenScriptEditor()?.editorView;
-  if (!view) return;
-  const { from, to } = view.state.selection.main;
-  view.dispatch({
-    changes: { from, to, insert: text },
-    selection: { anchor: from + text.length },
-  });
-  view.focus();
-  window.scheduleScriptEditorProjectSync?.();
-}
-
-export function showScriptContextMenu(clientX: number, clientY: number): void {
-  const menu = document.getElementById('script-context-menu') as any;
-  if (!menu || typeof menu.open !== 'function') return;
-
-  const atChip = window.getChipAtScriptCaret?.();
-  if (atChip) {
-    hideScriptContextMenu();
-    window.showChipContextMenuAt?.(atChip.type, atChip.label, clientX, clientY);
-    return;
-  }
-
-  hideScriptContextMenu();
-  const selectedText = getScriptSelectionOrCurrentLine();
-  const sel = getCurrentScriptSelection();
-  const hasSelection = sel && sel.from !== sel.to;
-  const existingChips = hasSelection ? window.extractChipsFromText?.(selectedText) || [] : [];
-
-  const items: Array<{ id: string; label: string; icon: string }> = [
-    { id: 'make-storyboard-frame-for-text', label: 'Make Storyboard Frame', icon: 'fa-image' },
-    { id: 'link-frame-to-script', label: 'Link to Selected Frame', icon: 'fa-link' },
-    { id: 'revise-selection', label: 'Revise...', icon: 'fa-pen' },
-  ];
-
-  if (hasSelection && existingChips.length === 0 && selectedText) {
-    items.push({ id: 'make-chip', label: `Make Chip...`, icon: 'fa-tag' });
-  }
-
-  items.push(
-    { id: 'insert-scene-heading', label: 'Insert Scene Heading', icon: 'fa-heading' },
-    { id: 'add-transition', label: 'Add Transition', icon: 'fa-arrow-right' },
-  );
-
-  menu.open({
-    x: clientX,
-    y: clientY,
-    items,
-    onSelect: (actionId: string) => {
-      switch (actionId) {
-        case 'make-storyboard-frame-for-text':
-          makeStoryboardFrameForText();
-          break;
-        case 'link-frame-to-script':
-          linkSelectedFrameToScript();
-          break;
-        case 'revise-selection':
-          openAiAssistModal();
-          break;
-        case 'make-chip':
-          makeChipFromSelection();
-          break;
-        case 'insert-scene-heading':
-          insertAtCursor('.\n\n');
-          break;
-        case 'add-transition':
-          insertAtCursor('> TRANSITION TO:\n\n');
-          break;
-      }
-    },
-  });
-}
-
-function makeChipFromSelection(): void {
-  const text = getScriptSelectionOrCurrentLine();
-  if (!text) {
-    alertCG('Select text in the script editor first.');
-    return;
-  }
-  let el = document.getElementById('cg-make-chip-prompt');
-  if (el) el.remove();
-  el = document.createElement('div');
-  el.id = 'cg-make-chip-prompt';
-  el.innerHTML = `
-    <div class="cg-prompt-layer" role="dialog" aria-modal="true" aria-labelledby="cg-make-chip-title">
-      <div class="cg-prompt-dialog bevel-raised" style="width:360px">
-        <div class="cg-prompt-header panel-header">
-          <span id="cg-make-chip-title"><i class="fa-solid fa-tag"></i> Make Chip</span>
-        </div>
-        <div class="cg-prompt-body panel-content">
-          <p class="text-xs text-[var(--text-dim)] mb-3">Create a new entity chip for: <strong>${escHtml(text)}</strong></p>
-          <label class="cg-prompt-field">
-            <span>Chip type</span>
-            <select id="cg-make-chip-type" class="cg-input">
-              <option value="character">Character</option>
-              <option value="location" selected>Location</option>
-              <option value="prop">Prop</option>
-              <option value="wardrobe">Wardrobe</option>
-              <option value="effect">SFX / Makeup</option>
-              <option value="vehicle">Vehicle</option>
-            </select>
-          </label>
-          <label class="cg-prompt-field">
-            <span>Chip label (name)</span>
-            <input type="text" id="cg-make-chip-label" class="cg-input" value="${escHtml(text)}" />
-          </label>
-        </div>
-        <div class="cg-prompt-footer bevel-sunken">
-          <button type="button" id="cg-make-chip-cancel" class="toolbar-btn">Cancel</button>
-          <button type="button" id="cg-make-chip-ok" class="toolbar-btn toolbar-btn--shape-soft btn-ai">Create Chip</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(el);
-  const layer = el.querySelector('.cg-prompt-layer') as HTMLElement;
-  const typeSelect = el.querySelector('#cg-make-chip-type') as HTMLSelectElement;
-  const labelInput = el.querySelector('#cg-make-chip-label') as HTMLInputElement;
-  const okBtn = el.querySelector('#cg-make-chip-ok') as HTMLElement;
-  const cancelBtn = el.querySelector('#cg-make-chip-cancel') as HTMLElement;
-  const close = (result: { type: string; label: string } | null) => {
-    el!.remove();
-    if (!result) return;
-    const bucketMap: Record<string, string> = {
-      character: 'characters',
-      location: 'locations',
-      prop: 'props',
-      effect: 'effects',
-      vehicle: 'vehicles',
-    };
-    const bucket = bucketMap[result.type];
-    if (bucket) {
-      window.addItemsToLibrary?.(bucket, [result.label], 'fa-tag', 'Created from script');
-    } else if (result.type === 'wardrobe') {
-      const w = window as any;
-      if (!Array.isArray(w.scriptInfoWardrobe)) w.scriptInfoWardrobe = [];
-      const name = window.normalizeEntityName?.(result.label) || result.label;
-      if (!w.scriptInfoWardrobe.some((s: string) => s.toLowerCase() === name.toLowerCase())) {
-        w.scriptInfoWardrobe.push(name);
-      }
-    }
-    window.scheduleFountainRender?.();
-    alertCG(`Chip "${result.label}" created as ${result.type}.`);
-  };
-  okBtn.addEventListener('click', (e) => { e.stopPropagation(); const lbl = labelInput.value.trim(); if (!lbl) { labelInput.focus(); return; } close({ type: typeSelect.value, label: lbl }); });
-  cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); close(null); });
-  layer.addEventListener('click', (e) => { if (e.target === layer) close(null); });
-  labelInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); okBtn.click(); }
-  });
-  document.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Escape') { document.removeEventListener('keydown', handler); close(null); }
-  });
-  el.hidden = false;
-  el.setAttribute('aria-hidden', 'false');
-  setTimeout(() => labelInput.focus(), 0);
-}
-
-export function hideScriptContextMenu(): void {
-  (document.getElementById('script-context-menu') as any)?.close?.();
-}
-
-let _scriptMenuDismissBound = false;
-
-export function wireScriptContextMenuDismiss(): void {
-  if (_scriptMenuDismissBound) return;
-  _scriptMenuDismissBound = true;
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('script-context-menu') as HTMLElement & {
-      containsTarget?: (t: EventTarget | null) => boolean;
-      hidden?: boolean;
-      close?: () => void;
-    };
-    if (!menu || menu.hidden) return;
-    if (typeof menu.containsTarget === 'function' && menu.containsTarget(e.target)) return;
-    hideScriptContextMenu();
-  });
-}
-
-function toggleStoryboardFrameTextButton(): void {
-  const btn = document.getElementById('make-storyboard-frame-text-btn');
-  if (!btn) return;
-  const sel = getCurrentScriptSelection();
-  if (!sel) {
-    btn.hidden = true;
-    return;
-  }
-  btn.hidden = !sel.text;
-}
-
-export function syncScriptSelectionToStoryboard(): void {
-  highlightStoryboardForScriptSelection();
-  toggleStoryboardFrameTextButton();
 }
 
 export function installStoryboardBundleGlobals(): void {

@@ -14,7 +14,7 @@ import {
   getStoryboardFrameFloatBlockHeightPx,
 } from '@/script/script-frame-layout';
 import { CG_STORYBOARD_FRAME_SELECTED } from '@/events/shell-events';
-import { openStoryboardFrameEditor } from '@/storyboard/storyboard-bundle';
+import { openStoryboardFrameEditor } from '@/storyboard/storyboard-frame-editor';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { selectStoryboardFrameById } from '@/workspace/shot-frame-bridge';
 import { blurStoryboardFrameThumbFocus } from '@/script/storyboard-link-ranges';
