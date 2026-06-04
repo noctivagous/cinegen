@@ -1,8 +1,9 @@
-import { html } from 'lit';
+import { html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { whenBootReady } from '@/app/boot-coordinator';
 import { CgLightElement } from '@/components/lit-base';
 import type { CineGenPreferences } from '@/services/preferences';
+import { CG_STORYBOARD_REFERENCES_CHANGED } from '@/events/shell-events';
 
 const STORYBOARD_LAYOUT_OPTIONS = [
   { value: 'shots' as const, label: 'By Shot', icon: 'fa-solid fa-layer-group' },
@@ -14,6 +15,7 @@ export class CinegenStoryboardPane extends CgLightElement {
   @state() private _tab: 'storyboard' | 'player' = 'storyboard';
   @state() private _layout: CineGenPreferences['storyboardViewMode'] = 'shots';
   @state() private _thumbScale = 1;
+  @state() private _showRefBank = false;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -21,6 +23,7 @@ export class CinegenStoryboardPane extends CgLightElement {
     this.classList.add('split-pane');
     if (!this.style.width) this.style.width = '50%';
     whenBootReady('preferences', () => this._applyLayoutPrefs());
+    document.addEventListener(CG_STORYBOARD_REFERENCES_CHANGED, () => this.requestUpdate());
   }
 
   private _applyLayoutPrefs(): void {
@@ -48,6 +51,60 @@ export class CinegenStoryboardPane extends CgLightElement {
     if (!Number.isFinite(val)) return;
     this._thumbScale = val;
     this._persistLayoutPrefs();
+  }
+
+  private _renderRefBank() {
+    const bank = (window as any).storyboardReferenceBank as Record<string, Array<Record<string, unknown>>> | undefined;
+    if (!bank) return nothing;
+    const categories = ['characters', 'locations', 'interiors', 'exteriors'] as const;
+    const labels: Record<string, string> = { characters: 'Characters', locations: 'Locations', interiors: 'Interiors', exteriors: 'Exteriors' };
+    return html`
+      <div style="padding:4px 8px;border-bottom:1px solid #1a1a1a;background:#252525;">
+        <div class="flex flex-wrap gap-3">
+          ${categories.map((cat) => {
+            const slots = Array.isArray(bank[cat]) ? bank[cat] : [];
+            const enabled = slots.filter((s) => s.enabled !== false);
+            return html`
+              <div style="min-width:140px;">
+                <div class="text-[10px] font-bold text-[var(--text-dim)] mb-1">
+                  ${labels[cat]} (${enabled.length}/${slots.length})
+                </div>
+                ${slots.length
+                  ? html`<div class="space-y-1">
+                      ${slots.map((slot) => {
+                        const id = String(slot.id ?? '');
+                        const label = String(slot.label ?? '');
+                        const imageUrl = String(slot.imageUrl ?? '');
+                        const isEnabled = slot.enabled !== false;
+                        return html`
+                          <div class="flex items-center gap-1 text-[10px]">
+                            <button
+                              type="button"
+                              class="${isEnabled ? 'text-emerald-400' : 'text-gray-500'}"
+                              style="background:none;border:none;cursor:pointer;padding:0;font-size:10px;"
+                              title=${isEnabled ? 'Disable reference' : 'Enable reference'}
+                              @click=${() => {
+                                (window as any).enableReferenceSlot?.(id, !isEnabled);
+                                this.requestUpdate();
+                              }}
+                            >
+                              <i class="fa-solid ${isEnabled ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
+                            </button>
+                            ${imageUrl
+                              ? html`<img src=${imageUrl} alt="" style="width:20px;height:20px;object-fit:cover;border-radius:2px;" />`
+                              : nothing}
+                            <span class="text-[var(--text-dim)] truncate" style="max-width:100px;" title=${label}>${label}</span>
+                          </div>
+                        `;
+                      })}
+                    </div>`
+                  : html`<span class="text-[10px] text-gray-600">Empty</span>`}
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
   }
 
   render() {
@@ -95,6 +152,14 @@ export class CinegenStoryboardPane extends CgLightElement {
           <button class="toolbar-btn btn-ai" data-ws-action="generateStoryboardReferences">
             <i class="fa-solid fa-id-card"></i> References
           </button>
+          <button
+            type="button"
+            class="toolbar-btn ${this._showRefBank ? 'active' : ''}"
+            @click=${() => { this._showRefBank = !this._showRefBank; }}
+            title="Toggle reference bank"
+          >
+            <i class="fa-solid fa-layer-group"></i> Ref Bank
+          </button>
           <button class="toolbar-btn btn-ai" data-ws-action="draftShotStoryboards"
                   title="Generate 1 frame per shot with cinematography set">
             <i class="fa-solid fa-images"></i> Draft Shot Storyboards
@@ -133,6 +198,7 @@ export class CinegenStoryboardPane extends CgLightElement {
           >References required</span>
         </div>
       </div>
+      ${this._showRefBank ? this._renderRefBank() : nothing}
       <div
         ?hidden=${this._tab !== 'storyboard'}
         class="tab-page-classic storyboard-pane-view"

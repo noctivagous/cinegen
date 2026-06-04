@@ -50,7 +50,7 @@ import { patchAppShellState } from '@/stores/app-shell';
 import { storageService } from '@/services/persistence';
 import { emitAiInteractionLog } from '@/services/ai/interaction-log';
 
-import { CG_TREE_NODE_SELECT, emitStoryboardFrameSelected } from '@/events/shell-events';
+import { CG_TREE_NODE_SELECT, CG_STORYBOARD_REFERENCES_CHANGED, emitStoryboardFrameSelected } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 import {
@@ -119,6 +119,7 @@ declare global {
     value: string,
     sceneKey?: string
   ): void;
+  function enableReferenceSlot(slotId: string, enabled: boolean, sceneKey?: string): void;
   function makeChipFromSelection(): void;
   function getChipAtScriptCaret(): { type: string; label: string } | null;
   function showChipContextMenuAt(chipType: string, label: string, clientX: number, clientY: number): void;
@@ -156,6 +157,7 @@ interface StoryboardReferenceSlot {
   imageUrl?: string;
   notes?: string;
   locked?: boolean;
+  enabled?: boolean;
   source: 'ai' | 'user';
   updatedAt?: string;
 }
@@ -328,7 +330,7 @@ function saveReferenceState(): void {
       referenceGenerationStatus,
     })
   );
-  window.dispatchEvent(new CustomEvent('storyboard-references-changed'));
+  window.dispatchEvent(new CustomEvent(CG_STORYBOARD_REFERENCES_CHANGED));
   syncReferenceGateControls();
 }
 
@@ -398,6 +400,7 @@ function makeReferenceSlot(category: ReferenceCategory, label: string, prompt: s
     label,
     prompt,
     source: 'ai',
+    enabled: true,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -581,6 +584,14 @@ export function updateReferenceSlotField(
   const slot = findReferenceSlot(slotId, sceneKey);
   if (!slot) return;
   slot[field] = value;
+  slot.updatedAt = new Date().toISOString();
+  saveReferenceState();
+}
+
+export function enableReferenceSlot(slotId: string, enabled: boolean, sceneKey?: string): void {
+  const slot = findReferenceSlot(slotId, sceneKey);
+  if (!slot) return;
+  slot.enabled = enabled;
   slot.updatedAt = new Date().toISOString();
   saveReferenceState();
 }
@@ -1464,6 +1475,7 @@ export function installStoryboardBundleGlobals(): void {
   w.lockReferenceSlot = lockReferenceSlot;
   w.unlockReferenceSlot = unlockReferenceSlot;
   w.updateReferenceSlotField = updateReferenceSlotField;
+  w.enableReferenceSlot = enableReferenceSlot;
   w.highlightStoryboardForScriptSelection = highlightStoryboardForScriptSelection;
   w.syncScriptSelectionToStoryboard = syncScriptSelectionToStoryboard;
   w.generateBoards = generateBoards;

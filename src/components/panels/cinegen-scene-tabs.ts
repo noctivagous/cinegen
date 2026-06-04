@@ -7,6 +7,10 @@ import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import { workspaceState } from '@/workspace/workspace-state';
 import { escHtml } from '@/utils/html';
 import { currentSceneData } from '@/data/project-data';
+import {
+  isAcceptedReferenceFile,
+  readFileAsDataUrl,
+} from '@/assets/asset-upload-service';
 import { cameraLightingData } from '@/camera/camera-lighting-bundle';
 import { markProjectDirty } from '@/services/project-service';
 import {
@@ -121,6 +125,64 @@ export class CinegenSceneTabs extends CgLightElement {
     this._renumberShots(sceneId);
     markProjectDirty(['scenes']);
     this.requestUpdate();
+  }
+
+  private _addShotRef(sceneId: string, shot: SceneShot): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,image/avif,.pdf';
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file || !isAcceptedReferenceFile(file)) return;
+      const dataUrl = await readFileAsDataUrl(file);
+      if (!Array.isArray(shot.sceneReferenceSlots)) shot.sceneReferenceSlots = [];
+      shot.sceneReferenceSlots.push(dataUrl);
+      markProjectDirty(['scenes']);
+      this.requestUpdate();
+    });
+    input.click();
+  }
+
+  private _removeShotRef(sceneId: string, shot: SceneShot, idx: number): void {
+    if (!Array.isArray(shot.sceneReferenceSlots)) return;
+    shot.sceneReferenceSlots.splice(idx, 1);
+    markProjectDirty(['scenes']);
+    this.requestUpdate();
+  }
+
+  private _shotRefHtml(sceneId: string, shot: SceneShot) {
+    const refSlots = shot.sceneReferenceSlots;
+    const refUrls = Array.isArray(refSlots) ? refSlots : [];
+    return html`
+      <div class="mt-2">
+        <div class="text-[10px] text-[var(--text-dim)] mb-1">
+          ${refUrls.length ? `${refUrls.length} shot reference${refUrls.length === 1 ? '' : 's'}` : 'No shot references'}
+        </div>
+        ${refUrls.length
+          ? html`<div class="flex flex-wrap gap-1 mb-1">
+              ${refUrls.map((url, i) => html`
+                <div style="position:relative;">
+                  <img src=${url} alt="Shot ref ${i + 1}"
+                    style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border-dark);" />
+                  <button
+                    type="button"
+                    @click=${() => this._removeShotRef(sceneId, shot, i)}
+                    style="position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:#c00;color:#fff;font-size:10px;line-height:16px;text-align:center;padding:0;"
+                    title="Remove reference"
+                  >&times;</button>
+                </div>
+              `)}
+            </div>`
+          : nothing}
+        <button
+          type="button"
+          class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400"
+          @click=${() => this._addShotRef(sceneId, shot)}
+        >
+          <i class="fa-solid fa-plus"></i> Add Reference
+        </button>
+      </div>
+    `;
   }
 
   private _overviewHtml(scene: SceneDetail) {
@@ -392,6 +454,7 @@ export class CinegenSceneTabs extends CgLightElement {
                           )}
                         </ul>`
                       : html`<p class="text-[10px] text-[var(--text-dim)] mt-2">No storyboard frames linked.</p>`}
+                    ${this._shotRefHtml(sceneId, shot)}
                   </div>
                 </div>
               `;

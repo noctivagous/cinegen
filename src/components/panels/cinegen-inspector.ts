@@ -297,8 +297,100 @@ export class CinegenInspector extends CgLightElement {
         title: 'Chips in asset',
       })}
         ${hasRefs ? this._renderCharacterRefSlots(name, refs!) : ''}
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400"
+            @click=${() => this._promoteAssetToShotRef(name, refs)}
+            ?disabled=${!hasRefs}
+            title=${hasRefs ? 'Assign this character as a shot reference' : 'No reference images to promote'}
+          >
+            <i class="fa-solid fa-crosshairs"></i> Use as Shot Reference
+          </button>
+        </div>
       </div>
     `;
+  }
+
+  private _promoteAssetToShotRef(name: string, refs: Record<string, unknown> | undefined): void {
+    if (!refs || typeof refs !== 'object') {
+      window.alertCG?.('This character has no reference images. Upload face/body/costume references first.');
+      return;
+    }
+    const refUrls: string[] = [];
+    for (const key of ['face', 'body', 'profile', 'threeQuarter', 'closeUp']) {
+      const url = refs[key];
+      if (typeof url === 'string' && url) refUrls.push(url);
+    }
+    if (Array.isArray(refs.costume)) {
+      for (const url of refs.costume) {
+        if (typeof url === 'string' && url) refUrls.push(url);
+      }
+    }
+    if (!refUrls.length) {
+      window.alertCG?.('No reference image URLs found on this character.');
+      return;
+    }
+
+    const imageUrl = refUrls[0];
+    const scenes = Object.entries(currentSceneData).sort(([a], [b]) => a.localeCompare(b));
+    if (!scenes.length) {
+      window.alertCG?.('No scenes found. Create scenes first.');
+      return;
+    }
+    const sceneLabels = scenes.map(([sceneId, scene], idx) =>
+      `${idx + 1}. Scene ${sceneId} — ${(scene as Record<string, unknown>).title || 'Untitled'}`
+    );
+    const sceneInput = prompt(`Assign "${name}" as shot reference.\nSelect a scene:\n${sceneLabels.join('\n')}\n\nEnter scene number (1–${scenes.length}):`);
+    if (!sceneInput) return;
+    const sceneIdx = parseInt(sceneInput, 10) - 1;
+    if (sceneIdx < 0 || sceneIdx >= scenes.length) {
+      window.alertCG?.('Invalid scene selection.');
+      return;
+    }
+    const [sceneId, scene] = scenes[sceneIdx] as [string, Record<string, unknown>];
+    const coverage = (scene.coverage ?? []) as Array<Record<string, unknown>>;
+    if (!coverage.length) {
+      window.alertCG?.('This scene has no shots. Create shots first.');
+      return;
+    }
+    const shotLabels = coverage.map((shot, idx) =>
+      `${idx + 1}. Shot ${shot.number ?? idx + 1} — ${shot.label || 'Untitled'}`
+    );
+    const shotInput = prompt(`Select a shot:\n${shotLabels.join('\n')}\n\nEnter shot number (1–${coverage.length}):`);
+    if (!shotInput) return;
+    const shotIdx = parseInt(shotInput, 10) - 1;
+    if (shotIdx < 0 || shotIdx >= coverage.length) {
+      window.alertCG?.('Invalid shot selection.');
+      return;
+    }
+
+    const overrides = sceneReferenceOverrides as Record<string, Record<string, unknown>>;
+    if (!overrides[sceneId]) overrides[sceneId] = {};
+    const chars = overrides[sceneId].characters;
+    if (!Array.isArray(chars)) {
+      overrides[sceneId].characters = [];
+    }
+    const arr = overrides[sceneId].characters as Array<Record<string, unknown>>;
+    const existing = arr.find(
+      (s) => String(s.label || '').toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      existing.imageUrl = imageUrl;
+    } else {
+      arr.push({
+        id: `char-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        category: 'characters',
+        label: name,
+        prompt: name,
+        imageUrl,
+        source: 'user',
+        enabled: true,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    markProjectDirty(['storyboard']);
+    notifyStoryboardReferencesChanged();
   }
 
   private _renderCharacterRefSlots(name: string, refs: Record<string, unknown>) {
@@ -405,8 +497,70 @@ export class CinegenInspector extends CgLightElement {
             @cg-file-loaded=${(e: CustomEvent) => this._onLocRefUploaded(name, e.detail.dataUrl)}
           ></cg-reference-upload>
         </div>
+        <div class="mt-3">
+          <button
+            type="button"
+            class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400"
+            @click=${() => this._promoteLocationToShotRef(name, refUrls)}
+            ?disabled=${!refUrls.length}
+            title=${refUrls.length ? 'Assign this location as a shot reference' : 'No reference images to promote'}
+          >
+            <i class="fa-solid fa-crosshairs"></i> Use as Shot Reference
+          </button>
+        </div>
       </div>
     `;
+  }
+
+  private _promoteLocationToShotRef(name: string, refUrls: string[]): void {
+    if (!refUrls.length) {
+      window.alertCG?.('This location has no reference images. Upload location plates first.');
+      return;
+    }
+    const imageUrl = refUrls[0];
+    const scenes = Object.entries(currentSceneData).sort(([a], [b]) => a.localeCompare(b));
+    if (!scenes.length) {
+      window.alertCG?.('No scenes found. Create scenes first.');
+      return;
+    }
+    const sceneLabels = scenes.map(([sceneId, scene], idx) =>
+      `${idx + 1}. Scene ${sceneId} — ${(scene as Record<string, unknown>).title || 'Untitled'}`
+    );
+    const sceneInput = prompt(`Assign "${name}" as location plate reference.\nSelect a scene:\n${sceneLabels.join('\n')}\n\nEnter scene number (1–${scenes.length}):`);
+    if (!sceneInput) return;
+    const sceneIdx = parseInt(sceneInput, 10) - 1;
+    if (sceneIdx < 0 || sceneIdx >= scenes.length) {
+      window.alertCG?.('Invalid scene selection.');
+      return;
+    }
+    const [sceneId] = scenes[sceneIdx] as [string, Record<string, unknown>];
+
+    const overrides = sceneReferenceOverrides as Record<string, Record<string, unknown>>;
+    if (!overrides[sceneId]) overrides[sceneId] = {};
+    const locs = overrides[sceneId].locations;
+    if (!Array.isArray(locs)) {
+      overrides[sceneId].locations = [];
+    }
+    const arr = overrides[sceneId].locations as Array<Record<string, unknown>>;
+    const existing = arr.find(
+      (s) => String(s.label || '').toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      existing.imageUrl = imageUrl;
+    } else {
+      arr.push({
+        id: `loc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        category: 'locations',
+        label: name,
+        prompt: name,
+        imageUrl,
+        source: 'user',
+        enabled: true,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    markProjectDirty(['storyboard']);
+    notifyStoryboardReferencesChanged();
   }
 
   private _onLocRefUploaded(locName: string, dataUrl: string): void {

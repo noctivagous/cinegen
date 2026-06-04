@@ -392,6 +392,7 @@ declare global {
       value: string,
       sceneKey?: string
     ) => void;
+    enableReferenceSlot?: (slotId: string, enabled: boolean, sceneKey?: string) => void;
     getProjectResolutionOptionGroups?: (
       aspectValue: string
     ) => Array<{ groupLabel: string; options: Array<{ value: string; label: string }> }>;

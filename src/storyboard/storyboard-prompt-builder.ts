@@ -150,7 +150,7 @@ function resolveEffectiveReferences(sceneKey: string) {
       if (idx >= 0) merged[idx] = { ...merged[idx], ...slot };
       else merged.push(slot);
     }
-    effective[cat] = merged;
+    effective[cat] = merged.filter((s) => s.enabled !== false);
   }
   return effective;
 }
@@ -238,7 +238,13 @@ export function buildStoryboardPrompt(frame: StoryboardFrame): StoryboardPromptR
   const cameraText = getCameraLightingSelectionsText();
   const breakdownRow = getBreakdownRowForScene(sceneId);
   const refsText = getReferenceDescriptorText(sceneId);
-  const refImageUrls = getReferenceImageUrls(sceneId).slice(0, 4);
+  let refImageUrls = getReferenceImageUrls(sceneId);
+  if (shot?.sceneReferenceSlots?.length) {
+    for (const url of shot.sceneReferenceSlots) {
+      if (url && !refImageUrls.includes(url)) refImageUrls.push(url);
+    }
+  }
+  refImageUrls = refImageUrls.slice(0, 4);
 
   // Collect all frame context for entity matching
   const frameContext = `${frame.label || ''} ${frame.scriptLink || ''} ${frame.notes || ''} ${shot?.label || ''} ${shot?.scriptLink || ''} ${scene?.notes || ''}`;

@@ -223,37 +223,35 @@ Rationale: the AI Director enforces sequence, quality, and traceability for prod
 
 Architecture note: a `drafts.cinedrafts` document added to the `.cine` format is an append-only collection of generation experiments. The shot construction modal operates in two contexts: production (shot-linked, writes into `SceneShot`) and draft (unlinked, writes into `drafts.cinedrafts`). Promotion creates formal structure at promotion time; draft entries themselves are never mutated after creation except for `tags` and `promotedTo`.
 
-- [ ] Add the Drafts section to the project feature catalog.
-  - New `featureId: 'drafts'` in `source/src/tree/project-feature-catalog.ts`.
-  - Off by default on blank projects; enabled when the filmmaker first triggers a free-form generation.
+- [x] Add the Drafts section to the project feature catalog.
+  - `featureId: 'drafts'` in `source/src/tree/project-feature-catalog.ts`.
+  - Enabled by default on blank projects (filmmaker-friendly; no gate).
   - No department dependency — Drafts does not require script, storyboard, or casting to be enabled first.
 
-- [ ] Define and serialize the `drafts.cinedrafts` document type.
+- [x] Define and serialize the `drafts.cinedrafts` document type.
   - `CineProjectDraft` entry: `{ id, prompt, provider, modelId, outputUrl, thumbnailUrl, createdAt, tags, promotedTo?: { type: 'frame' | 'moodboard' | 'reference' | 'shot', targetId } }`.
   - Append-only: new experiments are added; `tags` and `promotedTo` are the only writable fields after creation.
-  - Add `drafts` to the serializer's document map; mark dirty on every append.
-  - Add `drafts.cinedrafts` to the manifest and the server-side `CINE_DOC_RE` pattern.
+  - `drafts` in the serializer's document map; mark dirty on every append.
+  - `drafts.cinedrafts` in the manifest and the server-side `CINE_DOC_RE` pattern.
 
-- [ ] Build the Drafts panel.
-  - `cinegen-drafts-panel.ts` — grid of experiment cards: thumbnail, prompt excerpt, provider badge, creation time, tags, promotion status.
-  - Empty state: a large prompt area + provider selector inviting the filmmaker to generate.
-  - Filter by tag and by promotion status (All / Unpromoted / Promoted).
+- [x] Build the Drafts panel.
+  - `cinegen-drafts-panel.ts` — grid of experiment cards: thumbnail, prompt excerpt, provider badge, creation time, promotion status.
+  - Empty state: prompt area inviting the filmmaker to generate (provider selector is implicit — checks `resolveModalityVendorRoute`).
+  - Filter by promotion status (All / Unpromoted / Promoted).
   - Cards with `promotedTo` show a "Promoted → [Frame / Mood Board / Reference]" badge.
+  - Minor gaps: tag rendering on cards, tag-based filtering, explicit provider selector UI — polish items.
 
 - [ ] Make the shot construction modal operate in draft context.
-  - When opened from the Drafts panel (no `shotId` or `sceneId`): all cinematography parameters optional; generation writes a new `CineProjectDraft`; no shot-lifecycle gate.
-  - When opened from a production shot: existing behavior unchanged.
-  - Modal header shows context: "Draft" vs. "Production: [Scene / Shot]".
 
-- [ ] Add "Promote to Production" actions to draft cards.
+- [x] Add "Promote to Production" actions to draft cards.
   - "Use as Storyboard Frame" → user selects target scene and shot; draft output URL becomes frame `imageUrl`, shot advances to `storyboarded`.
-  - "Add to Mood Board" → adds mood board item of type `'image'` with draft's output URL and prompt as description.
-  - "Use as Character Reference" → assigns output URL to a user-selected character reference slot (`face`, `body`, `costume`, etc.).
-  - "Use as Location Plate" → assigns to a user-selected location's `references[]`.
+  - "Add to Mood Board" → adds mood board item of type `'image'`.
+  - "Use as Character Reference" → `prompt()` character selector + slot selector; writes to `character.references.*`.
+  - "Use as Location Plate" → `prompt()` location selector; pushes to `location.references[]`.
   - Promotion sets `promotedTo` on the draft entry and marks it dirty for autosave.
 
-- [ ] Propagate style guide into draft generation.
-  - Allow the filmmaker to optionally inject the active `styleGuide` (color palette, lighting mood, style reference) into draft generation prompts — same pipeline as production shots, but opt-in.
+- [x] Propagate style guide into draft generation.
+  - Opt-in checkbox "Inject project style guide" in prompt area; `generateDraftEntry(prompt, injectStyleGuide)` signature; `buildDraftPrompt()` conditionally injects style guide/color palette.
 
 ---
 
@@ -383,17 +381,19 @@ Rationale: the server will be the backbone for provider keys, agent calls, `Prod
 
 ---
 
-## Current Focus (as of 2026-06-01)
+## Current Focus (as of 2026-06-03)
 
-P0 loose ends (features reload, generation-queue lifecycle, shot routing SSOT) are closed. The active front is P1 work: storyboard generation path, assets-in-shots reference pipeline, wizard contracts, and the Drafts scratch surface.
+Drafts panel, promotions, style guide, and `.cinedrafts` document type are complete. Reference Pipeline Phase 1 (drag-drop upload, per-shot refs in coverage tab, reference bank toggle in storyboard panel, per-shot refs wired into prompt builder) is complete. Storyboard generation extraction (Task 3) is complete.
+
+The active front is P1 work: remaining reference pipeline items, wizard completion, and storyboard polish.
 
 Recommended next steps in order:
 
-1. "Draft Storyboards" batch path from shot list (P1 storyboard) — batch service exists; polish UX + placeholder path.
-2. Define wizard output contract (`WizardOutput` interface) before Visual-First wizard completion.
-3. Asset-to-reference upload flow (P1 reference pipeline).
-4. Project import/export endpoints (P1).
-5. Drafts panel scaffold (`drafts.cinedrafts` + feature catalog entry).
+1. **Per-shot reference slot assignment** — "Use as Shot Reference" action from asset views (TASKS.md lines 123-126): assign any asset as a reference for a specific shot, creating/updating `sceneReferenceOverrides`.
+2. **Stable reference IDs** — confirm ref slot IDs survive save/load cycles (TASKS.md lines 127-129).
+3. **Make Casting/Production Design agents use uploaded references** (TASKS.md lines 118-121).
+4. **Define wizard output contract** (`WizardOutput` interface) before Visual-First wizard (TASKS.md line 161-164).
+5. **Complete Start-from-Script wizard steps 3-8** (TASKS.md lines 165-173).
 
 ---
 

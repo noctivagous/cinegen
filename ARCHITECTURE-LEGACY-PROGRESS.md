@@ -1,6 +1,6 @@
 # Cinegen Architecture Progressive Fix Tracker
 
-Last verified: 2026-05-29
+Last verified: 2026-06-03
 Source baseline: `planning/architecture-audit-report-2026-05-25.md`
 
 This is a living reference for incremental cleanup until legacy bundles and global bridges are removed.
@@ -20,18 +20,18 @@ This is a living reference for incremental cleanup until legacy bundles and glob
 ### Architecture shape
 
 - `VERIFIED` Mixed architecture remains: modern Lit/store/services + legacy `window.*` bridge modules.
-- `VERIFIED` Script wizard is still embedded in `toolbar/toolbar-modals-service.ts`, not extracted into `wizard/`.
+- `UPDATED` Script wizard state/slides extracted to `wizard/` modules (`script-wizard-state.ts`, `script-wizard-bundle.ts`), but HTML rendering templates (~67 `script-wizard-form` blocks) remain in `toolbar/toolbar-modals-service.ts`.
 - `VERIFIED` `source/server/proxy.js` remains monolithic and owns multiple concerns (proxy, key/routing/settings APIs, agents routing).
 - `VERIFIED` Build still reports pre-existing circular chunk warnings involving setup assistant/workspace/modals/panels.
 
 ### Monolithic hotspots (current line counts)
 
-- `OPEN` `source/src/toolbar/toolbar-modals-service.ts` — 3143
-- `OPEN` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2509
-- `OPEN` `source/src/storyboard/storyboard-bundle.ts` — 1510
+- `OPEN` `source/src/toolbar/toolbar-modals-service.ts` — 2757
+- `OPEN` `source/src/setup-assistant/setup-assistant-bundle.ts` — 2161
+- `OPEN` `source/src/storyboard/storyboard-bundle.ts` — 1512
 - `OPEN` `source/src/workspace/workspace-bundle.ts` — 1340
-- `OPEN` `source/src/services/status-bar-service.ts` — 1208
-- `OPEN` `source/server/proxy.js` — 1178
+- `OPEN` `source/src/services/status-bar-service.ts` — 1192
+- `OPEN` `source/server/proxy.js` — 1749
 
 ---
 
@@ -127,7 +127,7 @@ Progress note (2026-05-26):
 - Extracted setup-assistant routing test orchestration into `source/src/setup-assistant/setup-assistant-routing-tests.ts` (single-modality and vendor-wide connection tests, status updates, model-list persistence hooks), wired via `_saRoutingTestDeps()` in bundle.
 - Extracted setup-assistant UI rendering shell into `source/src/setup-assistant/setup-assistant-render.ts` (`renderSetupStep`, rail/body/footer rendering) while preserving existing step templates and event behavior in bundle.
 - Reduced setup-assistant bundle indirection by removing pass-through helper wrappers in `source/src/setup-assistant/setup-assistant-bundle.ts` and calling extracted module APIs directly (state, persistence, and connection-test helpers).
-- Phase B decomposition goals are complete; remaining cleanup is optional follow-up modularization.
+- Phase B decomposition goals are complete for state/slide extraction; rendering templates remain inline in `toolbar-modals-service.ts` and would be a follow-up extraction pass.
 
 ### Phase C — Legacy bridge retirement
 
@@ -176,7 +176,8 @@ Progress note (2026-05-26):
     - verified target-flow shim removals with `npm run build`; remaining legacy globals are outside Phase C target flows and tracked as next-wave workspace/storyboard cleanup
   - strengthened lint guards by adding `source/scripts/check-raw-custom-event-strings.mjs` and wiring it into `npm run lint:legacy-globals` to block new raw custom-event string literals outside a temporary legacy allowlist
 - [x] Remove unused barrels only after integration confirmation.
-- [ ] Introduce stricter lint checks to prevent new global write paths and raw string event names.
+- [x] Add lint guards (`check-window-cinegen-writes.mjs` + `check-raw-custom-event-strings.mjs`) blocking new globals and raw event strings; wired into build pipeline.
+- [ ] Introduce stricter lint checks beyond current guard coverage (e.g., detect existing violations in allowlisted files, add ESLint rules).
 
 ### Phase D — Structural cleanup
 

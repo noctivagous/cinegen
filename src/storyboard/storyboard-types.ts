@@ -32,6 +32,7 @@ export type StoryboardReferenceSlot = {
   imageUrl?: string;
   notes?: string;
   locked?: boolean;
+  enabled?: boolean;
   source: StoryboardReferenceSource;
   updatedAt?: string;
 };

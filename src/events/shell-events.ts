@@ -18,6 +18,9 @@ export const CG_STORYBOARD_FRAME_SELECTED = 'storyboard-frame-selected';
 /** Storyboard: frames array or link metadata changed. */
 export const CG_STORYBOARD_FRAMES_CHANGED = 'storyboard-frames-changed';
 
+/** Storyboard: reference bank or scene reference overrides changed. */
+export const CG_STORYBOARD_REFERENCES_CHANGED = 'storyboard-references-changed';
+
 /** Drafts: entries array changed (append or patch). */
 export const CG_DRAFTS_CHANGED = 'cg-drafts-changed';
 
