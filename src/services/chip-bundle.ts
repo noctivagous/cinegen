@@ -10,6 +10,15 @@ import { persistProjectTreeExpandedState } from '@/services/project-service';
 import { sceneIdFromStoryboardFrame } from '@/workspace/shot-frame-bridge';
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { getCurrentScriptText } from '@/script/fountain-bundle';
+import {
+  projectData,
+  breakdownData,
+  assetLibrary,
+  storyboardFrames,
+  currentSceneData,
+} from '@/data/project-data';
+import { switchView } from '@/workspace/view-routing';
+import { hideStoryboardContextMenu as hideSbContextMenu } from '@/storyboard/storyboard-context-menus';
 
 // ==================== CHIP NAVIGATION ====================
 let chipNavFocus = { type: null, label: null };
@@ -109,7 +118,7 @@ function chipLabelMatches(text, label, chipType) {
   });
 }
 
-function findProjectNode(predicate, node = window.projectData) {
+function findProjectNode(predicate, node = projectData) {
   if (predicate(node)) return node;
   if (node.children) {
     for (const child of node.children) {
@@ -120,15 +129,15 @@ function findProjectNode(predicate, node = window.projectData) {
   return null;
 }
 
-function findProjectNodeByName(name, node = window.projectData) {
+function findProjectNodeByName(name, node = projectData) {
   return findProjectNode((candidate) => candidate.name === name, node);
 }
 
-function findProjectNodeBySceneId(sceneId, node = window.projectData) {
+function findProjectNodeBySceneId(sceneId, node = projectData) {
   return findProjectNode((candidate) => candidate.sceneId === sceneId, node);
 }
 
-function expandTreePathToNode(targetName, node = window.projectData, ancestors = []) {
+function expandTreePathToNode(targetName, node = projectData, ancestors = []) {
   if (node.name === targetName) {
     let changed = false;
     ancestors.forEach((n) => {
@@ -239,7 +248,7 @@ function collectChipMentions(chipType, label) {
     });
   });
 
-  window.breakdownData.forEach((row) => {
+  breakdownData.forEach((row) => {
     const fields = [
       { key: 'location', chip: 'location', label: 'Location' },
       { key: 'characters', chip: 'character', label: 'Characters' },
@@ -261,11 +270,11 @@ function collectChipMentions(chipType, label) {
   });
 
   const libMap = {
-    character: window.assetLibrary.characters,
-    location: window.assetLibrary.locations,
-    prop: window.assetLibrary.props,
-    vehicle: window.assetLibrary.vehicles,
-    effect: window.assetLibrary.effects
+    character: assetLibrary.characters,
+    location: assetLibrary.locations,
+    prop: assetLibrary.props,
+    vehicle: assetLibrary.vehicles,
+    effect: assetLibrary.effects
   };
   const lib = libMap[chipType];
   if (lib) {
@@ -276,14 +285,14 @@ function collectChipMentions(chipType, label) {
     });
   }
 
-  window.storyboardFrames.forEach((frame) => {
+  storyboardFrames.forEach((frame) => {
     const blob = `${frame.label || ''} ${frame.scriptLink || ''} ${frame.notes || ''}`;
     if (chipLabelMatches(blob, label, chipType)) {
       push('Storyboard', frame.label || frame.id, { dest: 'script' });
     }
   });
 
-  Object.entries(window.currentSceneData).forEach(([sceneId, scene]) => {
+  Object.entries(currentSceneData).forEach(([sceneId, scene]) => {
     (scene.coverage || []).forEach((shot) => {
       if (chipLabelMatches(shot.label, label, chipType)) {
         push('Scene coverage', `${scene.title} — ${shot.label}`, { dest: 'scene', sceneId: sceneId });
@@ -292,7 +301,7 @@ function collectChipMentions(chipType, label) {
   });
 
   if (chipType === 'character') {
-    window.assetLibrary.characters.forEach((item) => {
+    assetLibrary.characters.forEach((item) => {
       if (chipLabelMatches(item.name, label, chipType)) {
         push('Casting / Characters', item.desc ? `${item.name} — ${item.desc}` : item.name, { dest: 'casting' });
       }
@@ -306,7 +315,7 @@ function renderCastingView(focusLabel) {
   const host = document.getElementById('casting-character-list');
   if (!host) return;
   const focus = focusLabel ? normalizeEntityName(focusLabel).toLowerCase() : '';
-  host.innerHTML = window.assetLibrary.characters
+  host.innerHTML = assetLibrary.characters
     .map((item) => {
       const isFocus = focus && chipLabelMatches(item.name, focusLabel, 'character');
       return `
@@ -386,7 +395,7 @@ function navigateChipDestination(destId, chipType, label, mentionMeta) {
   };
 
   if (destId === 'global') {
-    window.switchView?.('chip-global', `Global — ${label}`, 'preprod');
+    switchView?.('chip-global', `Global — ${label}`, 'preprod');
     renderChipGlobalView(chipType, label);
     return;
   }
@@ -467,7 +476,7 @@ function showChipContextMenuAt(chipType, label, clientX, clientY) {
   const menu = document.getElementById('chip-context-menu');
   if (!menu || typeof menu.open !== 'function' || !config || !label) return;
 
-  window.hideStoryboardContextMenu?.();
+  hideSbContextMenu?.();
   chipContextState = { chipType, label };
   updateInspectorChip(chipType, label);
   const typeCaption = CHIP_TYPE_MENU_LABELS[chipType] || chipType;
@@ -590,7 +599,7 @@ function initChipNavigation() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       hideChipContextMenu();
-      window.hideStoryboardContextMenu?.();
+      hideSbContextMenu?.();
     }
   });
 }
@@ -608,7 +617,7 @@ function collectStoryboardFrameMentions(frame) {
 }
 
 function navigateStoryboardDestination(destId, frame) {
-  window.hideStoryboardContextMenu?.();
+  hideSbContextMenu?.();
 
   if (destId === 'script') {
     activateTreeNodeByName('Script');
@@ -665,7 +674,7 @@ function renderStoryboardFrameGlobalView(frame) {
     listEl.innerHTML = chips.length
       ? '<p class="chip-global-empty">No cross-references found for entities in this frame yet.</p>'
       : '<p class="chip-global-empty">No recognized entity chips in this frame.</p>';
-    window.switchView?.('chip-global', `Global — ${frame.label}`, 'preprod');
+    switchView?.('chip-global', `Global — ${frame.label}`, 'preprod');
     return;
   }
 
@@ -686,7 +695,7 @@ function renderStoryboardFrameGlobalView(frame) {
     });
   });
 
-  window.switchView?.('chip-global', `Global — ${frame.label}`, 'preprod');
+  switchView?.('chip-global', `Global — ${frame.label}`, 'preprod');
 }
 
 

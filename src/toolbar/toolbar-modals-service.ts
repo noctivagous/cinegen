@@ -113,52 +113,41 @@ export {
   wireProjectsModalList,
 };
 
+import {
+  setProjectFountainText,
+} from '@/data/project-data';
+import { generateBoards, renderStoryboard } from '@/storyboard/storyboard-bundle';
+import { activateProjectTreeNode } from '@/tree/project-tree-service';
+import { saveFountainFile, triggerFDXImport } from '@/script/fountain-bundle';
+import { renderScriptInfoTables } from '@/workspace/script-info-utils';
+import { parseScriptToAssets } from '@/ai/ai-stubs-bundle';
+import { renderTimeline } from '@/timeline/timeline-bundle';
+
+const _w = window as any;
+
 let guideModalSectionIndex = 0;
 
 /* ── Entry-point wizard slide data ─────────────────────────────────────────── */
-
-const legacyGlobal = window as unknown as Record<string, unknown>;
-const legacySetProjectFountainText = (text: string): void => {
-  const fn = legacyGlobal.setProjectFountainText;
-  if (typeof fn === 'function') (fn as (value: string) => void)(text);
-};
-const legacyGenerateStoryboardReferences = async (): Promise<void> => {
-  const fn = legacyGlobal.generateStoryboardReferences;
-  if (typeof fn === 'function') {
-    await (fn as () => Promise<void>)();
-  }
-};
-const legacyGenerateBoards = async (): Promise<void> => {
-  const fn = legacyGlobal.generateBoards;
-  if (typeof fn === 'function') {
-    await (fn as () => Promise<void>)();
-  }
-};
-const legacyAddItemsToLibrary = (
-  bucket: string,
-  values: string[],
-  icon?: string,
-  desc?: string
-): void => {
-  const fn = legacyGlobal.addItemsToLibrary;
-  if (typeof fn === 'function') {
-    (fn as (b: string, v: string[], i?: string, d?: string) => void)(bucket, values, icon, desc);
-  }
-};
 
 const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
   'script-wizard-modal': createScriptWizardSlides({
     createNewProject,
     setActiveProjectId: (projectId: string) => appShellStore.setActiveProjectId(projectId),
     syncActiveProjectName,
-    setProjectFountainText: legacySetProjectFountainText,
+    setProjectFountainText,
     hydrateScriptEditorFromProject,
     renderProjectsModalList,
     renderEntryWizardSlide: (modalId: string, index: number) => renderEntryWizardSlide(modalId, index),
-    generateStoryboardReferences: legacyGenerateStoryboardReferences,
-    generateBoards: legacyGenerateBoards,
+    generateStoryboardReferences: async () => {
+      const fn = _w.generateStoryboardReferences;
+      if (typeof fn === 'function') await (fn as () => Promise<void>)();
+    },
+    generateBoards,
     closeScriptWizardModal,
-    addItemsToLibrary: legacyAddItemsToLibrary,
+    addItemsToLibrary: (bucket: string, values: string[], icon?: string, desc?: string) => {
+      const fn = _w.addItemsToLibrary;
+      if (typeof fn === 'function') (fn as (b: string, v: string[], i?: string, d?: string) => void)(bucket, values, icon, desc);
+    },
     renderBreakdownTable,
     scheduleFountainRender,
     syncFountainToProject,
@@ -171,17 +160,8 @@ const WIZARD_SLIDES: Record<string, WizardSlide[]> = {
 
 declare let currentSceneId: string | undefined;
 declare const currentSceneData: Record<string, { broll?: Array<{ id: number; label: string }> }>;
-declare function addItemsToLibrary(bucket: string, values: string[], icon?: string, desc?: string): void;
-declare function generateBoards(): Promise<void>;
-declare function generateStoryboardReferences(): Promise<void>;
-declare function setProjectFountainText(text: string): void;
 declare function renderGlobalAssets(tabIndex?: number): void;
-declare function renderScriptInfoTables(): void;
-declare function renderStoryboard(): void;
 declare function refreshShotFrameTree(): void;
-declare function updateInspector(kind: string, data: unknown): void;
-declare function renderFullTree(): void;
-declare function renderTimeline(): void;
 
 function getGuideSectionIndex(id: string): number {
   return GUIDE_SECTIONS.findIndex((s) => s.id === id);
@@ -301,7 +281,7 @@ export function openWizardsModal(): void {
 
 export function openMoodBoardsModal(): void {
   closeAllToolbarSplitMenus();
-  window.activateProjectTreeNode?.('Mood Boards');
+  activateProjectTreeNode?.('Mood Boards');
 }
 
 export function openMoodBoardItemDetail(boardId: string, itemId: string): void {
@@ -337,13 +317,13 @@ export function launchWizardAction(wizardId: string): void {
 export function launchAiAssistAction(kind: string, actionId: string): void {
   if (actionId === 'app-setup-assistant') {
     closeAiAssistModal();
-    void window.openSetupAssistant?.();
+    void _w.openSetupAssistant?.();
     return;
   }
   if (kind === 'task') {
-    if (actionId === 'sync-entities' && typeof window.parseScriptToAssets === 'function') {
+    if (actionId === 'sync-entities') {
       closeAiAssistModal();
-      window.parseScriptToAssets();
+      parseScriptToAssets();
       return;
     }
     if (actionId === 'suggest-pickups') {
@@ -360,8 +340,8 @@ export function launchAiAssistAction(kind: string, actionId: string): void {
           scene.broll.push({ id: Date.now(), label: 'AI Suggested Cutaway', duration: '4s' } as never);
         }
         const detail = document.getElementById('view-scene-detail');
-        if (detail && !detail.classList.contains('hidden') && typeof window.renderSceneDetail === 'function') {
-          window.renderSceneDetail();
+        if (detail && !detail.classList.contains('hidden') && typeof _w.renderSceneDetail === 'function') {
+          _w.renderSceneDetail();
         }
         alertCG('Suggested pickups and a cutaway idea for this scene.');
       } else {
@@ -369,9 +349,9 @@ export function launchAiAssistAction(kind: string, actionId: string): void {
       }
       return;
     }
-    if (actionId === 'board-from-scene' && typeof window.generateBoards === 'function') {
+    if (actionId === 'board-from-scene') {
       closeAiAssistModal();
-      window.generateBoards();
+      generateBoards();
       return;
     }
     if (actionId === 'production-brief') {
@@ -439,7 +419,7 @@ export function buildSettingsModalGrid(): void {
 
 export function importScript(): void {
   closeToolbarSplitMenu('import-split');
-  window.triggerFDXImport?.();
+  triggerFDXImport();
 }
 
 export function saveProject(): void {
@@ -464,8 +444,8 @@ export function openSettings(action: string): void {
 }
 
 export function exportScreenplay(): void {
-  window.closeSaveExportMenu?.();
-  window.saveFountainFile?.();
+  _w.closeSaveExportMenu?.();
+  saveFountainFile();
 }
 
 export function registerToolbarModals(): void {
@@ -661,4 +641,3 @@ export function wireToolbarModalDismissals(): void {
   };
   wireWizardNavigationAndActions(WIZARD_SLIDES, projectActions);
 }
-

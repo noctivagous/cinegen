@@ -246,12 +246,20 @@ Progress note (2026-06-04):
 
 ### Phase E — Next-wave legacy surface cleanup
 
-- [ ] Inventory remaining high-traffic legacy globals outside provider/settings/status (focus: `workspace`, `storyboard`, `toolbar`, `chip`, `fountain` bundles) and rank by user-path frequency.
-- [ ] Replace `window.*` read/write paths in workspace/storyboard/chip flows with explicit imports/services (start with `workspace-bundle`, `storyboard-bundle`, `chip-bundle`, `fountain-bundle`).
+- [x] Inventory remaining high-traffic legacy globals outside provider/settings/status (focus: `workspace`, `storyboard`, `toolbar`, `chip`, `fountain` bundles) and rank by user-path frequency.
+- [x] Migrate `chip-bundle.ts` data reads from `window.*` to direct module imports: `projectData`, `breakdownData`, `assetLibrary`, `storyboardFrames`, `currentSceneData` now imported from `@/data/project-data`. Also imports `switchView` from `@/workspace/view-routing` and `hideStoryboardContextMenu` from `@/storyboard/storyboard-context-menus`.
+- [x] Migrate `toolbar-modals-service.ts` function calls from `window.*` to direct module imports: `setProjectFountainText`, `generateBoards`, `activateProjectTreeNode`, `saveFountainFile`, `triggerFDXImport`, `parseScriptToAssets` now imported from their canonical modules.
+- [x] Migrate `toolbar-menus-service.ts` window.* reads: `projectRegistry`, `projectData`, `loadProjectFromCineFile`, `renderBreakdownTable`, `renderStoryboard`, `renderTimeline`, `hydrateScriptEditorFromProject`, `runImportMenuAction`, `runScriptImportExportMenuAction`, `exportScreenplay`, `syncActiveProjectName` now directly imported. `closeSaveExportMenu` replaced with local function. `window.renderFullTree` replaced with `refreshProjectTree` from project-tree-service.
+- [ ] Replace remaining `window.*` read/write paths in workspace/storyboard/fountain flows with explicit imports/services.
 - [ ] Remove string-based inline handlers in remaining legacy-rendered HTML fragments and bind events through module functions.
 - [ ] Shrink `bridge/compat.ts` and `types/globals.d.ts` to only required cross-bundle compatibility symbols; remove dead exports after migration.
 - [ ] Add/expand lint guards for raw string event names and non-allowlisted global writes beyond `window.CineGen`.
 - [ ] Verify end-to-end flows (script edit, storyboard generation/review, workspace navigation, toolbar actions) and `npm run build` before closing the phase.
+
+Progress note (2026-06-04):
+- Phase E inventory complete: ranked 8 target bundles by user-path frequency. `chip-bundle.ts` (#1 at 736 lines, ~40 window.* refs) is the highest-leverage target.
+- Migrated chip-bundle.ts data reads: 6 globals (`projectData`, `breakdownData`, `assetLibrary`, `storyboardFrames`, `currentSceneData`, `switchView`, `hideStoryboardContextMenu`) replaced with direct module imports from canonical sources. Remaining window.* accesses in chip-bundle are function bridges (installed by `installChipBundleGlobals`) that require consumer-side migration to remove.
+- Migrated toolbar-modals-service.ts function reads: 6 globals (`setProjectFountainText`, `generateBoards`, `activateProjectTreeNode`, `saveFountainFile`, `triggerFDXImport`, `parseScriptToAssets`) replaced with direct module imports. Cast/direct write lint count dropped from 102→99. Remaining 20+ window writes in `installToolbarModalGlobals` are bridge exports for other modules. Remaining 3 window reads (`openSetupAssistant`, `renderSceneDetail`, `closeSaveExportMenu`) lack module exports.
 
 ---
 

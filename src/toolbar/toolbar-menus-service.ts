@@ -9,6 +9,7 @@ import {
 import {
   activatePersistedProjectTreeSelection,
   primePersistedProjectTreeUi,
+  refreshProjectTree,
   resetProjectTreeUiRestoreFlag,
 } from '@/tree/project-tree-service';
 import { appShellStore } from '@/stores/app-shell';
@@ -27,11 +28,20 @@ import {
   clearProviderModelCacheForDebug,
   logSettingsStorageForDebug,
   reloadAppForDebug,
+  exportScreenplay,
+  syncActiveProjectName,
 } from '@/toolbar/toolbar-modals-service';
+import { projectRegistry, projectData, loadProjectFromCineFile } from '@/data/project-data';
+import {
+  renderBreakdownTable,
+} from '@/assets/assets-bundle';
+import { renderStoryboard } from '@/storyboard/storyboard-bundle';
+import { renderTimeline } from '@/timeline/timeline-bundle';
+import { hydrateScriptEditorFromProject, runImportMenuAction, runScriptImportExportMenuAction } from '@/script/fountain-bundle';
 
-declare const projectRegistry: Array<{ id: string; name: string; file?: string }>;
-declare const projectData: { name: string };
-declare const loadProjectFromCineFile: (filename: string) => void;
+function closeSaveExportMenuLocal(): void {
+  closeToolbarSplitMenu('save-export-split');
+}
 
 async function _fetchAndMergeProjects(): Promise<Array<{ id: string; name: string; file?: string }>> {
   hydrateProjectRegistryFromPersistence();
@@ -95,19 +105,18 @@ function switchProject(projectId: string): void {
   let activeName = proj.name;
   if (proj.file) {
     loadProjectFromCineFile(proj.file);
-    activeName = projectData.name || proj.name;
+    activeName = (projectData.name as string) || proj.name;
   } else {
     const local = openProjectFromService(projectId);
     if (local?.name) activeName = local.name;
   }
   appShellStore.setActiveProjectId(projectId);
-  window.syncActiveProjectName?.(activeName);
-  const refresh = window as unknown as Record<string, (() => void) | undefined>;
-  refresh.renderFullTree?.();
-  refresh.renderBreakdownTable?.();
-  refresh.renderStoryboard?.();
-  refresh.renderTimeline?.();
-  refresh.hydrateScriptEditorFromProject?.();
+  syncActiveProjectName?.(activeName);
+  refreshProjectTree?.();
+  renderBreakdownTable?.();
+  renderStoryboard?.();
+  renderTimeline?.();
+  hydrateScriptEditorFromProject?.();
   renderProjectsMenu();
   primePersistedProjectTreeUi(projectId);
   queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
@@ -190,9 +199,7 @@ function initImportMenu(): void {
   importMenu?.querySelectorAll('[data-import-action]').forEach((item) => {
     item.addEventListener('click', () => {
       const action = (item as HTMLElement).dataset.importAction;
-      if (typeof window.runImportMenuAction === 'function' && action) {
-        window.runImportMenuAction(action);
-      }
+      if (action) runImportMenuAction(action);
     });
   });
 }
@@ -241,7 +248,7 @@ const EXPORT_ACTIONS: Record<string, () => void> = {
       });
     });
   },
-  screenplay: () => window.exportScreenplay?.(),
+  screenplay: () => exportScreenplay?.(),
   pdf: () => (window as Window & { exportPDF?: () => void }).exportPDF?.(),
 };
 
@@ -252,12 +259,12 @@ function initSaveExportMenu(): void {
     if (!action) return;
     item.addEventListener('click', () => {
       EXPORT_ACTIONS[action]?.();
-      window.closeSaveExportMenu?.();
+      closeSaveExportMenuLocal();
     });
   });
   menu?.querySelectorAll('.toolbar-split-menu-item:not([data-export-action])').forEach((item) => {
     if ((item as HTMLElement).dataset.wsAction) return;
-    item.addEventListener('click', () => window.closeSaveExportMenu?.());
+    item.addEventListener('click', () => closeSaveExportMenuLocal());
   });
 }
 
@@ -334,9 +341,7 @@ function initScriptImportExportMenu(): void {
   menu?.querySelectorAll('[data-script-io-action]').forEach((item) => {
     item.addEventListener('click', () => {
       const action = (item as HTMLElement).dataset.scriptIoAction;
-      if (typeof window.runScriptImportExportMenuAction === 'function' && action) {
-        window.runScriptImportExportMenuAction(action);
-      }
+      if (action) runScriptImportExportMenuAction(action);
     });
   });
 }
@@ -363,7 +368,7 @@ export function installToolbarMenuGlobals(): void {
   window.renderProjectsMenu = renderProjectsMenu;
   window.buildAiAssistToolbarMenu = buildAiAssistToolbarMenu;
   window.buildWizardsToolbarMenu = buildWizardsToolbarMenu;
-  window.closeSaveExportMenu = () => closeToolbarSplitMenu('save-export-split');
+  window.closeSaveExportMenu = closeSaveExportMenuLocal;
   window.launchAiAssistAction = launchAiAssistAction;
   window.launchWizardAction = launchWizardAction;
 }
