@@ -5,7 +5,8 @@ import { CgLightElement } from '@/components/lit-base';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { getCinegenSceneTabs } from '@/panels/panel-hosts';
-import { renderOverviewPanel, renderTreatmentView, switchView } from '@/workspace/workspace-bundle';
+import { renderOverviewPanel, renderTreatmentView } from '@/workspace/workspace-bundle';
+import { switchView } from '@/workspace/view-routing';
 
 /** Main workspace container; view panes remain as light-DOM children in index.html. */
 @customElement('cinegen-workspace')

@@ -146,7 +146,7 @@ Progress note (2026-06-04):
 
 ### Phase C — Legacy bridge retirement
 
-- [ ] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
+- [x] Replace high-traffic `window.*` global paths with explicit module imports (start with provider/settings/status flows).
   - [x] Create a migration inventory for high-traffic globals in provider/settings/status paths (`rg "window\." source/src/{services,settings,toolbar,components}` + owner/module notes).
   - [x] Define explicit import targets for each inventoried global path (service API, store facade, or typed helper), including temporary compatibility adapters where needed.
   - [x] Provider flows: migrate call-sites that read/write provider routing, model catalogs, and connection-test state to direct imports (remove `window.CineGen.*` access in these paths).
@@ -211,7 +211,15 @@ Progress note (2026-05-26):
 - [x] Extract blank-project wizard from `toolbar-modals-service.ts` into `toolbar-blank-project-wizard.ts` (2757→2444 lines).
 - [x] Extract 4 wizard slide arrays from `toolbar-modals-service.ts` into per-wizard modules (2444→664 lines).
 - [ ] Continue modularizing large workspace/storyboard/status-bar bundles (remaining: `toolbar-modals-service.ts` 664, `setup-assistant-bundle.ts` 2161, `storyboard-bundle.ts` 444, `status-bar-service.ts` 808).
-- [ ] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
+- [x] Reduce circular chunk coupling in setup assistant/workspace/modal/panel loading graph.
+
+Progress note (2026-06-04):
+- Investigated 3 circular chunk cycles (modals-lazy ↔ setup-assistant, panels-lazy, workspace) — all indirect through the entry chunk, no direct static import edges between named chunks.
+- Applied 3 fixes to eliminate all circular chunk + re-export warnings:
+  - `cinegen-workspace.ts`: imported `switchView` directly from `view-routing.ts` instead of re-export through `workspace-bundle.ts` (broke Cycle 4 re-export warning).
+  - `init-setup-assistant.ts`: removed redundant `import '@/components/modals/cinegen-setup-assistant-modal'` (already dynamically loaded by `modal-loader.ts`; broke one edge of Cycle 1).
+  - `vite.config.ts`: excluded `modal-loader.ts` from `modals-lazy` chunk into entry chunk (hub module that all 3 cycles pivoted through; broke all remaining indirect cycles).
+- Verified with `npm run build`: zero circular chunk warnings, zero re-export warnings.
 
 ### Phase E — Next-wave legacy surface cleanup
 

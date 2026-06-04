@@ -1,4 +1,3 @@
-import '@/components/modals/cinegen-setup-assistant-modal';
 import '@/setup-assistant/cinegen-sa-step-host';
 import {
   installSetupAssistantBundleGlobals,

@@ -23,11 +23,11 @@ export default defineConfig({
       input: path.resolve(appRoot, 'index.html'),
       output: {
         manualChunks(id) {
-          // if (id.includes('node_modules/@xterm')) return 'xterm';
           if (id.includes('node_modules/lit')) return 'lit-vendor';
           if (id.includes('/setup-assistant/')) return 'setup-assistant';
           if (id.includes('/workspace/workspace-bundle')) return 'workspace';
           if (id.includes('/components/panels/chunk-')) return 'panels-lazy';
+          if (id.includes('modal-loader')) return;
           if (id.includes('/components/modals/') && !id.includes('templates')) return 'modals-lazy';
         },
       },
