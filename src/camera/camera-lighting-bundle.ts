@@ -3,6 +3,7 @@ import { updateInspector } from '@/components/panels/cinegen-inspector';
 import { previsSelectionState, currentSceneData, styleGuide, activeProjectId } from '@/data/project-data';
 import { colorState } from '@/color/color-state';
 import { getShotById } from '@/workspace/shot-frame-bridge';
+import type { SceneShot } from '@/workspace/scene-types';
 import { CG_PREVIS_SELECTION_CHANGED } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { markActiveShotPrompted } from '@/services/generation-queue-service';
@@ -163,13 +164,29 @@ export let cameraLightingSelections: Record<string, string | null> = {
 
 export let cameraLightingParams: Record<string, Record<string, unknown>> = {};
 
-const SECTION_TO_SHOT_FIELD: Record<string, keyof typeof cameraLightingData> = {
+const SECTION_TO_SHOT_FIELD: Record<string, keyof SceneShot> = {
   shotTypes: 'shotType',
   angles: 'cameraAngle',
   lighting: 'lightingTechnique',
   composition: 'composition',
   movements: 'cameraMovement',
 };
+
+const SHOT_FIELD_TO_SECTION: Record<string, string> = {
+  shotType: 'shotTypes',
+  cameraAngle: 'angles',
+  lightingTechnique: 'lighting',
+  composition: 'composition',
+  cameraMovement: 'movements',
+};
+
+function mirrorShotToScene(sceneId: string, shotId: number, shot: SceneShot): void {
+  const scene = currentSceneData[sceneId];
+  if (scene && Array.isArray(scene.coverage)) {
+    const idx = scene.coverage.findIndex((s: { id: number }) => s.id === shotId);
+    if (idx >= 0) scene.coverage[idx] = shot;
+  }
+}
 
 function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): void {
   const sceneId = previsSelectionState.sceneId;
@@ -182,14 +199,30 @@ function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): vo
   if (!field) return;
 
   (shot as Record<string, unknown>)[field] = abbr ?? undefined;
-
-  // Mirror back into currentSceneData so the change is persisted
-  const scene = currentSceneData[sceneId];
-  if (scene && Array.isArray(scene.coverage)) {
-    const idx = scene.coverage.findIndex((s: { id: number }) => s.id === shotId);
-    if (idx >= 0) scene.coverage[idx] = shot;
+  if (!abbr) {
+    if (shot.cinematographyParams) delete shot.cinematographyParams[sectionKey];
   }
 
+  mirrorShotToScene(sceneId, shotId, shot);
+  markProjectDirty(['scenes']);
+}
+
+function writeParamsToActiveShot(sectionKey: string): void {
+  const sceneId = previsSelectionState.sceneId;
+  const shotId = previsSelectionState.shotId;
+  if (!sceneId || shotId == null) return;
+  const shot = getShotById(sceneId, shotId);
+  if (!shot) return;
+
+  const params = cameraLightingParams[sectionKey];
+  if (!params || !Object.keys(params).length) {
+    if (shot.cinematographyParams) delete shot.cinematographyParams[sectionKey];
+  } else {
+    shot.cinematographyParams ??= {};
+    shot.cinematographyParams[sectionKey] = { ...params };
+  }
+
+  mirrorShotToScene(sceneId, shotId, shot);
   markProjectDirty(['scenes']);
 }
 
@@ -221,12 +254,52 @@ export function syncCameraSelectionsFromActiveShot(): void {
     movements: null,
   };
 
+  cameraLightingParams = {};
   for (const [field, section] of Object.entries(fieldToSection)) {
     const val = (shot as Record<string, unknown>)[field];
     if (typeof val === 'string') {
       cameraLightingSelections[section] = val;
     }
+    const stored = shot.cinematographyParams?.[section];
+    if (stored && typeof stored === 'object') {
+      cameraLightingParams[section] = { ...stored };
+    }
   }
+}
+
+export function shotToCameraSelections(shot: SceneShot): Record<string, string | null> {
+  const selections: Record<string, string | null> = {
+    shotTypes: null,
+    angles: null,
+    lighting: null,
+    composition: null,
+    movements: null,
+  };
+  for (const [field, section] of Object.entries(SHOT_FIELD_TO_SECTION)) {
+    const val = (shot as Record<string, unknown>)[field];
+    if (typeof val === 'string') selections[section] = val;
+  }
+  return selections;
+}
+
+export function buildPromptPartsFromShot(shot: SceneShot): string[] {
+  const selections = shotToCameraSelections(shot);
+  return Object.entries(selections)
+    .filter((entry): entry is [string, string] => entry[1] !== null)
+    .map(([sectionKey, abbr]) => {
+      const item = cameraLightingData[sectionKey]?.items.find((i: CameraItem) => i.abbr === abbr);
+      if (!item) return abbr;
+      let name = item.name;
+      const storedParams = shot.cinematographyParams?.[sectionKey];
+      const paramValues = item.params
+        ?.map((p) => {
+          const val = storedParams?.[p.key] ?? p.defaultValue;
+          return val != null && val !== '' ? String(val) : null;
+        })
+        .filter((v): v is string => v !== null);
+      if (paramValues?.length) name += ` (${paramValues.join(', ')})`;
+      return name;
+    });
 }
 
 function renderCameraChip(sectionKey: string, item: CameraItem): string {
@@ -351,12 +424,17 @@ export function _updateCameraPromptBar() {
 export function selectCameraItem(sectionKey: string, abbr: string): void {
   const next = cameraLightingSelections[sectionKey] === abbr ? null : abbr;
   cameraLightingSelections[sectionKey] = next;
-  if (next !== abbr) {
+  if (!next) {
     delete cameraLightingParams[sectionKey];
   } else {
+    const item = cameraLightingData[sectionKey]?.items.find((i) => i.abbr === abbr);
     cameraLightingParams[sectionKey] = {};
+    item?.params?.forEach((p) => {
+      cameraLightingParams[sectionKey][p.key] = p.defaultValue;
+    });
   }
   writeSelectionToActiveShot(sectionKey, next);
+  if (next) writeParamsToActiveShot(sectionKey);
   renderCameraLighting();
   updateInspector('camera-lighting', cameraLightingSelections);
 }
@@ -366,6 +444,7 @@ export function setCameraItemParam(sectionKey: string, paramKey: string, value: 
     cameraLightingParams[sectionKey] = {};
   }
   cameraLightingParams[sectionKey][paramKey] = value;
+  writeParamsToActiveShot(sectionKey);
   renderCameraLighting();
   updateInspector('camera-lighting', cameraLightingSelections);
 }

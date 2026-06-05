@@ -199,8 +199,11 @@ function _populateTreeNodeView(node: TreeNode, sectionKey: string | null, resolv
   if (resolvedView === 'timeline') renderTimeline();
   if (resolvedView === 'camera-lighting') renderCameraLighting(node.clSection || null);
   if (resolvedView === 'shot-designer') {
-    const el = document.querySelector('cinegen-shot-designer') as HTMLElement & { clSection: string } | null;
-    if (el) el.clSection = node.clSection || '';
+    const el = document.querySelector('cinegen-shot-designer') as HTMLElement & { clSection: string; refresh?: () => void } | null;
+    if (el) {
+      el.clSection = node.clSection || '';
+      el.refresh?.();
+    }
   }
   if (resolvedView === 'casting') (window as any).renderCastingView?.((window as any).chipNavFocus?.label);
   if (resolvedView === 'overview') renderOverviewPanel(node, sectionKey);

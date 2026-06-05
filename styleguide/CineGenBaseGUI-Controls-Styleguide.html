@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineGen Base GUI — Controls Sheet</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/CineGenBaseGUI-tokens.css">
+<link rel="stylesheet" href="../css/CineGenBaseGUI.css">
+<link rel="stylesheet" href="CineGenBaseGUI-button-shapes.css">
+<link rel="stylesheet" href="CineGenBaseGUI-button-surfaces.css">
+<link rel="stylesheet" href="../css/CineGenBaseGUI-controls-extra.css">
+<style>
+/* Styleguide chrome only — not part of the app */
+html { font-size: 11px; }
+body {
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  user-select: text;
+  min-height: 100vh;
+}
+/* Master–detail shell */
+.sg-shell {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  min-height: 100vh;
+  align-items: start;
+}
+.sg-master {
+  border-right: 1px solid var(--border-dark);
+  background: color-mix(in srgb, var(--bg-dark) 92%, #000);
+}
+.sg-master-inner {
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow: auto;
+  padding: 20px 14px 32px 18px;
+}
+.sg-master-brand {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-light);
+}
+.sg-master-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sg-master-nav a {
+  display: block;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-main);
+  text-decoration: none;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+.sg-master-nav a:hover {
+  background: color-mix(in srgb, var(--bg-panel) 55%, transparent);
+  color: var(--text-highlight);
+}
+.sg-master-nav a.sg-master-nav--active {
+  background: color-mix(in srgb, var(--accent-blue) 18%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--accent-blue) 35%, var(--border-dark));
+  color: var(--text-highlight);
+}
+.sg-detail {
+  min-width: 0;
+}
+.sg-wrap {
+  max-width: 1180px;
+  margin: 0;
+  padding: 28px 32px 64px 28px;
+}
+.sg-section[id] {
+  scroll-margin-top: 12px;
+}
+@media (max-width: 880px) {
+  .sg-shell {
+    grid-template-columns: 1fr;
+  }
+  .sg-master {
+    border-right: none;
+    border-bottom: 1px solid var(--border-dark);
+  }
+  .sg-master-inner {
+    position: relative;
+    max-height: none;
+    overflow: visible;
+    padding: 16px 18px 12px;
+  }
+  .sg-master-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .sg-master-nav a {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+}
+.sg-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-highlight);
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+.sg-lede {
+  color: var(--text-dim);
+  max-width: 720px;
+  line-height: 1.55;
+  margin: 0 0 20px;
+}
+.sg-lede code {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  background: #222;
+  padding: 1px 5px;
+  border: 1px solid #1a1a1a;
+}
+.sg-section {
+  margin-bottom: 32px;
+}
+.sg-section > h2 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 6px;
+  margin: 0 0 14px;
+}
+.sg-section > h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sg-note {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin: 0 0 12px;
+  max-width: 680px;
+  line-height: 1.5;
+}
+.sg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.sg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.sg-specimen {
+  border: 1px solid var(--border-dark);
+  background: var(--bg-dark);
+  padding: 12px;
+}
+.sg-specimen--inset {
+  background: var(--bg-inset);
+}
+.sg-label {
+  display: block;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.sg-token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+.sg-token-table th,
+.sg-token-table td {
+  border: 1px solid #1a1a1a;
+  padding: 5px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.sg-token-table th {
+  background: #333;
+  color: var(--text-highlight);
+  font-weight: 600;
+}
+.sg-token-table code {
+  font-family: 'Courier New', monospace;
+  color: #9ec4f0;
+}
+.sg-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #1a1a1a;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.sg-type-sample {
+  padding: 8px 10px;
+  background: #262626;
+  border: 1px solid #1a1a1a;
+  margin-bottom: 6px;
+}
+.sg-type-meta {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.sg-demo-toolbar {
+  padding: 6px;
+}
+.sg-demo-panel {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+}
+.sg-demo-panel .panel-content {
+  flex: 1;
+  padding: 10px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.sg-shape-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: #262626;
+  border: 1px solid #1a1a1a;
+}
+.sg-shape-card .sg-shape-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-highlight);
+}
+.sg-shape-card .sg-shape-use {
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.sg-shape-card .sg-shape-class {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  color: #8eb8dc;
+}
+.sg-context-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-top: 10px;
+}
+.sg-context-table th,
+.sg-context-table td {
+  border: 1px solid #1a1a1a;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.sg-context-table th {
+  background: #333;
+  color: var(--text-highlight);
+}
+.flex { display: flex; }
+.flex-1 { flex: 1; }
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+/* Mirrors #storyboard-grid.* production rules — specimen grid uses .sg-storyboard-demo-grid instead of ID */
+.sg-storyboard-demo-grid.storyboard-hide-scene .frame-part-scene {
+  display: none;
+}
+.sg-storyboard-demo-grid.storyboard-hide-frame .frame-part-frame {
+  display: none;
+}
+.sg-storyboard-demo-grid.storyboard-hide-notes .frame-part-notes {
+  display: none;
+}
+.sg-surface-matrix {
+  display: grid;
+  grid-template-columns: auto repeat(2, 1fr);
+  gap: 10px;
+  align-items: center;
+  max-width: 520px;
+  margin-bottom: 14px;
+}
+.sg-surface-matrix .sg-matrix-head {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  text-align: center;
+}
+.sg-surface-matrix .sg-matrix-row-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  padding-right: 8px;
+}
+.sg-tabs-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 720px;
+}
+.sg-tabs-compare .sg-label { margin-bottom: 8px; }
+.sg-tabs-legacy .tab-btn.active {
+  /* production underline style — shown for contrast */
+}
+.sg-demo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+}
+.sg-demo-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.sg-mock-tree {
+  max-width: 260px;
+}
+.sg-mock-tree .tree-item {
+  padding-left: 20px;
+}
+.sg-mock-tree .tree-item.tree-item--toplevel {
+  padding-left: 4px;
+}
+#sg-workspace-preprod.workspace-section-preprod { --workspace-header-tint: var(--tree-section-preprod-item); }
+#sg-workspace-design.workspace-section-design { --workspace-header-tint: var(--tree-section-design-item); }
+#sg-workspace-preprod.workspace-section-preprod .workspace-panel-title { color: var(--tree-section-preprod-item); }
+#sg-workspace-design.workspace-section-design .workspace-panel-title { color: var(--tree-section-design-item); }
+#sg-workspace-preprod[class*="workspace-section-"] .panel-header,
+#sg-workspace-design[class*="workspace-section-"] .panel-header {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--workspace-header-tint) 24%, #464646) 0%,
+    color-mix(in srgb, var(--workspace-header-tint) 18%, #3a3a3a) 50%,
+    color-mix(in srgb, var(--workspace-header-tint) 14%, #323232) 51%,
+    color-mix(in srgb, var(--workspace-header-tint) 16%, #343434) 100%
+  );
+}
+
+/* ── Styleguide overrides: two-zone navigation specimens ── */
+
+/* Override fixed position on popover so it renders inline as a static specimen */
+.sg-ov-preview-static {
+  position: relative;
+  display: flex;
+  width: 260px;
+  background: linear-gradient(180deg, #2c2c2c 0%, #242424 100%);
+  border: 1px solid #555;
+  border-bottom-color: #666;
+  box-shadow: 0 6px 20px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.07);
+  padding: 10px 12px;
+  gap: 10px;
+  align-items: flex-start;
+}
+</style>
+</head>
+<body>
+<div class="sg-shell">
+  <aside class="sg-master" aria-label="Section index">
+    <div class="sg-master-inner">
+      <p class="sg-master-brand">CineGen Base GUI</p>
+      <nav class="sg-master-nav" id="sg-master-nav" aria-label="Controls sheet sections">
+        <a href="#sg-tokens">Design tokens</a>
+        <a href="#sg-typography">Typography</a>
+        <a href="#sg-bevels">Bevels &amp; structure</a>
+        <a href="#sg-fieldsets">Group boxes</a>
+        <a href="#sg-text-fields">Text fields</a>
+        <a href="#sg-panels">Panels</a>
+        <a href="#sg-storyboard">Storyboard frames</a>
+        <a href="#sg-toolbar">Toolbar buttons</a>
+        <a href="#sg-gui-chrome">GUI chrome controls</a>
+        <a href="#sg-chips">Chips, table &amp; status</a>
+        <a href="#sg-surfaces">Button surfaces</a>
+        <a href="#sg-shapes">Button shapes</a>
+        <a href="#sg-controls">Segmented &amp; sliders</a>
+        <a href="#sg-menus">Menus &amp; modals</a>
+        <a href="#sg-wizard">Wizard slides</a>
+        <hr style="border:none;border-top:1px solid var(--border-dark);margin:8px 0 4px">
+        <span style="display:block;padding:0 8px 5px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:#484848">Two-zone navigation</span>
+        <a href="#sg-overview-panel">Overview panel</a>
+        <a href="#sg-column-view">Column view</a>
+        <a href="#sg-row-view">Row view</a>
+        <a href="#sg-browse-mode">Browse mode</a>
+        <a href="#sg-master-detail">Asset master-detail</a>
+        <a href="#sg-hover-preview">Hover preview</a>
+      </nav>
+    </div>
+  </aside>
+  <div class="sg-detail">
+<div class="sg-wrap">
+  <h1 class="sg-title">CineGen Base GUI — Controls Sheet</h1>
+  <p class="sg-lede">
+    Live specimens from <code>source/CineGenBaseGUI.html</code> and <code>source/css/CineGenBaseGUI.css</code>.
+  Panels, typography, and bevels match production. Button <em>shape</em> modifiers:
+  <code>CineGenBaseGUI-button-shapes.css</code>. Surface finish (matte vs reflective) and relief (protruded vs inset):
+  <code>CineGenBaseGUI-button-surfaces.css</code>.
+  </p>
+
+  <!-- TOKENS -->
+  <section class="sg-section" id="sg-tokens">
+    <h2>Design tokens</h2>
+    <table class="sg-token-table">
+      <thead>
+        <tr><th>Token</th><th>Value / role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--bg-dark</code></td><td><span class="sg-swatch" style="background:#1e1e1e"></span>#1e1e1e — app backdrop</td></tr>
+        <tr><td><code>--bg-panel</code></td><td><span class="sg-swatch" style="background:#3c3c3c"></span>#3c3c3c — flat panels</td></tr>
+        <tr><td><code>--bg-inset</code></td><td><span class="sg-swatch" style="background:#262626"></span>#262626 — wells, tree, storyboard grid</td></tr>
+        <tr><td><code>--text-main</code></td><td><span class="sg-swatch" style="background:#d0d0d0"></span>#d0d0d0 — body UI</td></tr>
+        <tr><td><code>--text-dim</code></td><td><span class="sg-swatch" style="background:#909090"></span>#909090 — labels, status</td></tr>
+        <tr><td><code>--accent-blue</code></td><td><span class="sg-swatch" style="background:#5a8cd6"></span>#5a8cd6 — selection, links</td></tr>
+        <tr><td><code>--accent-orange</code></td><td><span class="sg-swatch" style="background:#d6834a"></span>#d6834a — active tabs, storyboard select</td></tr>
+        <tr><td><code>--accent-ai</code></td><td><span class="sg-swatch" style="background:#2a4268"></span>#2a4268 — AI actions (<code>.btn-ai</code>)</td></tr>
+        <tr><td><code>--font-scene-list</code></td><td>Source Sans 3 — scene rows in hierarchy</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- TYPOGRAPHY -->
+  <section class="sg-section" id="sg-typography">
+    <h2>Typography</h2>
+    <p class="sg-note">Base UI: Segoe UI / Lucida Grande, 11px. Script and guide modals use distinct scales.</p>
+    <div class="sg-grid">
+      <div>
+        <div class="sg-type-sample" style="font-family: 'Segoe UI', 'Lucida Grande', Tahoma, sans-serif; font-size: 11px;">
+          Application chrome — toolbar, panels, inspector
+        </div>
+        <div class="sg-type-meta">body · 11px · Segoe UI stack</div>
+      </div>
+      <div>
+        <div class="sg-type-sample" style="font-family: var(--font-scene-list); font-size: calc(11px * 1.4 * 0.96); font-weight: 500;">
+          Scene 04 — Warehouse confrontation
+        </div>
+        <div class="sg-type-meta">tree scene row · ~15px · Source Sans 3 · weight 500</div>
+      </div>
+      <div>
+        <div class="sg-type-sample" style="font-family: 'Courier New', Courier, monospace; font-size: 15px; line-height: 1.6; background:#202020; color: var(--text-main);">
+          INT. SAFEHOUSE - NIGHT
+        </div>
+        <div class="sg-type-meta">script editor · 15px · Courier · line-height 1.6</div>
+      </div>
+      <div>
+        <div class="sg-type-sample" style="font-size: 16px; line-height: 1.6;">
+          Guide modal body copy for onboarding sections.
+        </div>
+        <div class="sg-type-meta">.guide-modal-body · 16px</div>
+      </div>
+    </div>
+    <h3>Size scale (in-app)</h3>
+    <table class="sg-token-table">
+      <thead><tr><th>Size</th><th>Typical use</th></tr></thead>
+      <tbody>
+        <tr><td>8–9px</td><td>Tree toggles, frame notes, section counts, compact carets</td></tr>
+        <tr><td>10px</td><td>Panel sublabels, status bar, compact toolbar, breakdown cells, chips</td></tr>
+        <tr><td>11px</td><td>Default UI, toolbar buttons, tabs, tree items, inspector</td></tr>
+        <tr><td>12px</td><td>Toolbar icons, guide footer buttons</td></tr>
+        <tr><td>15px</td><td>Script editor, guide modal header</td></tr>
+        <tr><td>16px+</td><td>Guide body, placeholder hero icon (48px)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- BEVELS -->
+  <section class="sg-section" id="sg-bevels">
+    <h2>Bevels &amp; structure</h2>
+    <div class="sg-grid">
+      <div>
+        <span class="sg-label">.bevel-raised</span>
+        <div class="bevel-raised sg-specimen" style="padding:12px; min-height:56px;">Main toolbar shell</div>
+      </div>
+      <div>
+        <span class="sg-label">.bevel-flat</span>
+        <div class="bevel-flat sg-specimen" style="padding:12px; min-height:56px;">Sidebar / workspace / inspector</div>
+      </div>
+      <div>
+        <span class="sg-label">.bevel-sunken</span>
+        <div class="bevel-sunken sg-specimen" style="padding:12px; min-height:56px;">Script pane chrome, guide footer, wells</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FIELDSETS / NSBOX-STYLE -->
+  <section class="sg-section" id="sg-fieldsets">
+    <h2>Group boxes (<code>fieldset</code>)</h2>
+    <p class="sg-note">
+      Production classes in <code>source/css/CineGenBaseGUI-controls-extra.css</code>.
+      Three variants loosely mapped to AppKit <strong>NSBox</strong> roles: <em>secondary</em> (flat bordered tile),
+      <em>titled</em> (chrome strip + body), <em>primary</em> (recessed well for dense or sensitive controls).
+      Use <code>.cg-fieldset</code> with a modifier; legends use <code>.cg-fieldset-legend</code>.
+      The <strong>titled</strong> variant expects a <code>.cg-fieldset-body</code> wrapper after the legend.
+    </p>
+    <div class="sg-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px">
+      <div>
+        <span class="sg-label"><code>.cg-fieldset--ns-secondary</code></span>
+        <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+          <legend class="cg-fieldset-legend"><i class="fa-solid fa-id-card" aria-hidden="true"></i> Secondary tile</legend>
+          <div class="cg-accordion-row" style="margin-bottom: 0">
+            <label for="sg-fs-sec-a">Name</label>
+            <input id="sg-fs-sec-a" class="cg-field" type="text" value="Acme Co." autocomplete="off">
+          </div>
+        </fieldset>
+        <p class="sg-type-meta" style="margin-top: 6px">Light frame, panel-tinted fill — identity / metadata rows.</p>
+      </div>
+      <div>
+        <span class="sg-label"><code>.cg-fieldset--ns-titled</code></span>
+        <fieldset class="cg-fieldset cg-fieldset--ns-titled">
+          <legend class="cg-fieldset-legend" id="sg-fs-titled-legend">Titled strip</legend>
+          <div class="cg-fieldset-body">
+            <div class="cg-segmented cg-segmented--matte" role="group" aria-labelledby="sg-fs-titled-legend">
+              <button type="button" class="cg-segmented-segment active">A</button>
+              <button type="button" class="cg-segmented-segment">B</button>
+              <button type="button" class="cg-segmented-segment">C</button>
+            </div>
+          </div>
+        </fieldset>
+        <p class="sg-type-meta" style="margin-top: 6px">Panel-header legend + inset body — mode switches, scoped tools.</p>
+      </div>
+      <div>
+        <span class="sg-label"><code>.cg-fieldset--ns-primary</code></span>
+        <fieldset class="cg-fieldset cg-fieldset--ns-primary">
+          <legend class="cg-fieldset-legend"><i class="fa-solid fa-key" aria-hidden="true"></i> Primary well</legend>
+          <div class="cg-accordion-row" style="margin-bottom: 0">
+            <label for="sg-fs-pri-a">Secret</label>
+            <input id="sg-fs-pri-a" class="cg-field" type="password" value="" placeholder="••••••••" autocomplete="off">
+          </div>
+        </fieldset>
+        <p class="sg-type-meta" style="margin-top: 6px">Deep inset — passwords, caps, heavy control stacks.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEXT FIELDS & TEXTAREAS -->
+  <section class="sg-section" id="sg-text-fields">
+    <h2>Text fields &amp; text areas</h2>
+    <p class="sg-note">
+      Single-line edits in inspectors and accordion bodies use <code>.cg-field</code> paired with <code>.cg-accordion-row</code>
+      (defined in <code>source/css/CineGenBaseGUI-controls-extra.css</code>). Modal API-key rows use the same visuals at 11px
+      via <code>.api-keys-input-row .cg-field</code> in <code>CineGenBaseGUI.css</code>. Longer prose in the treatment pane
+      uses <code>.treatment-input</code>; height presets are optional modifiers <code>.treatment-input--synopsis</code> and
+      <code>.treatment-input--notes</code>.
+    </p>
+
+    <div class="sg-grid">
+      <div>
+        <span class="sg-label">Compact inset — <code>.cg-accordion-row .cg-field</code></span>
+        <div class="bevel-sunken sg-specimen" style="padding:0; max-width:400px;">
+          <div class="cg-accordion-body">
+            <div class="cg-accordion-row">
+              <label for="sg-tf-title">Title</label>
+              <input id="sg-tf-title" class="cg-field" type="text" value="Scene 04 — Beat sheet" autocomplete="off">
+            </div>
+            <div class="cg-accordion-row">
+              <label for="sg-tf-slug">Slug</label>
+              <input id="sg-tf-slug" class="cg-field" type="text" value="" placeholder="INT. LOCATION — DAY" autocomplete="off">
+            </div>
+            <div class="cg-accordion-row">
+              <label for="sg-tf-readonly">Read-only</label>
+              <input id="sg-tf-readonly" class="cg-field" type="text" value="fbcb6a…" readonly aria-readonly="true">
+            </div>
+            <div class="cg-accordion-row">
+              <label for="sg-tf-disabled">Frozen</label>
+              <input id="sg-tf-disabled" class="cg-field" type="text" value="Synced" disabled>
+            </div>
+          </div>
+        </div>
+        <p class="sg-type-meta" style="margin-top: 6px">10px type, recessed border — inspector / accordion density.</p>
+      </div>
+
+      <div>
+        <span class="sg-label">Modal-width row — <code>.api-keys-input-row .cg-field</code></span>
+        <div class="bevel-flat sg-specimen" style="max-width:420px;">
+          <p style="margin:0 0 10px;font-size:10px;color:var(--text-dim);line-height:1.45">Pattern from AI / API screens: flexible row, slightly larger tap target.</p>
+          <div class="api-keys-input-row">
+            <input id="sg-tf-api" class="cg-field" type="text" placeholder="sk-…" value="sk-live-demo••••••••••••••••" autocomplete="off" spellcheck="false">
+            <button type="button" class="toolbar-btn" style="padding:5px 10px;font-size:11px"><i class="fa-solid fa-clipboard"></i> Copy</button>
+          </div>
+        </div>
+        <p class="sg-type-meta" style="margin-top: 6px">11px field + paired action.</p>
+      </div>
+
+      <div style="grid-column: 1 / -1;">
+        <span class="sg-label"><code>.treatment-input</code> — multi-line (treatment panel)</span>
+        <div class="sg-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items:start;">
+          <div class="bevel-flat sg-specimen sg-specimen--inset">
+            <div class="treatment-field">
+              <label class="treatment-field-label" for="sg-txf-default"><i class="fa-solid fa-pen" aria-hidden="true"></i> Default height</label>
+              <textarea id="sg-txf-default" class="treatment-input" rows="4" autocomplete="off">Log line and short beat here. Resize handle is vertical only in production.</textarea>
+            </div>
+          </div>
+          <div class="bevel-flat sg-specimen sg-specimen--inset">
+            <div class="treatment-field">
+              <label class="treatment-field-label" for="sg-txf-synopsis"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Synopsis <span style="opacity:.75;font-weight:500;color:var(--text-dim);">(<code>treatment-input--synopsis</code>)</span></label>
+              <textarea id="sg-txf-synopsis" class="treatment-input treatment-input--synopsis" autocomplete="off">Wider synopsis well — min-height preset for overview copy.</textarea>
+            </div>
+          </div>
+          <div class="bevel-flat sg-specimen sg-specimen--inset">
+            <div class="treatment-field">
+              <label class="treatment-field-label" for="sg-txf-notes"><i class="fa-solid fa-note-sticky" aria-hidden="true"></i> Notes <span style="opacity:.75;font-weight:500;color:var(--text-dim);">(<code>treatment-input--notes</code>)</span></label>
+              <textarea id="sg-txf-notes" class="treatment-input treatment-input--notes" autocomplete="off" placeholder="Director notes, references, todos…"></textarea>
+              <p class="treatment-field-hint">Optional <code>.treatment-field-hint</code> for secondary guidance.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANELS -->
+  <section class="sg-section" id="sg-panels">
+    <h2>Panels</h2>
+    <div class="sg-grid">
+      <div class="bevel-flat sg-demo-panel">
+        <div class="panel-header">
+          <span><i class="fa-solid fa-folder-tree"></i> PROJECT HIERARCHY</span>
+        </div>
+        <div class="panel-content tree-container sg-mock-tree">
+          <div class="tree-item tree-item--toplevel tree-section-preprod selected" data-tree-depth="0">
+            <i class="fa-solid fa-scroll"></i> Pre-Production
+          </div>
+          <div class="tree-item tree-section-preprod" data-tree-depth="1" style="padding-left:38px">
+            <i class="fa-solid fa-file-lines"></i> Script + Storyboard
+          </div>
+          <div class="tree-sidebar-divider"></div>
+          <div class="tree-item tree-item--toplevel tree-section-global" data-tree-depth="0">
+            <i class="fa-solid fa-globe"></i> Global Assets
+          </div>
+        </div>
+      </div>
+
+      <div id="sg-workspace-preprod" class="bevel-flat sg-demo-panel workspace-section-preprod">
+        <div class="panel-header">
+          <span class="workspace-panel-title"><i class="fa-solid fa-scroll"></i> SCRIPT + STORYBOARD</span>
+          <div class="flex gap-1">
+            <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-link"></i> Sync</button>
+            <button type="button" class="toolbar-btn btn-ai" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-image"></i> Generate</button>
+          </div>
+        </div>
+        <div class="panel-content">Workspace header tint follows <code>workspace-section-*</code> on <code>#main-workspace-container</code>.</div>
+      </div>
+
+      <div id="sg-workspace-design" class="bevel-flat sg-demo-panel workspace-section-design">
+        <div class="panel-header">
+          <span class="workspace-panel-title"><i class="fa-solid fa-camera"></i> CAMERA, LIGHTING</span>
+        </div>
+        <div class="panel-content">Design section — orange title hue.</div>
+      </div>
+    </div>
+
+    <h3>Sub-pane chrome (segmented control)</h3>
+    <div class="bevel-sunken sg-specimen" style="padding:0; display:flex; flex-direction:column;">
+      <div style="padding:4px 8px 0; display:flex; justify-content:space-between; align-items:flex-end; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:10px;color:var(--text-dim)">SCRIPT EDITOR (.FOUNTAIN)</span>
+        <div class="cg-segmented script-pane-segmented" role="tablist" data-segmented>
+          <button type="button" class="cg-segmented-segment active" role="tab"><i class="fa-solid fa-scroll"></i> Script</button>
+          <button type="button" class="cg-segmented-segment" role="tab"><i class="fa-solid fa-tags"></i> Script Info</button>
+          <button type="button" class="cg-segmented-segment" role="tab"><i class="fa-solid fa-book-open"></i> Treatment</button>
+        </div>
+      </div>
+      <div class="tab-page-classic" style="border-left:none;border-right:none;border-bottom:none;background:#262626">Script pane content area</div>
+    </div>
+  </section>
+
+  <section class="sg-section" id="sg-storyboard">
+    <h2>Storyboard frames</h2>
+    <p class="sg-note">
+      Grid shell (<code>.storyboard-grid</code>), cards (<code>.storyboard-frame</code>), and sub-regions (<code>.frame-image</code>, <code>.frame-label</code>, <code>.frame-notes</code>)
+      are defined in <code>source/css/CineGenBaseGUI.css</code>. Live DOM follows <code>renderStoryboard()</code> in <code>source/js/gui-Storyboard.js</code>
+      — see <code>#preprod-story-pane</code> and <code>#storyboard-grid</code> in <code>source/CineGenBaseGUI.html</code>. Toolbar visibility toggles add
+      <code>storyboard-hide-scene</code>, <code>storyboard-hide-frame</code>, or <code>storyboard-hide-notes</code> on the grid container; production targets
+      <code>#storyboard-grid</code>; this sheet uses class <code>.sg-storyboard-demo-grid</code> with equivalent rules below.
+      Toggle Scene / Frame / Notes here; click a frame card to illustrate <code>.selected</code> (orange accent).
+    </p>
+    <div class="bevel-flat sg-specimen" style="padding:0;max-width:720px;overflow:hidden">
+      <div class="bevel-sunken flex items-center justify-between gap-2" style="padding:4px 8px;background:#2a2a2a;border-bottom:1px solid #1a1a1a;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--text-dim)">STORYBOARD FRAMES</span>
+        <div class="flex items-center gap-2" style="flex-wrap:wrap">
+          <div class="storyboard-visibility-toggles" role="group" aria-label="Storyboard visibility (specimen)">
+            <label class="storyboard-vis-toggle" title="Show scene numbers">
+              <input type="checkbox" id="sg-sb-vis-scene" checked>
+              <span class="storyboard-vis-switch" aria-hidden="true"></span>
+              <span class="storyboard-vis-label">Scene</span>
+            </label>
+            <label class="storyboard-vis-toggle" title="Show frame thumbnails">
+              <input type="checkbox" id="sg-sb-vis-frame" checked>
+              <span class="storyboard-vis-switch" aria-hidden="true"></span>
+              <span class="storyboard-vis-label">Frame</span>
+            </label>
+            <label class="storyboard-vis-toggle" title="Show notes under frames">
+              <input type="checkbox" id="sg-sb-vis-notes" checked>
+              <span class="storyboard-vis-switch" aria-hidden="true"></span>
+              <span class="storyboard-vis-label">Notes</span>
+            </label>
+          </div>
+          <span class="storyboard-toolbar-sep" aria-hidden="true"></span>
+          <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-plus"></i> Add Frame</button>
+          <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-link"></i> Link to Cursor</button>
+          <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-trash"></i> Delete</button>
+        </div>
+      </div>
+      <div id="sg-storyboard-demo-grid" class="storyboard-grid sg-storyboard-demo-grid">
+        <div class="storyboard-frame">
+          <div class="frame-image frame-part-frame" aria-hidden="true">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div class="frame-label">
+            <div class="scene-ref frame-part-scene">SC 02</div>
+            <div class="frame-shot-label">CU — Insert reaction</div>
+          </div>
+          <div class="frame-notes frame-part-notes">Hold on beat; doorway silhouette in BG.</div>
+        </div>
+        <div class="storyboard-frame selected">
+          <div class="frame-image frame-part-frame" aria-hidden="true">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div class="frame-label">
+            <div class="scene-ref frame-part-scene">SC 03</div>
+            <div class="frame-shot-label">Wide — Exterior establishing</div>
+          </div>
+          <div class="frame-notes frame-part-notes"><span class="frame-notes-empty">No notes</span></div>
+        </div>
+        <div class="storyboard-frame">
+          <div class="frame-image frame-part-frame" aria-hidden="true">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <div class="frame-label">
+            <div class="scene-ref frame-part-scene">SC 08</div>
+            <div class="frame-shot-label">OTS — Corridor walk</div>
+          </div>
+          <div class="frame-notes frame-part-notes">Match prior axis; fluorescent overhead, cool fill.</div>
+        </div>
+      </div>
+    </div>
+    <table class="sg-context-table" style="margin-top:12px;max-width:720px">
+      <thead>
+        <tr><th>Wrapper</th><th>Production role</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>.storyboard-grid</code></td><td>Auto-fill columns <code>minmax(180px, 1fr)</code>, gap 12px, <code>--bg-inset</code> backdrop</td></tr>
+        <tr><td><code>.storyboard-frame</code></td><td>Card shell; hover uses <code>--accent-blue</code>; selection uses <code>--accent-orange</code></td></tr>
+        <tr><td><code>.frame-part-scene</code>, <code>.frame-part-frame</code>, <code>.frame-part-notes</code></td><td>Hidden when ancestor grid has matching <code>storyboard-hide-*</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- TOOLBAR BUTTONS (production) -->
+  <section class="sg-section" id="sg-toolbar">
+    <h2>Toolbar buttons (production)</h2>
+    <div class="bevel-raised sg-demo-toolbar sg-specimen">
+      <div class="sg-row">
+        <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded"><i class="fa-solid fa-folder-open"></i> Projects</button>
+        <button type="button" class="toolbar-btn"><i class="fa-solid fa-gear"></i> Settings</button>
+        <button type="button" class="toolbar-btn btn-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist</button>
+        <button type="button" class="toolbar-btn"><i class="fa-solid fa-info-circle"></i> Inspector</button>
+      </div>
+      <div class="sg-row" style="margin-top:8px">
+        <div class="toolbar-split">
+          <button type="button" class="toolbar-btn toolbar-split-main"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          <button type="button" class="toolbar-btn toolbar-split-trigger" title="Menu"><i class="fa-solid fa-caret-down"></i></button>
+        </div>
+        <div class="toolbar-split toolbar-split--compact">
+          <button type="button" class="toolbar-btn toolbar-split-main"><i class="fa-solid fa-right-left"></i> Import/Export</button>
+          <button type="button" class="toolbar-btn toolbar-split-trigger"><i class="fa-solid fa-caret-down"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Compact panel actions</h3>
+    <div class="sg-row">
+      <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-plus"></i> Add Frame</button>
+      <button type="button" class="toolbar-btn btn-ai" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-robot"></i> AI Auto-Suggest</button>
+    </div>
+
+    <h3>Fountain insert tools</h3>
+    <div class="script-fountain-toolbar bevel-sunken sg-specimen" style="margin:0">
+      <span class="script-fountain-toolbar-label">Insert <span style="opacity:0.7">(matte protruded)</span></span>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-door-open"></i> INT.</button>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-tree"></i> EXT.</button>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-user"></i> Character</button>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-align-left"></i> Action</button>
+      <span class="script-fountain-toolbar-sep"></span>
+      <label class="storyboard-vis-toggle">
+        <input type="checkbox" checked>
+        <span class="storyboard-vis-switch"></span>
+        <span class="storyboard-vis-label">Chips</span>
+      </label>
+    </div>
+
+    <h3>Tabs — classic (recommended)</h3>
+    <p class="sg-note">Rounded top corners, raised active tab tied to content — not underline-only. Classes: <code>tab-strip-classic</code>, <code>tab-btn-classic</code>, <code>tab-page-classic</code>.</p>
+    <div style="max-width:520px">
+      <div class="tab-strip-classic" role="tablist">
+        <button type="button" class="tab-btn-classic active" role="tab">OVERVIEW</button>
+        <button type="button" class="tab-btn-classic" role="tab">MASTER SHOT</button>
+        <button type="button" class="tab-btn-classic" role="tab">COVERAGE</button>
+        <button type="button" class="tab-btn-classic" role="tab">NOTES</button>
+      </div>
+      <div class="tab-page-classic">Scene tab content — active tab visually connects to this panel.</div>
+    </div>
+    <h3>Tabs — production underline (legacy)</h3>
+    <div class="tab-bar sg-tabs-legacy" style="max-width:480px">
+      <button type="button" class="tab-btn active">OVERVIEW</button>
+      <button type="button" class="tab-btn">COVERAGE</button>
+      <button type="button" class="tab-btn">NOTES</button>
+    </div>
+
+    <h3>Treatment layout control</h3>
+    <div class="sg-row">
+      <div class="treatment-layout-control">
+        <button type="button" class="treatment-layout-btn" data-layout="one-column"><i class="fa-solid fa-align-justify"></i><span class="treatment-layout-btn-label">1</span></button>
+        <button type="button" class="treatment-layout-btn active" data-layout="two-column"><i class="fa-solid fa-table-columns"></i><span class="treatment-layout-btn-label">2</span></button>
+      </div>
+    </div>
+
+    <h3>Hero AI CTA</h3>
+    <button type="button" class="btn-ai" style="padding:8px 24px;font-size:12px">Let AI suggest next step</button>
+  </section>
+
+  <!-- GUI CHROME CONTROLS -->
+  <section class="sg-section" id="sg-gui-chrome">
+    <h2>GUI chrome controls</h2>
+    <p class="sg-lede">
+      Layout and shell toggles (sidebars, drawers, mood-board hub) use
+      <code>.toolbar-btn--gui-chrome</code> — the panel-toolbar bevel tokens
+      (<code>--chrome-btn-*</code>, lighter than main-bar workflow buttons) with soft 6px corners.
+      Production workflow actions (Projects, Save, Wizards) use the darker
+      <code>--chrome-toolbar-btn-*</code> raised style.
+    </p>
+
+    <div class="bevel-raised sg-demo-toolbar sg-specimen">
+      <p class="sg-note" style="margin:0 0 10px">Compare: workflow (left) vs. GUI chrome (right)</p>
+      <div class="sg-row">
+        <button type="button" class="toolbar-btn"><i class="fa-solid fa-folder-open"></i> Projects</button>
+        <button type="button" class="toolbar-btn btn-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> Wizards</button>
+        <span style="width:1px;height:22px;background:var(--border-dark);margin:0 6px"></span>
+        <button type="button" class="toolbar-btn toolbar-btn--gui-chrome active"><i class="fa-solid fa-sitemap"></i> Project</button>
+        <button type="button" class="toolbar-btn toolbar-btn--gui-chrome"><i class="fa-solid fa-wave-square"></i> Previs</button>
+        <button type="button" class="toolbar-btn toolbar-btn--gui-chrome active"><i class="fa-solid fa-info-circle"></i> Inspector</button>
+        <div class="toolbar-split toolbar-split--gui-chrome">
+          <button type="button" class="toolbar-btn toolbar-split-main toolbar-btn--gui-chrome"><i class="fa-solid fa-images"></i> Mood Boards</button>
+          <button type="button" class="toolbar-btn toolbar-split-trigger toolbar-btn--gui-chrome" title="Menu"><i class="fa-solid fa-caret-down"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <table class="sg-context-table" style="margin-top:14px;max-width:720px">
+      <thead>
+        <tr><th>Class / variant</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>.toolbar-btn--gui-chrome</code></td><td>Standalone layout toggles: Project sidebar, Previs drawer, Inspector</td></tr>
+        <tr><td><code>variant="gui-chrome"</code> on <code>&lt;cg-toolbar-split&gt;</code></td><td>Split controls that open panels/menus without leaving the shell (Mood Boards)</td></tr>
+        <tr><td><code>.toolbar-split--gui-chrome</code></td><td>Host class applied automatically; rounds outer split corners as a pair</td></tr>
+        <tr><td><code>.active</code> / <code>aria-pressed="true"</code></td><td>Visible panel or drawer is open — inset pressed bevel (<code>--chrome-active-inset</code>)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CHIPS, TABLE, STATUS -->
+  <section class="sg-section" id="sg-chips">
+    <h2>Chips, table &amp; status</h2>
+    <div class="sg-row">
+      <span class="entity-chip entity-chip--character">Marcus <button type="button" class="remove-chip-btn">×</button></span>
+      <span class="entity-chip entity-chip--location">Warehouse</span>
+      <span class="entity-chip entity-chip--prop">Manila envelope</span>
+    </div>
+    <div class="sg-row" style="margin-top:8px">
+      <span class="script-inline-chip script-inline-chip--slug">INT. WAREHOUSE</span>
+      <span class="script-inline-chip script-inline-chip--character">MARCUS</span>
+    </div>
+    <div class="cl-chips-grid" style="max-width:320px;margin-top:12px;padding:8px;background:#242424;border:1px solid #1a1a1a">
+      <button type="button" class="cl-chip cl-chip--selected">
+        <span class="cl-chip-abbr">50mm</span>
+        <span class="cl-chip-name">Normal lens</span>
+        <span class="cl-chip-desc">Shallow depth, intimate</span>
+      </button>
+      <button type="button" class="cl-chip">
+        <span class="cl-chip-abbr">WS</span>
+        <span class="cl-chip-name">Wide shot</span>
+        <span class="cl-chip-desc">Establish space</span>
+      </button>
+    </div>
+
+    <h3>Breakdown table</h3>
+    <div class="sg-specimen sg-specimen--inset" style="padding:0;overflow:auto;max-width:100%">
+      <table class="breakdown-table">
+        <thead><tr><th>Scene</th><th>Location</th><th>Characters</th></tr></thead>
+        <tbody>
+          <tr><td>04</td><td>Warehouse</td><td>Marcus, Elena</td></tr>
+          <tr><td>05</td><td>Alley</td><td>Marcus</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Toolbar setup-incomplete alert</h3>
+    <p class="sg-note"><code>.toolbar-btn.toolbar-btn--setup-incomplete</code> — main-toolbar alert button (same height band as other toolbar buttons). Shown before Projects when setup is incomplete.</p>
+    <div class="sg-row bevel-raised" style="padding:4px;align-items:center;gap:4px;max-width:100%">
+      <button type="button" class="toolbar-btn toolbar-btn--setup-incomplete toolbar-btn--shape-soft">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Complete App Setup...
+      </button>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded"><i class="fa-solid fa-folder-open"></i> Projects</button>
+    </div>
+
+    <h3>Status bar mode badges (compact)</h3>
+    <p class="sg-note"><code>.status-mode-badge</code> — compact chips for the 22px status bar (storage mode, etc.).</p>
+    <div class="sg-row" style="gap:8px;margin-bottom:8px">
+      <button type="button" class="status-mode-badge status-mode-badge--unsecured"><i class="fa-solid fa-lock-open" aria-hidden="true"></i> UNSECURED KEYS</button>
+      <button type="button" class="status-mode-badge status-mode-badge--secured"><i class="fa-solid fa-lock" aria-hidden="true"></i> SECURED</button>
+    </div>
+
+    <h3>Project list status badges</h3>
+    <p class="sg-note"><code>.project-status-badge--local</code> / <code>.project-status-badge--sample</code> — used in Projects hub cards to distinguish writable server-resident projects vs read-only bundled samples (follows same color language as status-mode badges).</p>
+    <div class="sg-row" style="gap:8px;margin-bottom:8px">
+      <span class="project-status-badge project-status-badge--local">Local</span>
+      <span class="project-status-badge project-status-badge--sample">Sample</span>
+    </div>
+
+    <h3>Save status badges (status bar)</h3>
+    <p class="sg-note"><code>.save-status-badge</code> variants — compact indicator shown in the bottom status bar for server-resident project autosave. States: <code>.save-status-saving</code> (orange), <code>.save-status-saved</code> (green), <code>.save-status-error</code> (red). Matches the chip/status aesthetic and icon usage from the rest of the status bar.</p>
+    <div class="sg-row" style="gap:8px;margin-bottom:8px">
+      <span class="save-status-badge save-status-saving"><i class="fa-solid fa-spinner fa-spin" style="margin-right:3px"></i>Saving…</span>
+      <span class="save-status-badge save-status-saved"><i class="fa-solid fa-check" style="margin-right:3px"></i>Saved</span>
+      <span class="save-status-badge save-status-error"><i class="fa-solid fa-exclamation-triangle" style="margin-right:3px"></i>Save failed</span>
+    </div>
+
+    <h3>Status bar</h3>
+    <div class="status-bar" style="max-width:100%">
+      <div class="status-item"><i class="fa-solid fa-circle" style="color:#5fcf5f;font-size:8px"></i><span>AI Ready</span></div>
+      <div class="status-item"><span>Project: UNTITLED_NOIR_01</span></div>
+      <div class="flex-1"></div>
+      <div class="status-item"><span>Script &amp; Storyboard</span></div>
+    </div>
+  </section>
+
+  <!-- SURFACE FINISH & RELIEF -->
+  <section class="sg-section" id="sg-surfaces">
+    <h2>Button surfaces — finish &amp; relief</h2>
+    <p class="sg-note">
+      Compose <strong>finish</strong> (reflective glossy vs matte flat) with <strong>relief</strong> (protruded raised vs inset pressed).
+      Fountain insert tools use <code>--finish-matte --relief-protruded</code> (+ <code>.script-fountain-tool</code>). Main toolbar = reflective protruded (production default).
+    </p>
+
+    <div class="sg-surface-matrix">
+      <div></div>
+      <div class="sg-matrix-head">Protruded (raised)</div>
+      <div class="sg-matrix-head">Inset (pressed)</div>
+      <div class="sg-matrix-row-label">Reflective</div>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded toolbar-btn--shape-soft">Save</button>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-inset toolbar-btn--shape-soft">Off</button>
+      <div class="sg-matrix-row-label">Matte</div>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft">INT.</button>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-matte toolbar-btn--relief-inset toolbar-btn--shape-soft">Idle</button>
+    </div>
+
+    <h3>Reflective protruded — main toolbar</h3>
+    <div class="sg-row">
+      <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+      <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded btn-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assist</button>
+    </div>
+
+    <h3>Matte protruded — script insert row</h3>
+    <div class="script-fountain-toolbar bevel-sunken sg-specimen" style="margin:0">
+      <span class="script-fountain-toolbar-label">Insert</span>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-door-open"></i> INT.</button>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-comment"></i> Dialogue</button>
+      <button type="button" class="toolbar-btn script-fountain-tool toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-music"></i> Lyrics</button>
+    </div>
+  </section>
+
+  <!-- BUTTON SHAPES -->
+  <section class="sg-section" id="sg-shapes">
+    <h2>Button shapes — contexts</h2>
+    <p class="sg-note">
+      Layer shape classes on top of finish/relief. See <code>CineGenBaseGUI-button-shapes.css</code>.
+    </p>
+
+    <div class="sg-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Rectangular</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-rect</span>
+        <span class="sg-shape-use">Main toolbar, split buttons, panel actions — default Nuke/Flame look.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-rect"><i class="fa-solid fa-save"></i> Save</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Soft round</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-soft</span>
+        <span class="sg-shape-use">Use with <code>--finish-matte</code> for fountain insert.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-soft"><i class="fa-solid fa-align-left"></i> Action</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Rounded</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-round</span>
+        <span class="sg-shape-use">Secondary panels, onboarding, low-density tool rows.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-round">Settings</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Pill</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-pill</span>
+        <span class="sg-shape-use">Filters, queue slots, tag-style toggles (cf. GUI-Styleguide <code>.btn-pill</code>).</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-pill">Queue 3</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Cut top-right</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-cut-tr</span>
+        <span class="sg-shape-use">Forward / render / “next step” emphasis.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-cut-tr btn-ai"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Cut bottom-left</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-cut-bl</span>
+        <span class="sg-shape-use">Back, undo, secondary escape actions.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-cut-bl"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Four corners cut</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-cut-four</span>
+        <span class="sg-shape-use">All four corners chamfered — mode switches, trim cluster.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--finish-matte toolbar-btn--relief-protruded toolbar-btn--shape-cut-four"><i class="fa-solid fa-film"></i> Master</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Four corners cut (large)</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-cut-four-lg</span>
+        <span class="sg-shape-use">Stronger chamfer — hero transport, record arm.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--finish-reflective toolbar-btn--relief-protruded toolbar-btn--shape-cut-four-lg btn-ai"><i class="fa-solid fa-robot"></i> Assemble</button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Chamfer / octagon</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-chamfer</span>
+        <span class="sg-shape-use">Transport, record arm, hardware-deck controls.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-chamfer"><i class="fa-solid fa-play"></i></button>
+      </div>
+      <div class="sg-shape-card">
+        <span class="sg-shape-name">Tab tie-in</span>
+        <span class="sg-shape-class">.toolbar-btn--shape-tab</span>
+        <span class="sg-shape-use">Script pane tabs alternative to <code>.script-pane-tab</code>.</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-tab active">Script</button>
+      </div>
+    </div>
+
+    <h3>Shapes × semantic styles</h3>
+    <div class="sg-row">
+      <button type="button" class="toolbar-btn toolbar-btn--shape-soft">Default</button>
+      <button type="button" class="toolbar-btn toolbar-btn--shape-soft btn-ai">AI</button>
+      <button type="button" class="toolbar-btn toolbar-btn--shape-pill">Filter</button>
+      <button type="button" class="toolbar-btn toolbar-btn--shape-pill btn-ai">AI Queue</button>
+      <button type="button" class="toolbar-btn toolbar-btn--shape-chamfer"><i class="fa-solid fa-stop"></i></button>
+      <button type="button" class="toolbar-btn toolbar-btn--shape-cut-tr btn-ai"><i class="fa-solid fa-robot"></i> AI Assemble</button>
+    </div>
+
+    <h3>Split buttons with shape</h3>
+    <div class="sg-row">
+      <div class="toolbar-split toolbar-split--shape-soft">
+        <button type="button" class="toolbar-btn toolbar-split-main toolbar-btn--shape-soft"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        <button type="button" class="toolbar-btn toolbar-split-trigger toolbar-btn--shape-soft"><i class="fa-solid fa-caret-down"></i></button>
+      </div>
+      <div class="toolbar-split toolbar-split--shape-pill">
+        <button type="button" class="toolbar-btn toolbar-split-main toolbar-btn--shape-pill">Export</button>
+        <button type="button" class="toolbar-btn toolbar-split-trigger toolbar-btn--shape-pill"><i class="fa-solid fa-caret-down"></i></button>
+      </div>
+    </div>
+
+    <h3>Recommended mapping</h3>
+    <table class="sg-context-table">
+      <thead>
+        <tr><th>Context</th><th>Shape class</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>App main toolbar</td><td><code>--shape-rect</code></td><td>Current production default; sharp 90° corners.</td></tr>
+        <tr><td>Panel header (Sync, Export)</td><td><code>--shape-rect</code> + compact padding</td><td><code>padding: 2px 8px; font-size: 10px</code></td></tr>
+        <tr><td>Fountain insert row</td><td><code>--finish-matte --relief-protruded --shape-soft</code></td><td>Matte raised buttons in sunken well; no glossy specular.</td></tr>
+        <tr><td>Scene tabs</td><td><code>tab-strip-classic</code> + <code>tab-btn-classic</code></td><td>Rounded top, 3D active tab — not underline <code>.tab-btn</code>.</td></tr>
+        <tr><td>Mode / trim tools</td><td><code>--shape-cut-four</code></td><td>All four corners cut; pair with matte or reflective.</td></tr>
+        <tr><td>Guide / modal footer</td><td><code>--shape-soft</code></td><td>Slightly friendlier than main chrome.</td></tr>
+        <tr><td>Placeholder hero CTA</td><td><code>--shape-round</code> + <code>.btn-ai</code></td><td>Larger padding in view-default.</td></tr>
+        <tr><td>Visibility / filter chips</td><td><code>--shape-pill</code></td><td>Alternative to <code>.storyboard-vis-toggle</code> when button-based.</td></tr>
+        <tr><td>AI primary actions</td><td><code>--shape-cut-tr</code> + <code>.btn-ai</code></td><td>Generate, Assemble, Master Shot.</td></tr>
+        <tr><td>Wizard back / Previous</td><td><code>--shape-cut-bl</code></td><td>Guide modal Previous control.</td></tr>
+        <tr><td>Transport cluster</td><td><code>--shape-chamfer</code></td><td>Icon-only play/stop/step.</td></tr>
+        <tr><td>Save + menu split</td><td><code>toolbar-split--shape-soft</code></td><td>Rounded outer corners only.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SEGMENTED, SLIDERS, ACCORDION -->
+  <section class="sg-section" id="sg-controls">
+    <h2>Segmented controls, sliders &amp; accordion</h2>
+    <p class="sg-note">
+      Patterns from <code>GUI-Styleguide.html</code> (segmented, horizontal/vertical sliders) and
+      <code>Dark-App-GUI-Styleguide.html</code> (inspector accordion). Styles in
+      <code>source/css/CineGenBaseGUI-controls-extra.css</code>.
+      Grouped sections use <a href="#sg-fieldsets">fieldset / NSBox-style boxes</a>.
+    </p>
+
+    <div class="sg-demo-row-2">
+      <div>
+        <h3>Segmented — reflective</h3>
+        <p class="sg-note">Toolbar-matched segments (<code>.cg-segmented</code> + <code>.cg-segmented-segment</code>), 4px corner radius.</p>
+        <div class="cg-segmented" role="group" aria-label="Trim mode" data-segmented>
+          <button type="button" class="cg-segmented-segment active">Trim</button>
+          <button type="button" class="cg-segmented-segment">Ripple</button>
+          <button type="button" class="cg-segmented-segment">Roll</button>
+          <button type="button" class="cg-segmented-segment">Slip</button>
+        </div>
+
+        <h3>Segmented — matte (inset well)</h3>
+        <div class="bevel-sunken sg-specimen" style="margin-top:8px;padding:8px">
+          <span class="sg-label" style="margin-bottom:6px">Storyboard layout</span>
+          <div class="cg-segmented cg-segmented--matte" role="group" aria-label="Layout" data-segmented>
+            <button type="button" class="cg-segmented-segment">1 col</button>
+            <button type="button" class="cg-segmented-segment active">2 col</button>
+            <button type="button" class="cg-segmented-segment">3 col</button>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px">Vertical segmented control with table</h3>
+        <p class="sg-note">
+          Column-oriented <code>.cg-segmented--vertical</code> fused to a description table on the right
+          (<code>.cg-vseg-table</code>). Each segment aligns with a table row; the active row is highlighted.
+          Default <code>data-vseg-desc-rows="1"</code> — one description line per row; use
+          <code>data-vseg-desc-rows="2"</code> + <code>.cg-vseg-table--desc-2</code> for a primary + sub line.
+        </p>
+        <div class="bevel-sunken sg-specimen" style="margin-top:8px;padding:10px 12px">
+          <span class="sg-label">Reflective — 1 description row</span>
+          <div class="cg-vseg-table" data-vseg-table data-vseg-desc-rows="1" style="margin-top:6px">
+            <div class="cg-segmented cg-segmented--vertical" role="group" aria-label="Aspect ratio" data-segmented>
+              <button type="button" class="cg-segmented-segment active" data-vseg-index="0">16:9</button>
+              <button type="button" class="cg-segmented-segment" data-vseg-index="1">2.39</button>
+              <button type="button" class="cg-segmented-segment" data-vseg-index="2">1:1</button>
+              <button type="button" class="cg-segmented-segment" data-vseg-index="3">9:16</button>
+            </div>
+            <table class="cg-vseg-table__table" aria-label="Aspect ratio descriptions">
+              <tbody>
+                <tr class="cg-vseg-table__row cg-vseg-table__row--active" data-vseg-index="0">
+                  <td class="cg-vseg-table__label">Widescreen</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">1920×1080 — standard HD masters</div>
+                  </td>
+                </tr>
+                <tr class="cg-vseg-table__row" data-vseg-index="1">
+                  <td class="cg-vseg-table__label">Scope</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">2.39:1 — letterboxed theatrical</div>
+                  </td>
+                </tr>
+                <tr class="cg-vseg-table__row" data-vseg-index="2">
+                  <td class="cg-vseg-table__label">Square</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">1:1 — social / thumbnail crops</div>
+                  </td>
+                </tr>
+                <tr class="cg-vseg-table__row" data-vseg-index="3">
+                  <td class="cg-vseg-table__label">Vertical</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">9:16 — mobile / reels safe area</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <span class="sg-label" style="margin-top:12px">Matte — 2 description rows</span>
+          <div class="cg-vseg-table cg-vseg-table--desc-2" data-vseg-table data-vseg-desc-rows="2" style="margin-top:6px">
+            <div class="cg-segmented cg-segmented--vertical cg-segmented--matte" role="group" aria-label="Export target" data-segmented>
+              <button type="button" class="cg-segmented-segment active" data-vseg-index="0"><i class="fa-solid fa-film"></i> Master</button>
+              <button type="button" class="cg-segmented-segment" data-vseg-index="1"><i class="fa-solid fa-clapperboard"></i> Proxy</button>
+              <button type="button" class="cg-segmented-segment" data-vseg-index="2"><i class="fa-solid fa-image"></i> Stills</button>
+            </div>
+            <table class="cg-vseg-table__table" aria-label="Export target descriptions">
+              <tbody>
+                <tr class="cg-vseg-table__row cg-vseg-table__row--active" data-vseg-index="0">
+                  <td class="cg-vseg-table__label">Master</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">ProRes 4444 — full grade</div>
+                    <div class="cg-vseg-table__line cg-vseg-table__line--sub">Includes handles + slate</div>
+                  </td>
+                </tr>
+                <tr class="cg-vseg-table__row" data-vseg-index="1">
+                  <td class="cg-vseg-table__label">Proxy</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">H.264 720p — editorial</div>
+                    <div class="cg-vseg-table__line cg-vseg-table__line--sub">Burned-in timecode optional</div>
+                  </td>
+                </tr>
+                <tr class="cg-vseg-table__row" data-vseg-index="2">
+                  <td class="cg-vseg-table__label">Stills</td>
+                  <td class="cg-vseg-table__desc">
+                    <div class="cg-vseg-table__line">PNG sequence — key frames</div>
+                    <div class="cg-vseg-table__line cg-vseg-table__line--sub">One file per marked frame</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px">2D matrix control</h3>
+        <p class="sg-note">
+          Row × column grid of <code>.cg-matrix-cell</code> buttons inside <code>.cg-matrix</code>.
+          <code>data-matrix-select="single"</code> — one active cell (single index);
+          <code>data-matrix-select="multiple"</code> — toggle <code>.selected</code> on many cells.
+          Cells expose <code>data-row</code> / <code>data-col</code> (0-based).
+        </p>
+        <div class="bevel-sunken sg-specimen" style="margin-top:8px;padding:10px 12px">
+          <span class="sg-label">Single index</span>
+          <div class="cg-matrix" id="sg-matrix-single" role="grid" aria-label="Grade LUT position" data-matrix-select="single" style="grid-template-columns:repeat(4,1fr);margin-top:6px">
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="0" aria-selected="false">A1</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="1" aria-selected="false">A2</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="2" aria-selected="false">A3</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="3" aria-selected="false">A4</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="0" aria-selected="false">B1</button>
+            <button type="button" class="cg-matrix-cell active" role="gridcell" data-row="1" data-col="1" aria-selected="true">B2</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="2" aria-selected="false">B3</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="3" aria-selected="false">B4</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="0" aria-selected="false">C1</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="1" aria-selected="false">C2</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="2" aria-selected="false">C3</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="3" aria-selected="false">C4</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="3" data-col="0" aria-selected="false">D1</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="3" data-col="1" aria-selected="false">D2</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="3" data-col="2" aria-selected="false">D3</button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="3" data-col="3" aria-selected="false">D4</button>
+          </div>
+          <span class="cg-matrix-readout" id="sg-matrix-single-out">Index: <strong>row 1, col 1</strong></span>
+
+          <span class="sg-label" style="margin-top:12px">Multiple indices</span>
+          <div class="cg-matrix" id="sg-matrix-multi" role="grid" aria-label="Mood board cells" data-matrix-select="multiple" style="grid-template-columns:repeat(5,1fr);margin-top:6px">
+            <button type="button" class="cg-matrix-cell selected" role="gridcell" data-row="0" data-col="0" aria-selected="true"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="1" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell selected" role="gridcell" data-row="0" data-col="2" aria-selected="true"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="3" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="0" data-col="4" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="0" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell selected" role="gridcell" data-row="1" data-col="1" aria-selected="true"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="2" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="1" data-col="3" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell selected" role="gridcell" data-row="1" data-col="4" aria-selected="true"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="0" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="1" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="2" aria-selected="false"></button>
+            <button type="button" class="cg-matrix-cell selected" role="gridcell" data-row="2" data-col="3" aria-selected="true"></button>
+            <button type="button" class="cg-matrix-cell" role="gridcell" data-row="2" data-col="4" aria-selected="false"></button>
+          </div>
+          <span class="cg-matrix-readout" id="sg-matrix-multi-out">Indices: <strong>(0,0) (0,2) (1,1) (1,4) (2,3)</strong></span>
+        </div>
+
+        <table class="sg-context-table" style="margin-top:10px;max-width:640px">
+          <thead>
+            <tr><th>Control</th><th>Classes / attributes</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Vertical segmented + table</td><td><code>.cg-vseg-table</code>, <code>.cg-segmented--vertical</code></td><td>Wrap fused segment column + <code>.cg-vseg-table__table</code>; sync via <code>data-vseg-table</code></td></tr>
+            <tr><td>Description rows</td><td><code>data-vseg-desc-rows</code>, <code>.cg-vseg-table--desc-2</code></td><td>Default 1 line; 2 shows <code>.cg-vseg-table__line--sub</code></td></tr>
+            <tr><td>2D matrix</td><td><code>.cg-matrix</code>, <code>.cg-matrix-cell</code></td><td><code>data-matrix-select="single|multiple"</code>; <code>.active</code> vs <code>.selected</code></td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top:14px">Production reference — treatment layout</h3>
+        <div class="treatment-layout-control">
+          <button type="button" class="treatment-layout-btn" data-layout="one-column"><i class="fa-solid fa-align-justify"></i><span class="treatment-layout-btn-label">1</span></button>
+          <button type="button" class="treatment-layout-btn active" data-layout="two-column"><i class="fa-solid fa-table-columns"></i><span class="treatment-layout-btn-label">2</span></button>
+        </div>
+
+        <h3 style="margin-top:14px">Popup menu (select)</h3>
+        <p class="sg-note">
+          Raised matte bezel (toolbar insert–row family), trailing caret. Base <code>.cg-nspopup</code> (11px); larger steps
+          <code>.cg-nspopup--md</code> (13px), <code>.cg-nspopup--lg</code> (15px) — pair matching
+          <code>.cg-nspopup-wrap--md</code> / <code>--lg</code> on the wrapper. Styles in
+          <code>source/css/CineGenBaseGUI-controls-extra.css</code>.
+        </p>
+        <div class="bevel-sunken sg-specimen" style="padding:10px 12px">
+          <span class="sg-label">Default — 11px</span>
+          <div class="cg-nspopup-wrap" style="max-width:220px">
+            <select class="cg-nspopup" id="sg-nspopup-standalone" aria-label="Export format" title="Export format">
+              <option selected>Final Draft (.fdx)</option>
+              <option>Fountain (.fountain)</option>
+              <option>PDF — formatted</option>
+              <option>Plain text</option>
+            </select>
+          </div>
+          <span class="sg-label" style="margin-top:10px">Medium — 13px</span>
+          <div class="cg-nspopup-wrap cg-nspopup-wrap--md" style="max-width:260px">
+            <select class="cg-nspopup cg-nspopup--md" id="sg-nspopup-md" aria-label="Sequence preset" title="Sequence preset">
+              <option selected>Rec. 709 — broadcast</option>
+              <option>P3 D65 — cinema</option>
+              <option>ACES 1.3 — linear</option>
+            </select>
+          </div>
+          <span class="sg-label" style="margin-top:10px">Large — 15px</span>
+          <div class="cg-nspopup-wrap cg-nspopup-wrap--lg" style="max-width:300px">
+            <select class="cg-nspopup cg-nspopup--lg" id="sg-nspopup-lg" aria-label="Project template" title="Project template">
+              <option selected>Feature — 90 min</option>
+              <option>Pilot — 1 hr</option>
+              <option>Short film</option>
+              <option>Commercial</option>
+            </select>
+          </div>
+        </div>
+        <div class="bevel-sunken sg-specimen" style="padding:10px 12px;margin-top:8px">
+          <span class="sg-label">In inspector row (matches <code>.cg-accordion-row</code>)</span>
+          <div class="cg-accordion-row" style="margin-bottom:0">
+            <label for="sg-nspopup-paper">Paper</label>
+            <div class="cg-nspopup-wrap">
+              <select class="cg-nspopup" id="sg-nspopup-paper" aria-label="Paper size" title="Paper size">
+                <option>US Letter</option>
+                <option>US Legal</option>
+                <option>A4</option>
+                <option selected>Screenplay (default)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3>Horizontal sliders</h3>
+        <div class="bevel-sunken sg-specimen" style="padding:10px 12px">
+          <div class="cg-slider-row">
+            <span class="cg-slider-label">Opacity</span>
+            <input class="cg-slider" type="range" min="0" max="100" value="72" data-out="sgOpOut">
+            <span class="cg-slider-val" id="sgOpOut">72%</span>
+          </div>
+          <div class="cg-slider-row">
+            <span class="cg-slider-label">Timeline zoom</span>
+            <input class="cg-slider" type="range" min="10" max="400" value="100" step="5" data-out="sgZmOut">
+            <span class="cg-slider-val" id="sgZmOut">100%</span>
+          </div>
+          <div class="cg-slider-row">
+            <span class="cg-slider-label">Speed ×</span>
+            <input class="cg-slider" type="range" min="25" max="800" value="100" step="25" data-out="sgSpOut" data-format="speed">
+            <span class="cg-slider-val" id="sgSpOut">1.00×</span>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px">Vertical faders</h3>
+        <div class="cg-fader-bank">
+          <div class="cg-fader-col">
+            <input class="cg-slider cg-fader" type="range" min="0" max="100" value="68" orient="vertical" aria-label="Dialog">
+            <label>DX</label>
+          </div>
+          <div class="cg-fader-col">
+            <input class="cg-slider cg-fader" type="range" min="0" max="100" value="40" orient="vertical" aria-label="Music">
+            <label>MX</label>
+          </div>
+          <div class="cg-fader-col">
+            <input class="cg-slider cg-fader" type="range" min="0" max="100" value="82" orient="vertical" aria-label="FX">
+            <label>FX</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Accordion — inspector sections</h3>
+    <p class="sg-note">Collapsible panels (<code>details.cg-accordion-section</code>) — pattern from Dark-App inspector.</p>
+    <div class="cg-accordion">
+      <details class="cg-accordion-section" open>
+        <summary class="cg-accordion-header">Transform</summary>
+        <div class="cg-accordion-body">
+          <div class="cg-accordion-row">
+            <label for="sg-pos-x">Position X</label>
+            <input id="sg-pos-x" class="cg-field" type="text" value="960">
+          </div>
+          <div class="cg-accordion-row">
+            <label for="sg-pos-y">Position Y</label>
+            <input id="sg-pos-y" class="cg-field" type="text" value="540">
+          </div>
+          <div class="cg-accordion-row">
+            <label for="sg-scale">Scale</label>
+            <input id="sg-scale" class="cg-field" type="text" value="100%">
+          </div>
+        </div>
+      </details>
+      <details class="cg-accordion-section" open>
+        <summary class="cg-accordion-header">Audio</summary>
+        <div class="cg-accordion-body">
+          <div class="cg-accordion-row">
+            <label for="sg-level">Level</label>
+            <input id="sg-level" class="cg-field" type="text" value="-6.0 dB">
+          </div>
+          <div class="cg-accordion-row">
+            <label for="sg-pan">Pan</label>
+            <input id="sg-pan" class="cg-field" type="text" value="0">
+          </div>
+        </div>
+      </details>
+      <details class="cg-accordion-section">
+        <summary class="cg-accordion-header">Effects</summary>
+        <div class="cg-accordion-body">
+          <p style="font-size:10px;color:var(--text-dim);font-style:italic;margin:0">No effects applied</p>
+        </div>
+      </details>
+      <details class="cg-accordion-section">
+        <summary class="cg-accordion-header">Metadata</summary>
+        <div class="cg-accordion-body">
+          <div class="cg-accordion-row">
+            <label for="sg-cam">Camera</label>
+            <input id="sg-cam" class="cg-field" type="text" value="RED Komodo">
+          </div>
+          <div class="cg-accordion-row">
+            <label for="sg-lens">Lens</label>
+            <input id="sg-lens" class="cg-field" type="text" value="35mm T1.5">
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       TWO-ZONE NAVIGATION COMPONENTS
+       ============================================================ -->
+
+  <!-- OVERVIEW PANEL -->
+  <section class="sg-section" id="sg-overview-panel">
+    <h2>Overview panel</h2>
+    <p class="sg-note">
+      The <code>#view-overview</code> workspace panel appears when a folder node is selected in the project hierarchy.
+      A header bar provides three view-mode buttons, a section description, and a "Preview on hover" toggle.
+      The content zone renders the selected mode below the header.
+    </p>
+
+    <h3>Header bar</h3>
+    <p class="sg-note"><code>.ov-header-bar</code> — flex row: mode-button group · description text (<code>flex:1</code>) · toggle switch. Sits at the top of <code>#overview-panel-content</code>.</p>
+    <div class="sg-specimen" style="padding:0">
+      <div class="ov-header-bar">
+        <div class="ov-mode-group" data-segmented role="group" aria-label="Overview layout">
+          <button class="ov-mode-btn active" data-mode="column">
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>Columns</span>
+          </button>
+          <button class="ov-mode-btn" data-mode="row">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i><span>Rows</span>
+          </button>
+          <button class="ov-mode-btn" data-mode="master">
+            <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Browse</span>
+          </button>
+        </div>
+        <p class="overview-desc-inline">Props, set dressing, vehicles and wardrobe tracked for AI generation.</p>
+        <label class="ov-preview-toggle">
+          <input type="checkbox" class="ov-preview-toggle-input" checked>
+          <span class="ov-toggle-track"><span class="ov-toggle-thumb"></span></span>
+          <span class="ov-preview-toggle-text">Preview on hover</span>
+        </label>
+      </div>
+    </div>
+    <table class="sg-token-table" style="margin-top:10px;max-width:640px">
+      <thead><tr><th>Element</th><th>Class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Header row</td><td><code>.ov-header-bar</code></td><td>Flex row, <code>border-bottom</code>, <code>background:#1e1e1e</code></td></tr>
+        <tr><td>Mode group</td><td><code>.ov-mode-group</code></td><td>Flex row of 3 buttons; wrap in <code>data-segmented</code> for styleguide click activation</td></tr>
+        <tr><td>Mode button</td><td><code>.ov-mode-btn</code></td><td>72×54 px, card-style gradient. Add <code>.active</code> for blue selected state. <code>data-mode</code> attr matches mode ID</td></tr>
+        <tr><td>Description</td><td><code>.overview-desc-inline</code></td><td><code>flex:1</code>; pushes toggle to right edge</td></tr>
+        <tr><td>Toggle label</td><td><code>.ov-preview-toggle</code></td><td>CSS-only — hidden checkbox + <code>.ov-toggle-track</code> + <code>.ov-toggle-thumb</code> siblings</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Overview cards</h3>
+    <p class="sg-note"><code>.overview-card</code> inside <code>.overview-grid</code> (auto-fill, minmax 210 px). Each card: icon · title + count badge · description. Section accent applied via modifier class adds a coloured left border. <code>.selected</code> state shown on second card.</p>
+    <div class="sg-specimen sg-specimen--inset" style="padding:0 0 4px">
+      <div class="overview-grid" style="padding:12px 16px 0">
+        <div class="overview-card overview-card--section-preprod">
+          <span class="overview-card-icon"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
+          <div class="overview-card-body">
+            <span class="overview-card-title">Props <span class="overview-card-count">8</span></span>
+            <span class="overview-card-desc">Physical objects appearing on screen</span>
+          </div>
+        </div>
+        <div class="overview-card overview-card--section-preprod selected">
+          <span class="overview-card-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></span>
+          <div class="overview-card-body">
+            <span class="overview-card-title">Wardrobe <span class="overview-card-count">12</span></span>
+            <span class="overview-card-desc">Character costumes per scene — selected state</span>
+          </div>
+        </div>
+        <div class="overview-card overview-card--section-design">
+          <span class="overview-card-icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></span>
+          <div class="overview-card-body">
+            <span class="overview-card-title">Locations <span class="overview-card-count">6</span></span>
+            <span class="overview-card-desc">Practical and studio locations</span>
+          </div>
+        </div>
+        <div class="overview-card">
+          <span class="overview-card-icon"><i class="fa-solid fa-car-side" aria-hidden="true"></i></span>
+          <div class="overview-card-body">
+            <span class="overview-card-title">Vehicles <span class="overview-card-count">4</span></span>
+            <span class="overview-card-desc">Hero vehicles and background traffic — no accent</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Section accent colours</h3>
+    <p class="sg-note">Left-border colour derived from tree section. Add the modifier class to <code>.overview-card</code>.</p>
+    <div class="sg-row" style="flex-wrap:wrap;gap:6px;margin-top:6px">
+      <div class="overview-card overview-card--section-preprod" style="width:180px;flex-shrink:0">
+        <span class="overview-card-icon"><i class="fa-solid fa-film" aria-hidden="true"></i></span>
+        <div class="overview-card-body"><span class="overview-card-title">Pre-Production</span><span class="overview-card-desc" style="font-family:monospace;font-size:9px">--section-preprod</span></div>
+      </div>
+      <div class="overview-card overview-card--section-design" style="width:180px;flex-shrink:0">
+        <span class="overview-card-icon"><i class="fa-solid fa-palette" aria-hidden="true"></i></span>
+        <div class="overview-card-body"><span class="overview-card-title">Production Design</span><span class="overview-card-desc" style="font-family:monospace;font-size:9px">--section-design</span></div>
+      </div>
+      <div class="overview-card overview-card--section-sound" style="width:180px;flex-shrink:0">
+        <span class="overview-card-icon"><i class="fa-solid fa-music" aria-hidden="true"></i></span>
+        <div class="overview-card-body"><span class="overview-card-title">Sound Department</span><span class="overview-card-desc" style="font-family:monospace;font-size:9px">--section-sound</span></div>
+      </div>
+      <div class="overview-card overview-card--section-scenes" style="width:180px;flex-shrink:0">
+        <span class="overview-card-icon"><i class="fa-solid fa-clapperboard" aria-hidden="true"></i></span>
+        <div class="overview-card-body"><span class="overview-card-title">Scenes</span><span class="overview-card-desc" style="font-family:monospace;font-size:9px">--section-scenes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLUMN VIEW -->
+  <section class="sg-section" id="sg-column-view">
+    <h2>Column view</h2>
+    <p class="sg-note">
+      <code>.ov-col-track</code> — horizontally-scrolling flex row. Each <code>.ov-col-container</code> (300 px fixed width) holds an overview card on top
+      and a companion list (<code>.ov-col-companion</code> → <code>.ov-col-list</code>) below. List items use a CSS-grid accordion:
+      click a row to expand its body; click again to collapse. The goto arrow button (<code>.ov-col-goto</code>) appears on hover and navigates
+      directly to that item in the asset master-detail panel.
+    </p>
+
+    <div class="sg-specimen sg-specimen--inset" style="padding:0;overflow:auto;max-height:400px">
+      <div style="display:flex;gap:8px;padding:10px 14px;align-items:flex-start">
+
+        <!-- Column 1: Props — first item open -->
+        <div class="ov-col-container">
+          <div class="overview-card overview-card--section-preprod" style="width:100%;cursor:default">
+            <span class="overview-card-icon"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
+            <div class="overview-card-body">
+              <span class="overview-card-title">Props <span class="overview-card-count">8</span></span>
+              <span class="overview-card-desc">Physical objects on screen</span>
+            </div>
+          </div>
+          <div class="ov-col-companion">
+            <div class="ov-col-list">
+              <!-- EXPANDED item -->
+              <div class="ov-col-item-wrap open" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Flashlight</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body">
+                  <div class="ov-col-item-body-inner">
+                    <div class="ov-col-acc-body">
+                      <p class="ov-col-acc-desc">Heavy metal body. Visible beam in rain and fog. Marcus's primary investigative tool.</p>
+                      <div class="ov-col-acc-meta">
+                        <span class="asset-status-dot asset-status-approved"></span>
+                        <span class="ov-col-acc-status">Approved</span>
+                      </div>
+                      <div class="ov-col-acc-tags">
+                        <span class="asset-tag">marcus</span><span class="asset-tag">active</span>
+                      </div>
+                      <button class="toolbar-btn ov-col-acc-open-btn"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Open in detail</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- COLLAPSED items -->
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-key" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Office Key Ring</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Marcus's key ring, institutional grey.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-approved"></span><span class="ov-col-acc-status">Approved</span></div></div></div></div>
+              </div>
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-suitcase" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Evidence Suitcase</span>
+                  <span class="asset-status-dot asset-status-in-progress"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Black hard case, worn latches.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-in-progress"></span><span class="ov-col-acc-status">In Progress</span></div></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Wardrobe — all collapsed -->
+        <div class="ov-col-container">
+          <div class="overview-card overview-card--section-design" style="width:100%;cursor:default">
+            <span class="overview-card-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></span>
+            <div class="overview-card-body">
+              <span class="overview-card-title">Wardrobe <span class="overview-card-count">12</span></span>
+              <span class="overview-card-desc">Costumes per scene per character</span>
+            </div>
+          </div>
+          <div class="ov-col-companion">
+            <div class="ov-col-list">
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Marcus — Act 1 Suit</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Dark charcoal two-piece, lapels slightly rumpled.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-approved"></span><span class="ov-col-acc-status">Approved</span></div><div class="ov-col-acc-tags"><span class="asset-tag">marcus</span><span class="asset-tag">act-1</span></div></div></div></div>
+              </div>
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-hat-cowboy" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">The Fixer — Overcoat</span>
+                  <span class="asset-status-dot asset-status-pending"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Heavy wool overcoat, dark forest green.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-pending"></span><span class="ov-col-acc-status">Pending</span></div></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: Sound — all collapsed -->
+        <div class="ov-col-container">
+          <div class="overview-card overview-card--section-sound" style="width:100%;cursor:default">
+            <span class="overview-card-icon"><i class="fa-solid fa-music" aria-hidden="true"></i></span>
+            <div class="overview-card-body">
+              <span class="overview-card-title">Music Cues <span class="overview-card-count">5</span></span>
+              <span class="overview-card-desc">Score and source music</span>
+            </div>
+          </div>
+          <div class="ov-col-companion">
+            <div class="ov-col-list">
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-music" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Main Title Theme</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Slow build, jazz with noir overtones. 2m 15s.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-approved"></span><span class="ov-col-acc-status">Approved</span></div></div></div></div>
+              </div>
+              <div class="ov-col-item-wrap" onclick="this.classList.toggle('open')">
+                <div class="ov-col-item">
+                  <span class="ov-col-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-icon"><i class="fa-solid fa-drum" aria-hidden="true"></i></span>
+                  <span class="ov-col-item-name">Chase Sequence</span>
+                  <span class="asset-status-dot asset-status-in-progress"></span>
+                  <button class="ov-col-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-col-item-body"><div class="ov-col-item-body-inner"><div class="ov-col-acc-body"><p class="ov-col-acc-desc">Percussive drive, no melody.</p><div class="ov-col-acc-meta"><span class="asset-status-dot asset-status-in-progress"></span><span class="ov-col-acc-status">In Progress</span></div></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table class="sg-token-table" style="margin-top:10px;max-width:680px">
+      <thead><tr><th>Element</th><th>Class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Track</td><td><code>.ov-col-track</code></td><td>Horizontal flex, <code>overflow-x: auto; overflow-y: auto</code>, <code>flex: 1</code> in live app</td></tr>
+        <tr><td>Column</td><td><code>.ov-col-container</code></td><td>300 px fixed width, flex column, grows with accordion content — no max-height</td></tr>
+        <tr><td>Companion</td><td><code>.ov-col-companion</code></td><td>Auto height; top border divider below the card</td></tr>
+        <tr><td>Item wrapper</td><td><code>.ov-col-item-wrap</code></td><td>CSS grid: <code>grid-template-rows: auto 0fr</code> collapsed → <code>auto 1fr</code> when <code>.open</code>. Transition 0.18 s ease</td></tr>
+        <tr><td>Item row</td><td><code>.ov-col-item</code></td><td>Chevron (<code>.ov-col-item-chevron</code> rotates 90° when open) · icon · name · status dot · goto button</td></tr>
+        <tr><td>Accordion body</td><td><code>.ov-col-item-body</code></td><td><code>overflow: hidden</code>, inner wrapper <code>.ov-col-acc-body</code> for padding and bg</td></tr>
+        <tr><td>Goto button</td><td><code>.ov-col-goto</code></td><td><code>opacity: 0</code> by default; visible on <code>.ov-col-item:hover</code>. Use <code>event.stopPropagation()</code> to prevent accordion toggle</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ROW VIEW -->
+  <section class="sg-section" id="sg-row-view">
+    <h2>Row view</h2>
+    <p class="sg-note">
+      <code>.ov-row-track</code> — vertically-scrolling flex column. Each <code>.ov-row-container</code> holds the card on the left (200 px fixed)
+      and a companion panel on the right. The companion has a tab strip (<code>.ov-row-tabs</code>) with Items / Info tabs and a scrollable
+      item list with goto buttons.
+    </p>
+
+    <div class="sg-specimen sg-specimen--inset" style="padding:0;overflow:auto;max-height:420px">
+      <div style="display:flex;flex-direction:column;gap:6px;padding:10px 14px">
+        <div class="ov-row-container">
+          <div class="ov-row-card-wrap">
+            <div class="overview-card overview-card--section-preprod" style="height:100%;cursor:default;border-left-width:3px">
+              <span class="overview-card-icon"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
+              <div class="overview-card-body">
+                <span class="overview-card-title">Props <span class="overview-card-count">4</span></span>
+                <span class="overview-card-desc">Physical objects on screen</span>
+              </div>
+            </div>
+          </div>
+          <div class="ov-row-companion">
+            <div class="ov-row-tabs" data-segmented>
+              <button class="ov-row-tab active">Items</button>
+              <button class="ov-row-tab">Info</button>
+            </div>
+            <div class="ov-row-list">
+              <!-- Collapsed item -->
+              <div class="ov-row-item-wrap">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Flashlight</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body"><div class="ov-row-item-body-inner"></div></div>
+              </div>
+              <!-- Expanded item (static specimen — .open applied inline) -->
+              <div class="ov-row-item-wrap open">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-key" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Office Key Ring</span>
+                  <span class="asset-status-dot asset-status-in-progress"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body">
+                  <div class="ov-row-item-body-inner">
+                    <div class="ov-row-acc-body">
+                      <p class="ov-col-acc-desc">A small brass ring holding two keys used in the interrogation room scenes.</p>
+                      <div class="ov-col-acc-meta">
+                        <span class="asset-status-dot asset-status-in-progress"></span>
+                        <span class="ov-col-acc-status">in progress</span>
+                      </div>
+                      <div class="ov-col-acc-tags">
+                        <span class="asset-tag">practical</span>
+                        <span class="asset-tag">small</span>
+                      </div>
+                      <button class="toolbar-btn ov-col-acc-open-btn"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i> Open in detail</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Collapsed item -->
+              <div class="ov-row-item-wrap">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-suitcase" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Evidence Suitcase</span>
+                  <span class="asset-status-dot asset-status-pending"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body"><div class="ov-row-item-body-inner"></div></div>
+              </div>
+              <!-- Collapsed item -->
+              <div class="ov-row-item-wrap">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Burner Phone</span>
+                  <span class="asset-status-dot asset-status-pending"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body"><div class="ov-row-item-body-inner"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ov-row-container">
+          <div class="ov-row-card-wrap">
+            <div class="overview-card overview-card--section-design" style="height:100%;cursor:default;border-left-width:3px">
+              <span class="overview-card-icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></span>
+              <div class="overview-card-body">
+                <span class="overview-card-title">Locations <span class="overview-card-count">2</span></span>
+                <span class="overview-card-desc">Practical and studio</span>
+              </div>
+            </div>
+          </div>
+          <div class="ov-row-companion">
+            <div class="ov-row-tabs" data-segmented>
+              <button class="ov-row-tab active">Items</button>
+              <button class="ov-row-tab">Info</button>
+            </div>
+            <div class="ov-row-list">
+              <div class="ov-row-item-wrap">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Police HQ — Bullpen</span>
+                  <span class="asset-status-dot asset-status-approved"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body"><div class="ov-row-item-body-inner"></div></div>
+              </div>
+              <div class="ov-row-item-wrap">
+                <div class="ov-row-item">
+                  <span class="ov-row-item-chevron"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-icon"><i class="fa-solid fa-cloud-rain" aria-hidden="true"></i></span>
+                  <span class="ov-row-item-name">Rain-Soaked Alley</span>
+                  <span class="asset-status-dot asset-status-pending"></span>
+                  <button class="ov-row-goto" title="Open"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="ov-row-item-body"><div class="ov-row-item-body-inner"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table class="sg-token-table" style="margin-top:10px;max-width:680px">
+      <thead><tr><th>Element</th><th>Class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Track</td><td><code>.ov-row-track</code></td><td>Vertical flex, <code>overflow-y: auto</code>, <code>flex: 1</code> in live app</td></tr>
+        <tr><td>Row container</td><td><code>.ov-row-container</code></td><td>Horizontal flex; card + companion stretch to row height</td></tr>
+        <tr><td>Card wrapper</td><td><code>.ov-row-card-wrap</code></td><td>200 px fixed width, right border divider</td></tr>
+        <tr><td>Companion</td><td><code>.ov-row-companion</code></td><td>Flex column: tab strip (sticky) + item list (scrollable)</td></tr>
+        <tr><td>Tab strip</td><td><code>.ov-row-tabs</code></td><td>Use <code>data-segmented</code> for styleguide JS; <code>.active</code> on selected tab</td></tr>
+        <tr><td>Item wrap</td><td><code>.ov-row-item-wrap</code></td><td>CSS-grid accordion container; add <code>.open</code> to expand</td></tr>
+        <tr><td>Item row</td><td><code>.ov-row-item</code></td><td>Clickable header row: chevron · icon · name · status dot · goto button</td></tr>
+        <tr><td>Chevron</td><td><code>.ov-row-item-chevron</code></td><td>Rotates 90° when <code>.ov-row-item-wrap.open</code></td></tr>
+        <tr><td>Body wrapper</td><td><code>.ov-row-item-body</code></td><td><code>overflow: hidden</code>; animated via CSS grid-template-rows on parent</td></tr>
+        <tr><td>Body inner</td><td><code>.ov-row-item-body-inner</code></td><td>Ensures collapsed height is zero; wraps <code>.ov-row-acc-body</code></td></tr>
+        <tr><td>Acc body</td><td><code>.ov-row-acc-body</code></td><td>Content area; reuses <code>.ov-col-acc-*</code> classes for description, meta, tags, open button</td></tr>
+        <tr><td>Goto button</td><td><code>.ov-row-goto</code></td><td>Opacity: 0 by default, revealed on <code>.ov-row-item:hover</code>; stop-propagation prevents accordion toggle</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- BROWSE MODE -->
+  <section class="sg-section" id="sg-browse-mode">
+    <h2>Browse mode (inline master-detail)</h2>
+    <p class="sg-note">
+      <code>.ov-master-layout</code> — flex column, <code>flex: 1</code>. Top zone (<code>.ov-master-cards</code>) shows the card grid
+      capped at <code>max-height: 198px</code> (~2 rows). Clicking a card selects it (blue outline) and renders the leaf node's
+      master-detail inline in the bottom zone. A 1 px divider separates the zones.
+    </p>
+
+    <div class="sg-specimen sg-specimen--inset" style="padding:0;height:500px;overflow:hidden">
+      <div class="ov-master-layout" style="height:100%">
+        <div class="ov-header-bar">
+          <div class="ov-mode-group" data-segmented>
+            <button class="ov-mode-btn" data-mode="column"><i class="fa-solid fa-table-columns"></i><span>Columns</span></button>
+            <button class="ov-mode-btn" data-mode="row"><i class="fa-solid fa-bars"></i><span>Rows</span></button>
+            <button class="ov-mode-btn active" data-mode="master"><i class="fa-solid fa-table-cells-large"></i><span>Browse</span></button>
+          </div>
+          <p class="overview-desc-inline">Production Design — props, wardrobe, vehicles, locations.</p>
+          <label class="ov-preview-toggle">
+            <input type="checkbox" class="ov-preview-toggle-input" checked>
+            <span class="ov-toggle-track"><span class="ov-toggle-thumb"></span></span>
+            <span class="ov-preview-toggle-text">Preview on hover</span>
+          </label>
+        </div>
+        <div class="ov-master-cards">
+          <div class="overview-grid">
+            <div class="overview-card overview-card--section-design">
+              <span class="overview-card-icon"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span>
+              <div class="overview-card-body"><span class="overview-card-title">Props <span class="overview-card-count">8</span></span><span class="overview-card-desc">On-screen physical objects</span></div>
+            </div>
+            <div class="overview-card overview-card--section-design selected">
+              <span class="overview-card-icon"><i class="fa-solid fa-shirt" aria-hidden="true"></i></span>
+              <div class="overview-card-body"><span class="overview-card-title">Wardrobe <span class="overview-card-count">12</span></span><span class="overview-card-desc">Costumes — selected</span></div>
+            </div>
+            <div class="overview-card overview-card--section-design">
+              <span class="overview-card-icon"><i class="fa-solid fa-car-side" aria-hidden="true"></i></span>
+              <div class="overview-card-body"><span class="overview-card-title">Vehicles <span class="overview-card-count">4</span></span><span class="overview-card-desc">Hero vehicles &amp; BG</span></div>
+            </div>
+            <div class="overview-card overview-card--section-design">
+              <span class="overview-card-icon"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i></span>
+              <div class="overview-card-body"><span class="overview-card-title">Locations <span class="overview-card-count">6</span></span><span class="overview-card-desc">Practical and studio</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="ov-master-divider"></div>
+        <div class="ov-master-detail">
+          <div class="asset-master-detail">
+            <div class="asset-master">
+              <div class="asset-master-header"><span>Wardrobe Items</span><span class="asset-master-count">12</span></div>
+              <div class="asset-master-item selected">
+                <span class="asset-master-item-icon"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></span>
+                <span class="asset-master-item-name">Marcus — Act 1 Suit</span>
+                <span class="asset-status-dot asset-status-approved"></span>
+              </div>
+              <div class="asset-master-item">
+                <span class="asset-master-item-icon"><i class="fa-solid fa-hat-cowboy" aria-hidden="true"></i></span>
+                <span class="asset-master-item-name">The Fixer — Overcoat</span>
+                <span class="asset-status-dot asset-status-pending"></span>
+              </div>
+              <div class="asset-master-item">
+                <span class="asset-master-item-icon"><i class="fa-solid fa-vest" aria-hidden="true"></i></span>
+                <span class="asset-master-item-name">Elena — Evening Dress</span>
+                <span class="asset-status-dot asset-status-in-progress"></span>
+              </div>
+            </div>
+            <div class="asset-form-pane">
+              <form class="asset-form" autocomplete="off" onsubmit="return false">
+                <div class="asset-form-media">
+                  <div class="asset-form-thumb-box"><i class="fa-solid fa-user-tie" aria-hidden="true"></i></div>
+                  <div class="asset-form-media-body">
+                    <div class="asset-form-media-title">Marcus — Act 1 Suit</div>
+                    <p class="asset-form-media-hint">Drop a reference image here or use Generate.</p>
+                    <div class="asset-form-media-actions">
+                      <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-file-import" aria-hidden="true"></i> Import</button>
+                      <button type="button" class="toolbar-btn btn-ai" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="asset-form-section">
+                  <div class="asset-form-section-title">Identity</div>
+                  <div class="asset-form-row">
+                    <label>Name</label>
+                    <input class="cg-field" type="text" value="Marcus — Act 1 Suit">
+                  </div>
+                  <div class="asset-form-row">
+                    <label>Status</label>
+                    <div class="cg-nspopup-wrap"><select class="cg-nspopup"><option selected>Approved</option><option>In Progress</option><option>Pending</option></select></div>
+                  </div>
+                </div>
+                <div class="asset-form-section">
+                  <div class="asset-form-section-title">Description</div>
+                  <div class="asset-form-row">
+                    <label>For AI</label>
+                    <textarea class="cg-field asset-form-textarea" rows="2">Dark charcoal two-piece, well-worn, lapels slightly rumpled.</textarea>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table class="sg-token-table" style="margin-top:10px;max-width:600px">
+      <thead><tr><th>Element</th><th>Class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Outer layout</td><td><code>.ov-master-layout</code></td><td>Flex column, <code>flex: 1</code>. Requires parent with definite height</td></tr>
+        <tr><td>Card zone</td><td><code>.ov-master-cards</code></td><td><code>max-height: 198px</code>, <code>overflow-y: auto</code></td></tr>
+        <tr><td>Divider</td><td><code>.ov-master-divider</code></td><td>1 px separator</td></tr>
+        <tr><td>Detail zone</td><td><code>.ov-master-detail</code></td><td><code>flex: 1; overflow: hidden</code> — hosts <code>.asset-master-detail</code> or <code>.ov-master-placeholder</code></td></tr>
+        <tr><td>Placeholder</td><td><code>.ov-master-placeholder</code></td><td>Centred icon + hint text when no card selected</td></tr>
+        <tr><td>Table wrapper</td><td><code>.ov-master-table-wrap</code></td><td>Full-size scrollable container used for continuity/shot-table leaf nodes</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ASSET MASTER-DETAIL PANEL -->
+  <section class="sg-section" id="sg-master-detail">
+    <h2>Asset master-detail panel</h2>
+    <p class="sg-note">
+      Activated when a leaf node (<code>view: "asset-detail"</code>) is selected in the project hierarchy.
+      The content area (<code>#asset-detail-content</code>) splits horizontally:
+      master list (230 px) on the left, scrollable detail form on the right.
+      Clicking a master list item updates the form pane without a full re-render.
+    </p>
+
+    <div class="sg-specimen" style="padding:0;height:460px;overflow:hidden">
+      <div class="asset-master-detail">
+        <div class="asset-master">
+          <div class="asset-master-header"><span>Add Prop</span><span class="asset-master-count">8</span></div>
+          <div class="asset-master-item selected">
+            <span class="asset-master-item-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span>
+            <span class="asset-master-item-name">Flashlight</span>
+            <span class="asset-status-dot asset-status-approved"></span>
+          </div>
+          <div class="asset-master-item">
+            <span class="asset-master-item-icon"><i class="fa-solid fa-key" aria-hidden="true"></i></span>
+            <span class="asset-master-item-name">Office Key Ring</span>
+            <span class="asset-status-dot asset-status-approved"></span>
+          </div>
+          <div class="asset-master-item">
+            <span class="asset-master-item-icon"><i class="fa-solid fa-suitcase" aria-hidden="true"></i></span>
+            <span class="asset-master-item-name">Evidence Suitcase</span>
+            <span class="asset-status-dot asset-status-in-progress"></span>
+          </div>
+          <div class="asset-master-item">
+            <span class="asset-master-item-icon"><i class="fa-solid fa-mobile-screen" aria-hidden="true"></i></span>
+            <span class="asset-master-item-name">Burner Phone</span>
+            <span class="asset-status-dot asset-status-pending"></span>
+          </div>
+          <div class="asset-master-item">
+            <span class="asset-master-item-icon"><i class="fa-solid fa-folder" aria-hidden="true"></i></span>
+            <span class="asset-master-item-name">Evidence Folder</span>
+            <span class="asset-status-dot asset-status-approved"></span>
+          </div>
+        </div>
+        <div class="asset-form-pane">
+          <form class="asset-form" autocomplete="off" onsubmit="return false">
+            <div class="asset-form-media">
+              <div class="asset-form-thumb-box"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></div>
+              <div class="asset-form-media-body">
+                <div class="asset-form-media-title">Flashlight</div>
+                <p class="asset-form-media-hint">Drop a reference image here or generate one to drive AI rendering.</p>
+                <div class="asset-form-media-actions">
+                  <button type="button" class="toolbar-btn" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-file-import" aria-hidden="true"></i> Import Image</button>
+                  <button type="button" class="toolbar-btn btn-ai" style="padding:2px 8px;font-size:10px"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Generate</button>
+                </div>
+              </div>
+            </div>
+            <div class="asset-form-section">
+              <div class="asset-form-section-title">Identity</div>
+              <div class="asset-form-row">
+                <label for="sg-prop-name">Name</label>
+                <input id="sg-prop-name" class="cg-field" type="text" value="Flashlight">
+              </div>
+              <div class="asset-form-row">
+                <label>Status</label>
+                <div class="cg-nspopup-wrap"><select class="cg-nspopup"><option selected>Approved</option><option>In Progress</option><option>Pending</option></select></div>
+              </div>
+              <div class="asset-form-row">
+                <label>Icon <small>FA class</small></label>
+                <input class="cg-field" type="text" value="fa-lightbulb" placeholder="fa-box">
+              </div>
+            </div>
+            <div class="asset-form-section">
+              <div class="asset-form-section-title">Description</div>
+              <div class="asset-form-row">
+                <label>For AI <small>generation hint</small></label>
+                <textarea class="cg-field asset-form-textarea" rows="2">Heavy metal body. Visible beam in rain and fog. Marcus's primary investigative tool.</textarea>
+              </div>
+            </div>
+            <div class="asset-form-section">
+              <div class="asset-form-section-title">Tags</div>
+              <div class="asset-form-row">
+                <label>Tags <small>comma-separated</small></label>
+                <input class="cg-field" type="text" value="marcus, active, scene-1">
+              </div>
+              <div class="asset-form-tags-chips">
+                <span class="asset-tag">marcus</span>
+                <span class="asset-tag">active</span>
+                <span class="asset-tag">scene-1</span>
+              </div>
+            </div>
+            <div class="asset-form-section asset-form-section--refs">
+              <div class="asset-form-section-title"><i class="fa-solid fa-link" aria-hidden="true"></i> Scene references</div>
+              <div class="asset-form-ref-row">Scene 1 — INT Police HQ — Bullpen (Night)</div>
+              <div class="asset-form-ref-row">Scene 4 — EXT Rain-Soaked Alley (Night)</div>
+            </div>
+            <div class="asset-form-section asset-form-section--danger">
+              <button type="button" class="toolbar-btn asset-form-delete-btn">
+                <i class="fa-solid fa-trash" aria-hidden="true"></i> Delete item
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <h3>Status dots</h3>
+    <p class="sg-note"><code>.asset-status-dot</code> with a status modifier.</p>
+    <div class="sg-row" style="gap:14px;flex-wrap:wrap;margin-top:4px">
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-approved"></span>approved</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-in-progress"></span>in-progress</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-pending"></span>pending</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-best-take"></span>best-take</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-take"></span>take</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-rendered"></span>rendered</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)"><span class="asset-status-dot asset-status-queued"></span>queued</span>
+    </div>
+
+    <h3>Form anatomy</h3>
+    <table class="sg-token-table" style="margin-top:8px;max-width:680px">
+      <thead><tr><th>Element</th><th>Class</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Outer split</td><td><code>.asset-master-detail</code></td><td>Horizontal flex, <code>height: 100%</code>; parent needs definite height</td></tr>
+        <tr><td>Master pane</td><td><code>.asset-master</code></td><td>230 px wide, <code>overflow-y: auto</code>, dark bg</td></tr>
+        <tr><td>Master header</td><td><code>.asset-master-header</code></td><td>Sticky; shows category label + count badge (<code>.asset-master-count</code>)</td></tr>
+        <tr><td>Master item</td><td><code>.asset-master-item</code></td><td>Add <code>.selected</code> for blue left-border + tinted bg</td></tr>
+        <tr><td>Form pane</td><td><code>.asset-form-pane</code></td><td><code>flex: 1; overflow-y: auto</code>, mid-tone bg</td></tr>
+        <tr><td>Media header</td><td><code>.asset-form-media</code></td><td>88×88 thumbnail placeholder + title + Import/Generate buttons</td></tr>
+        <tr><td>Thumb box</td><td><code>.asset-form-thumb-box</code></td><td>Inset shadow; shows FA icon until reference image is placed</td></tr>
+        <tr><td>Form section</td><td><code>.asset-form-section</code></td><td>Padded, border-bottom; title via <code>.asset-form-section-title</code></td></tr>
+        <tr><td>Field row</td><td><code>.asset-form-row</code></td><td>2-col grid: 88 px label + flex control</td></tr>
+        <tr><td>Form field</td><td><code>.cg-field</code></td><td>Dark-themed <code>input</code> or <code>textarea</code>: background <code>#1c1c1c</code>, inset shadow, focus ring. Global rule — applies in any context. Context overrides (<code>.cg-accordion-row .cg-field</code>) still win on specificity.</td></tr>
+        <tr><td>Tag chips</td><td><code>.asset-form-tags-chips</code></td><td>Flex-wrap chip row below tags input</td></tr>
+        <tr><td>References</td><td><code>.asset-form-section--refs</code></td><td>Tinted bg; scene mentions auto-populated from breakdown data</td></tr>
+        <tr><td>Danger zone</td><td><code>.asset-form-section--danger</code></td><td>Red-tinted bg; delete button uses <code>.asset-form-delete-btn</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- HOVER PREVIEW POPOVER -->
+  <section class="sg-section" id="sg-hover-preview">
+    <h2>Hover preview popover</h2>
+    <p class="sg-note">
+      A singleton <code>position: fixed</code> div (<code>#ov-col-preview</code>) lives in the app HTML.
+      On <code>mouseenter</code> of any <code>.ov-col-item</code> or <code>.ov-row-item</code>, <code>showOvPreview(el, childIdx, itemIdx)</code>
+      populates it with item data and positions it just to the right of the row (flips left if near the viewport edge).
+      A 120 ms debounce on <code>mouseleave</code> prevents flicker; entering the popover itself cancels the hide timer.
+      Controlled by the "Preview on hover" toggle (<code>_ovShowHoverPreview</code>).
+    </p>
+
+    <div class="sg-specimen" style="padding:14px;display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+      <!-- Static inline specimen — override fixed positioning via .sg-ov-preview-static -->
+      <div class="sg-ov-preview-static">
+        <div class="ov-preview-icon">
+          <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+        </div>
+        <div class="ov-preview-body">
+          <div class="ov-preview-name">
+            Flashlight <span class="asset-status-dot asset-status-approved" title="approved"></span>
+          </div>
+          <p class="ov-preview-status">Approved</p>
+          <p class="ov-preview-desc">Heavy metal body. Visible beam in rain and fog. Marcus's primary investigative tool on the night beat.</p>
+          <div class="ov-preview-tags">
+            <span class="asset-tag">marcus</span>
+            <span class="asset-tag">active</span>
+          </div>
+          <p class="ov-preview-hint">Click row to expand · <i class="fa-solid fa-arrow-right"></i> to open</p>
+        </div>
+      </div>
+
+      <table class="sg-token-table" style="max-width:280px;align-self:flex-start">
+        <thead><tr><th>Element</th><th>Class</th></tr></thead>
+        <tbody>
+          <tr><td>Container</td><td><code>#ov-col-preview</code></td></tr>
+          <tr><td>Icon box</td><td><code>.ov-preview-icon</code></td></tr>
+          <tr><td>Body</td><td><code>.ov-preview-body</code></td></tr>
+          <tr><td>Name + dot</td><td><code>.ov-preview-name</code></td></tr>
+          <tr><td>Status label</td><td><code>.ov-preview-status</code></td></tr>
+          <tr><td>Description</td><td><code>.ov-preview-desc</code></td></tr>
+          <tr><td>Tags row</td><td><code>.ov-preview-tags</code></td></tr>
+          <tr><td>Hint text</td><td><code>.ov-preview-hint</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- MENUS (static specimen) -->
+  <section class="sg-section" id="sg-menus">
+    <h2>Menus &amp; modals</h2>
+    <h3 id="sg-panel-modal">Panel modal (<code>cg-panel-modal</code>)</h3>
+    <p class="sg-note">
+      A <strong>panel modal</strong> fills its host panel (not the viewport). Use inside a
+      <code>position: relative</code> container with a defined height — e.g. mood boards workspace.
+      Double-clicking a grid item opens the viewer in this layer with a dimmed backdrop and raised dialog shadow.
+    </p>
+    <div class="sg-row" style="align-items:flex-start;margin-bottom:20px">
+      <div
+        class="moodboards-panel-host bevel-flat"
+        id="sg-panel-modal-demo-host"
+        style="position:relative;flex:1;max-width:520px;height:280px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border-dark);"
+      >
+        <div class="panel-header" style="flex-shrink:0"><span><i class="fa-solid fa-images"></i> Mood board panel (specimen)</span></div>
+        <div class="panel-content moodboards-drop-surface" style="flex:1;min-height:0;margin:8px;display:flex;flex-direction:column;gap:8px;">
+          <div class="moodboards-drop-chrome" style="flex-shrink:0;cursor:default">
+            <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+            <div class="moodboards-drop-chrome-copy">
+              <strong>Drop files anywhere in this panel</strong>
+              <span>Grid cards live inside this drop surface.</span>
+            </div>
+          </div>
+          <div class="moodboards-items-grid" style="flex:1;min-height:0;overflow:auto;padding:4px;">
+            <div class="moodboard-grid-card" style="border:1px solid var(--border-light);background:var(--bg-panel);border-radius:4px;overflow:hidden;">
+              <div class="moodboard-grid-card-thumb" style="height:72px;background:linear-gradient(135deg,#2a3548,#1a2030);"></div>
+              <div class="moodboard-grid-card-meta" style="padding:8px;font-size:11px;">Sample frame.jpg <span style="color:var(--text-dim);">IMAGE</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="cg-panel-modal-layer" id="sg-panel-modal-demo" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Sample frame.jpg" style="position:absolute;inset:0;z-index:50;display:flex;flex-direction:column;">
+          <div class="cg-panel-modal-backdrop" data-sg-panel-modal-close aria-hidden="true" style="position:absolute;inset:0;background:color-mix(in srgb,var(--bg-dark) 52%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--border-dark) 65%,transparent);"></div>
+          <div class="cg-panel-modal-dialog bevel-raised" style="position:absolute;inset:6px;display:flex;flex-direction:column;box-shadow:0 10px 28px color-mix(in srgb,#000 55%,transparent),0 2px 8px color-mix(in srgb,#000 35%,transparent);">
+            <div class="cg-panel-modal-header panel-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <span class="cg-panel-modal-title" style="display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-image" aria-hidden="true"></i> Sample frame.jpg</span>
+              <button type="button" class="toolbar-btn cg-panel-modal-close" data-sg-panel-modal-close aria-label="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <div class="cg-panel-modal-body panel-content moodboard-item-viewer" style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;">
+              <div class="moodboard-item-viewer-meta">
+                <span class="moodboard-item-viewer-label">Sample frame.jpg</span>
+                <span class="moodboard-item-viewer-type">image</span>
+              </div>
+              <div class="moodboard-item-viewer-stage" style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:var(--bg-inset);border:1px solid var(--border-dark);">
+                <div style="width:72%;aspect-ratio:16/10;background:linear-gradient(145deg,#3d4f6a 0%,#1e2838 50%,#0f141c 100%);border-radius:2px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="min-width:160px;display:flex;flex-direction:column;gap:8px;">
+        <button type="button" class="toolbar-btn btn-ai" id="sg-panel-modal-open">Open panel modal</button>
+        <button type="button" class="toolbar-btn" id="sg-panel-modal-close-btn">Close</button>
+        <p class="sg-note" style="margin:0">Escape or backdrop click also close in production.</p>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var layer = document.getElementById('sg-panel-modal-demo');
+        var openBtn = document.getElementById('sg-panel-modal-open');
+        var closeBtn = document.getElementById('sg-panel-modal-close-btn');
+        if (!layer || !openBtn) return;
+        function setOpen(on) {
+          layer.hidden = !on;
+          layer.setAttribute('aria-hidden', on ? 'false' : 'true');
+        }
+        openBtn.addEventListener('click', function () { setOpen(true); });
+        closeBtn && closeBtn.addEventListener('click', function () { setOpen(false); });
+        layer.querySelectorAll('[data-sg-panel-modal-close]').forEach(function (el) {
+          el.addEventListener('click', function () { setOpen(false); });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && !layer.hidden) setOpen(false);
+        });
+      })();
+    </script>
+
+    <h3>Setup Assistant alert</h3>
+    <p class="sg-note"><code>.sa-alert-modal</code> — nested alert inside <code>.setup-assistant-modal</code>. Shown when a provider test fails or Next is blocked on a modality step.</p>
+    <div class="sg-row" style="align-items:flex-start;margin-bottom:16px">
+      <div class="setup-assistant-modal" style="position:relative;inset:auto;width:min(520px,100%);height:280px;z-index:0;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg-dark) 88%,#000);border:1px solid var(--border-dark);border-radius:4px">
+        <div class="setup-assistant-dialog bevel-raised" style="position:relative;z-index:1;width:92%;max-height:90%;opacity:.35;pointer-events:none">
+          <div class="panel-header"><span>App Setup Assistant</span></div>
+          <div class="panel-content" style="padding:12px;font-size:11px;color:var(--text-dim)">Wizard content (dimmed)</div>
+        </div>
+        <div class="sa-alert-modal" style="position:absolute;inset:0;z-index:6;display:flex;pointer-events:auto">
+          <div class="sa-alert-modal-layer" role="alertdialog" aria-modal="true">
+            <div class="sa-alert-dialog bevel-raised">
+              <div class="sa-alert-header panel-header">
+                <span><i class="fa-solid fa-triangle-exclamation" aria-hidden="true" style="color:#e8a040;margin-right:4px"></i> Connection test failed</span>
+              </div>
+              <div class="sa-alert-body panel-content">The Language / Text AI provider could not be verified. Check your API key and settings, then try again.</div>
+              <div class="sa-alert-footer bevel-sunken">
+                <button type="button" class="toolbar-btn toolbar-btn--shape-soft btn-ai">OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sg-row" style="align-items:flex-start">
+      <div style="min-width:200px">
+        <span class="sg-label">.toolbar-split-menu</span>
+        <nav class="toolbar-split-menu" style="position:relative;top:0;left:0;display:block !important">
+          <button type="button" class="toolbar-split-menu-item">Export Screenplay…</button>
+          <button type="button" class="toolbar-split-menu-item">Export PDF…</button>
+          <div class="toolbar-split-menu-sep"></div>
+          <button type="button" class="toolbar-split-menu-item guide-menu-item" data-guide-theme="preprod" style="border-left:3px solid var(--tree-section-preprod-item);color:var(--tree-section-preprod)">Pre-Production — Script</button>
+        </nav>
+      </div>
+      <div class="bevel-raised" style="max-width:360px;flex:1">
+        <div class="panel-header"><span><i class="fa-solid fa-book-open"></i> Guide</span></div>
+        <div class="panel-content" style="font-size:12px;padding:12px">Modal body uses 16px type in production.</div>
+        <div class="guide-modal-footer bevel-sunken" style="display:flex;gap:8px;align-items:center;padding:8px">
+          <button type="button" class="toolbar-btn toolbar-btn--shape-soft"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+          <span class="guide-modal-progress" style="flex:1;text-align:center">Step 2 of 5</span>
+          <button type="button" class="toolbar-btn toolbar-btn--shape-soft">Next <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WIZARD SLIDES -->
+  <section class="sg-section" id="sg-wizard">
+    <h2>Wizard slides</h2>
+    <p class="sg-note">
+      The <strong>Script Wizard</strong> uses <code>cg-modal-shell</code> with a custom
+      <code>cinegen-entry-wizard-body</code> component. The content area is
+      <code>.entry-wizard-body.bevel-flat</code> — a flat panel with built-in padding so text and
+      controls never touch the modal edge. Interactive slides compose existing controls:
+      <code>.cg-field</code> for inputs, <code>.entity-chip</code> for tags, and
+      <code>.cg-fieldset--ns-secondary</code> for card containers.
+    </p>
+
+    <h3>Slide 1 — Script textarea</h3>
+    <div class="bevel-raised" style="max-width:520px;overflow:hidden">
+      <div class="panel-header"><span><i class="fa-solid fa-scroll"></i> Script Import &amp; Review</span></div>
+      <div class="entry-wizard-body bevel-flat">
+        <div class="script-wizard-form">
+          <p>Paste your Fountain screenplay below. CineGen will automatically detect scene headings, characters, and locations.</p>
+          <textarea class="cg-field" style="min-height:100px" placeholder="Paste your script here…">INT. WAREHOUSE — NIGHT
+
+MARCUS enters slowly, scanning the room.</textarea>
+          <button type="button" class="toolbar-btn btn-ai">Create Project &amp; Analyze Script</button>
+        </div>
+      </div>
+      <div class="guide-modal-footer bevel-sunken" style="display:flex;gap:8px;align-items:center;padding:8px">
+        <button type="button" class="toolbar-btn toolbar-btn--shape-soft"><i class="fa-solid fa-chevron-left"></i> Previous</button>
+        <span class="guide-modal-progress" style="flex:1;text-align:center">Step 1 of 8</span>
+        <button type="button" class="toolbar-btn toolbar-btn--shape-soft">Next <i class="fa-solid fa-chevron-right"></i></button>
+        <button type="button" class="toolbar-btn">Close</button>
+      </div>
+    </div>
+
+    <h3>Slide 2 — Entity chips + add row</h3>
+    <div class="sg-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr))">
+      <div>
+        <span class="sg-label">Detected characters</span>
+        <div class="bevel-flat sg-specimen" style="padding:10px">
+          <div class="script-wizard-section">
+            <h4>Characters (3)</h4>
+            <div class="script-wizard-chip-list">
+              <span class="entity-chip entity-chip--character">Marcus <button type="button" class="remove-chip-btn" aria-label="Remove Marcus">×</button></span>
+              <span class="entity-chip entity-chip--character">Elena <button type="button" class="remove-chip-btn" aria-label="Remove Elena">×</button></span>
+              <span class="entity-chip entity-chip--character">Kovacs <button type="button" class="remove-chip-btn" aria-label="Remove Kovacs">×</button></span>
+            </div>
+            <div class="script-wizard-add-row">
+              <input class="cg-field" type="text" placeholder="Add character…" />
+              <button type="button" class="toolbar-btn">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <span class="sg-label">Detected locations</span>
+        <div class="bevel-flat sg-specimen" style="padding:10px">
+          <div class="script-wizard-section">
+            <h4>Locations (2)</h4>
+            <div class="script-wizard-chip-list">
+              <span class="entity-chip entity-chip--location">Warehouse <button type="button" class="remove-chip-btn" aria-label="Remove Warehouse">×</button></span>
+              <span class="entity-chip entity-chip--location">Safehouse <button type="button" class="remove-chip-btn" aria-label="Remove Safehouse">×</button></span>
+            </div>
+            <div class="script-wizard-add-row">
+              <input class="cg-field" type="text" placeholder="Add location…" />
+              <button type="button" class="toolbar-btn">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Slide 3 — Casting cards (fieldset)</h3>
+    <div class="bevel-flat sg-specimen" style="padding:10px;max-width:520px">
+      <div class="script-wizard-cards" style="max-height:none">
+        <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+          <legend class="cg-fieldset-legend"><i class="fa-solid fa-user" aria-hidden="true"></i> Marcus</legend>
+          <div class="cg-fieldset-body">
+            <div class="script-wizard-field-row">
+              <span>Age</span>
+              <input class="cg-field" type="text" value="30s" placeholder="e.g. 30s" />
+            </div>
+            <div class="script-wizard-field-row">
+              <span>Build</span>
+              <input class="cg-field" type="text" value="Athletic, scar on left cheek" placeholder="e.g. Athletic, slender" />
+            </div>
+            <div class="script-wizard-field-row">
+              <span>Vibe</span>
+              <textarea class="cg-field" placeholder="General personality, energy, archetype…">Weary but determined; former military.</textarea>
+            </div>
+          </div>
+        </fieldset>
+        <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+          <legend class="cg-fieldset-legend"><i class="fa-solid fa-user" aria-hidden="true"></i> Elena</legend>
+          <div class="cg-fieldset-body">
+            <div class="script-wizard-field-row">
+              <span>Age</span>
+              <input class="cg-field" type="text" placeholder="e.g. 30s" />
+            </div>
+            <div class="script-wizard-field-row">
+              <span>Build</span>
+              <input class="cg-field" type="text" placeholder="e.g. Athletic, slender" />
+            </div>
+            <div class="script-wizard-field-row">
+              <span>Vibe</span>
+              <textarea class="cg-field" placeholder="General personality, energy, archetype…"></textarea>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <h3>Slide 5 — Style presets</h3>
+    <div class="bevel-flat sg-specimen" style="padding:10px;max-width:520px">
+      <div class="script-wizard-form">
+        <p>Set the overall aesthetic for the project.</p>
+        <textarea class="cg-field" style="min-height:60px" placeholder="Describe the overall look…">Cinematic noir — high contrast, deep shadows, sodium-vapor accents.</textarea>
+        <div class="script-wizard-presets">
+          <button type="button" class="toolbar-btn script-wizard-preset">Cinematic noir</button>
+          <button type="button" class="toolbar-btn script-wizard-preset">Warm naturalistic</button>
+          <button type="button" class="toolbar-btn script-wizard-preset">High-contrast sci-fi</button>
+          <button type="button" class="toolbar-btn script-wizard-preset">Muted period drama</button>
+          <button type="button" class="toolbar-btn script-wizard-preset">Vibrant comedy</button>
+        </div>
+      </div>
+    </div>
+
+    <h3>Slide 7 — Scene kit summary</h3>
+    <div class="bevel-flat sg-specimen" style="padding:10px;max-width:520px">
+      <fieldset class="cg-fieldset cg-fieldset--ns-secondary">
+        <legend class="cg-fieldset-legend"><i class="fa-solid fa-cube" aria-hidden="true"></i> Scene Kit Summary</legend>
+        <div class="cg-fieldset-body script-wizard-summary">
+          <div class="script-wizard-summary-row"><strong>Characters:</strong> 3 — Marcus, Elena, Kovacs</div>
+          <div class="script-wizard-summary-row"><strong>Locations:</strong> 2 — Warehouse, Safehouse</div>
+          <div class="script-wizard-summary-row"><strong>References:</strong> 4 generated</div>
+          <div class="script-wizard-summary-row"><strong>Style:</strong> Cinematic noir</div>
+        </div>
+      </fieldset>
+      <div class="script-wizard-actions" style="margin-top:12px">
+        <button type="button" class="toolbar-btn">Go Back</button>
+        <button type="button" class="toolbar-btn btn-ai">Looks Good — Continue</button>
+      </div>
+    </div>
+
+    <h3>Slide 8 — Success state</h3>
+    <div class="bevel-flat sg-specimen" style="padding:10px;max-width:520px">
+      <div class="script-wizard-form">
+        <div class="script-wizard-success">
+          <p><strong>6</strong> draft frame(s) created.</p>
+          <p>You can review and generate thumbnails in the Pre-production workspace.</p>
+        </div>
+        <button type="button" class="toolbar-btn btn-ai">Finish &amp; Close Wizard</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+  </div>
+</div>
+<script>
+(function () {
+  var nav = document.getElementById('sg-master-nav');
+  var detail = document.querySelector('.sg-detail');
+  function syncMasterNavActive() {
+    if (!nav || !detail) return;
+    var sections = detail.querySelectorAll('.sg-section[id]');
+    if (!sections.length) return;
+    var line = window.innerHeight * 0.22;
+    var bestId = null;
+    var bestDist = Infinity;
+    sections.forEach(function (sec) {
+      var r = sec.getBoundingClientRect();
+      if (r.bottom < 24 || r.top > window.innerHeight - 24) return;
+      var mid = (r.top + r.bottom) / 2;
+      var d = Math.abs(mid - line);
+      if (d < bestDist) {
+        bestDist = d;
+        bestId = sec.id;
+      }
+    });
+    if (!bestId) {
+      bestId = sections[0].id;
+    }
+    nav.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      var href = a.getAttribute('href');
+      a.classList.toggle('sg-master-nav--active', bestId && href === '#' + bestId);
+    });
+  }
+  var scrollT = null;
+  function onScroll() {
+    if (scrollT) cancelAnimationFrame(scrollT);
+    scrollT = requestAnimationFrame(function () {
+      scrollT = null;
+      syncMasterNavActive();
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('hashchange', syncMasterNavActive);
+  syncMasterNavActive();
+
+  function syncVsegTableIndex(wrap, index) {
+    if (!wrap) return;
+    var idx = String(index);
+    wrap.querySelectorAll('.cg-segmented-segment[data-vseg-index]').forEach(function (btn) {
+      var on = btn.getAttribute('data-vseg-index') === idx;
+      btn.classList.toggle('active', on);
+    });
+    wrap.querySelectorAll('.cg-vseg-table__row[data-vseg-index]').forEach(function (row) {
+      row.classList.toggle('cg-vseg-table__row--active', row.getAttribute('data-vseg-index') === idx);
+    });
+  }
+
+  document.querySelectorAll('[data-vseg-table]').forEach(function (wrap) {
+    function activate(index) {
+      syncVsegTableIndex(wrap, index);
+    }
+    wrap.querySelectorAll('.cg-segmented-segment[data-vseg-index]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        activate(btn.getAttribute('data-vseg-index'));
+      });
+    });
+    wrap.querySelectorAll('.cg-vseg-table__row[data-vseg-index]').forEach(function (row) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function () {
+        activate(row.getAttribute('data-vseg-index'));
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-segmented]').forEach(function (seg) {
+    if (seg.closest('[data-vseg-table]')) return;
+    seg.querySelectorAll('.cg-segmented-segment, button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        seg.querySelectorAll('.cg-segmented-segment, button').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+      });
+    });
+  });
+
+  function formatMatrixIndex(row, col) {
+    return '(' + row + ',' + col + ')';
+  }
+
+  function syncMatrixSingleReadout(matrix) {
+    var out = document.getElementById('sg-matrix-single-out');
+    if (!out || !matrix) return;
+    var cell = matrix.querySelector('.cg-matrix-cell.active');
+    if (!cell) {
+      out.innerHTML = 'Index: <strong>none</strong>';
+      return;
+    }
+    out.innerHTML = 'Index: <strong>row ' + cell.getAttribute('data-row') + ', col ' + cell.getAttribute('data-col') + '</strong>';
+  }
+
+  function syncMatrixMultiReadout(matrix) {
+    var out = document.getElementById('sg-matrix-multi-out');
+    if (!out || !matrix) return;
+    var parts = [];
+    matrix.querySelectorAll('.cg-matrix-cell.selected').forEach(function (cell) {
+      parts.push(formatMatrixIndex(cell.getAttribute('data-row'), cell.getAttribute('data-col')));
+    });
+    out.innerHTML = 'Indices: <strong>' + (parts.length ? parts.join(' ') : 'none') + '</strong>';
+  }
+
+  document.querySelectorAll('.cg-matrix[data-matrix-select="single"]').forEach(function (matrix) {
+    matrix.querySelectorAll('.cg-matrix-cell').forEach(function (cell) {
+      cell.addEventListener('click', function () {
+        matrix.querySelectorAll('.cg-matrix-cell').forEach(function (c) {
+          c.classList.remove('active');
+          c.setAttribute('aria-selected', 'false');
+        });
+        cell.classList.add('active');
+        cell.setAttribute('aria-selected', 'true');
+        syncMatrixSingleReadout(matrix);
+      });
+    });
+    syncMatrixSingleReadout(matrix);
+  });
+
+  document.querySelectorAll('.cg-matrix[data-matrix-select="multiple"]').forEach(function (matrix) {
+    matrix.querySelectorAll('.cg-matrix-cell').forEach(function (cell) {
+      cell.addEventListener('click', function () {
+        var on = !cell.classList.contains('selected');
+        cell.classList.toggle('selected', on);
+        cell.setAttribute('aria-selected', on ? 'true' : 'false');
+        syncMatrixMultiReadout(matrix);
+      });
+    });
+    syncMatrixMultiReadout(matrix);
+  });
+
+  document.querySelectorAll('input.cg-slider[data-out]').forEach(function (el) {
+    var id = el.getAttribute('data-out');
+    var out = document.getElementById(id);
+    function sync() {
+      if (!out) return;
+      if (el.getAttribute('data-format') === 'speed') {
+        out.textContent = (Number(el.value) / 100).toFixed(2) + '×';
+      } else {
+        out.textContent = el.value + '%';
+      }
+    }
+    el.addEventListener('input', sync);
+    sync();
+  });
+
+  var sbGrid = document.getElementById('sg-storyboard-demo-grid');
+  if (sbGrid) {
+    function syncStoryboardDemoVisibility() {
+      ['scene', 'frame', 'notes'].forEach(function (part) {
+        var chk = document.getElementById('sg-sb-vis-' + part);
+        sbGrid.classList.toggle('storyboard-hide-' + part, !chk || !chk.checked);
+      });
+    }
+    ['scene', 'frame', 'notes'].forEach(function (part) {
+      var el = document.getElementById('sg-sb-vis-' + part);
+      if (el) el.addEventListener('change', syncStoryboardDemoVisibility);
+    });
+    syncStoryboardDemoVisibility();
+
+    sbGrid.addEventListener('click', function (ev) {
+      var frameEl = ev.target.closest('.storyboard-frame');
+      if (!frameEl || !sbGrid.contains(frameEl)) return;
+      sbGrid.querySelectorAll('.storyboard-frame.selected').forEach(function (n) {
+        n.classList.remove('selected');
+      });
+      frameEl.classList.add('selected');
+    });
+  }
+})();
+</script>
+</body>
+</html>

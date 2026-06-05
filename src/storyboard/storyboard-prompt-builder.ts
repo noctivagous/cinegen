@@ -12,10 +12,15 @@ import { getTreatmentForVisualAI } from '@/workspace/treatment-form-service';
 import type { StoryboardFrame, StoryboardReferenceSlot } from '@/storyboard/storyboard-types';
 import { build10ElementPrompt } from '@/services/prompt-engineer-service';
 import type { ProjectSnapshot } from '@/services/prompt-engineer-service';
+import {
+  previewStylePrompt,
+  resolvePreviewStyle,
+  STORYBOARD_STYLE_PROMPT,
+} from '@/storyboard/storyboard-preview-styles';
+
+export { STORYBOARD_STYLE_PROMPT };
 
 const MAX_PROMPT_LENGTH = 3800;
-export const STORYBOARD_STYLE_PROMPT =
-  'Pencil illustration of film frame, monochrome linework, cinematic composition, clear subject blocking, practical shot intent, no photorealism.';
 
 /** Pixel sizes aligned to 16px grid (required by Together FLUX and similar APIs). */
 export const ASPECT_RATIO_TO_SIZE: Record<string, string> = {
@@ -166,8 +171,14 @@ export function buildStoryboardPrompt(frame: StoryboardFrame): StoryboardPromptR
   }
 
   const result = build10ElementPrompt({ frame, shot, scene, projectSnapshot: snapshot });
+  const style = resolvePreviewStyle(frame.previewStyle, shot.storyboardPreviewStyle);
+  const stylePrompt = previewStylePrompt(style);
+  let prompt = result.text;
+  if (!prompt.includes(stylePrompt)) {
+    prompt = `${prompt} ${stylePrompt}`.trim();
+  }
   return {
-    prompt: result.text,
+    prompt,
     size,
     openaiSize,
     refImageUrls: result.refImageUrls,

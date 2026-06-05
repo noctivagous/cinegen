@@ -20,3 +20,4 @@ import './cg-scroll-area';
 import './cg-color-wheel';
 import './cg-color-palette';
 import './cg-reference-upload';
+import './cg-codemirror-field';

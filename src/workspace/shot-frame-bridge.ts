@@ -1,4 +1,5 @@
-import { currentSceneData, projectScreenplay, storyboardFrames, timelineClips } from '@/data/project-data';
+import { currentSceneData, previsSelectionState, projectScreenplay, storyboardFrames, timelineClips } from '@/data/project-data';
+import { workspaceState } from '@/workspace/workspace-state';
 import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { updateInspector } from '@/components/panels/cinegen-inspector';
@@ -123,6 +124,21 @@ export function setFrameDurationSeconds(frameId: number, durationSeconds: number
 export function getSceneDetail(sceneId: string): SceneDetail | null {
   const scenes = currentSceneData as Record<string, SceneDetail>;
   return scenes[sceneId] ?? null;
+}
+
+/** Scene for shot designer / camera presets when previs selection is unset. */
+export function resolveActiveSceneId(): string | null {
+  if (previsSelectionState.sceneId) return previsSelectionState.sceneId;
+  if (workspaceState.currentSceneId) return workspaceState.currentSceneId;
+  const w = window as { currentSceneId?: string | null };
+  if (w.currentSceneId) return w.currentSceneId;
+
+  const scenes = currentSceneData as Record<string, SceneDetail>;
+  const ids = Object.keys(scenes).sort();
+  for (const id of ids) {
+    if (scenes[id]?.coverage?.length) return id;
+  }
+  return ids[0] ?? null;
 }
 
 export function getShotsForScene(sceneId: string): SceneShot[] {

@@ -19,6 +19,7 @@ const ALLOWLIST = new Set([
   'components/panels/cinegen-storyboard.ts',
   'components/panels/cinegen-timeline.ts',
   'components/primitives/cg-checkbox-tree.ts',
+  'components/primitives/cg-codemirror-field.ts',
   'components/primitives/cg-feature-tree.ts',
   'components/primitives/cg-reference-upload.ts',
   'components/primitives/cg-modal-tile-grid.ts',

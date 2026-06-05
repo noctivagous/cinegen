@@ -1,0 +1,135 @@
+/**
+ * CineGen button shape modifiers — layer on .toolbar-btn (and .btn-ai).
+ * Imported by styleguide/CineGenBaseGUI-Controls-Styleguide.html; adopt in css/ when ready.
+ */
+
+.toolbar-btn--shape-rect {
+  border-radius: 0;
+}
+
+.toolbar-btn--shape-soft {
+  border-radius: 3px;
+}
+
+.toolbar-btn--shape-round {
+  border-radius: 6px;
+}
+
+.toolbar-btn--shape-pill {
+  border-radius: 999px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* Single cut — top-right (toolbar accent / “forward” actions) */
+.toolbar-btn--shape-cut-tr {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    0 100%
+  );
+}
+
+/* Single cut — bottom-left (secondary / “back” affordance) */
+.toolbar-btn--shape-cut-bl {
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+
+/* All four corners cut — mode chips, sci-fi tool cluster */
+.toolbar-btn--shape-cut-four,
+.toolbar-btn--shape-cut-dual {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px),
+    0 10px
+  );
+}
+
+/* Larger four-corner cut for emphasis */
+.toolbar-btn--shape-cut-four-lg {
+  clip-path: polygon(
+    12px 0,
+    calc(100% - 12px) 0,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    0 calc(100% - 12px),
+    0 12px
+  );
+}
+
+/* Chamfered octagon — hardware transport, record arm */
+.toolbar-btn--shape-chamfer {
+  clip-path: polygon(
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px),
+    0 8px
+  );
+}
+
+/* Tab tie-in — flat top, beveled bottom (pairs with tab-bar) */
+.toolbar-btn--shape-tab {
+  border-radius: 3px 3px 0 0;
+  border-bottom-width: 0;
+  margin-bottom: -1px;
+}
+
+.toolbar-btn--shape-tab.active {
+  border-bottom-width: 1px;
+}
+
+/* Split buttons: only apply shape to outer corners */
+.toolbar-split--shape-soft .toolbar-split-main {
+  border-radius: 3px 0 0 3px;
+}
+
+.toolbar-split--shape-soft .toolbar-split-trigger {
+  border-radius: 0 3px 3px 0;
+}
+
+.toolbar-split--shape-pill .toolbar-split-main {
+  border-radius: 999px 0 0 999px;
+}
+
+.toolbar-split--shape-pill .toolbar-split-trigger {
+  border-radius: 0 999px 999px 0;
+}
+
+/* clip-path trims shadows — optional glow ring for cut/chamfer shapes */
+.toolbar-btn[class*="--shape-cut"],
+.toolbar-btn--shape-chamfer,
+.toolbar-btn--shape-cut-four-lg {
+  position: relative;
+  isolation: isolate;
+}
+
+.toolbar-btn[class*="--shape-cut"]::before,
+.toolbar-btn--shape-chamfer::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  background: inherit;
+  filter: blur(0);
+  opacity: 0;
+  pointer-events: none;
+}

@@ -1,4 +1,6 @@
 import { emitStoryboardFrameSelected } from '@/events/shell-events';
+import { sceneIdFromStoryboardFrame } from '@/workspace/shot-frame-bridge';
+import { setPrevisSelectionState } from '@/data/project-data';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 
 export function openStoryboardFrameEditor(frame: StoryboardFrame): void {
@@ -9,13 +11,29 @@ export function openStoryboardFrameEditor(frame: StoryboardFrame): void {
   document.body.style.overflow = 'hidden';
   window.selectedStoryboardFrameId = frame.id;
 
+  const sceneId = sceneIdFromStoryboardFrame(frame);
+  setPrevisSelectionState({
+    sceneId,
+    shotId: frame.shotId ?? null,
+    frameId: frame.id,
+  });
+
+  const titleEl = document.getElementById('sfe-title');
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fa-solid fa-pen-ruler"></i> Shot Designer — ${frame.label || `Frame ${frame.id}`}`;
+  }
+
   emitStoryboardFrameSelected(frame.id);
 
-  // Forward the frame to the shot designer component inside the modal
-  const sd = document.querySelector<HTMLElement & { openForFrame: (f: StoryboardFrame) => void }>('#shot-designer-modal');
-  if (sd && typeof sd.openForFrame === 'function') {
-    sd.openForFrame(frame);
-  }
+  const loadDesigner = (): void => {
+    const sd = document.querySelector<HTMLElement & { openForFrame: (f: StoryboardFrame) => void }>('#shot-designer-modal');
+    if (sd && typeof sd.openForFrame === 'function') {
+      sd.openForFrame(frame);
+    }
+  };
+
+  loadDesigner();
+  requestAnimationFrame(loadDesigner);
 }
 
 export function closeStoryboardFrameEditor(): void {

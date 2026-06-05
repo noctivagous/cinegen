@@ -10,8 +10,8 @@ export const storyboardFrameEditorTemplate = html`
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
-    <div class="storyboard-frame-editor-body panel-content" style="display:flex;flex-direction:column;overflow:hidden">
-      <cinegen-shot-designer id="shot-designer-modal"></cinegen-shot-designer>
+    <div class="storyboard-frame-editor-body panel-content" style="display:flex;flex-direction:column;overflow:hidden;padding:0">
+      <cinegen-shot-designer id="shot-designer-modal" style="flex:1;min-height:0"></cinegen-shot-designer>
     </div>
     <div class="storyboard-frame-editor-footer bevel-sunken">
       <button type="button" class="toolbar-btn" data-cg-close="storyboard-frame-editor">Close</button>

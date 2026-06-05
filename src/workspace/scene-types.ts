@@ -26,6 +26,10 @@ export type SceneShot = {
   lens?: string; // Wide (14–24mm), Standard (35–50mm), Portrait (85mm), Telephoto (135mm+), Macro, Anamorphic
   lightingTechnique?: string; // 3-Point, High-Key, Low-Key, Side, Backlit, Rim, Golden Hour, Blue Hour, Practical, Gels, Hard, Soft
   composition?: string; // Rule of Thirds, Centered, Leading Lines, Symmetry, Frame-within-Frame, Depth of Field, Negative Space
+  /** Per-section preset params (focal length, color temp, movement speed, etc.). */
+  cinematographyParams?: Record<string, Record<string, unknown>>;
+  /** Default storyboard generation style for this shot. */
+  storyboardPreviewStyle?: 'illustrative' | 'render-preview';
   sfxSelections?: {
     atmosphere?: { abbr: string; params?: Record<string, unknown> };
     weather?: { abbr: string; params?: Record<string, unknown> };
@@ -69,6 +73,12 @@ export type SceneDetail = {
   broll: SceneBroll[];
   pickups: SceneBroll[];
   notes: string;
+
+  /** Linked asset ids from production breakdown */
+  characterIds?: string[];
+  locationIds?: string[];
+  propIds?: string[];
+  wardrobeIds?: string[];
 
   /** Overrides project-level style defaults for this scene. */
   colorOverride?: string[];

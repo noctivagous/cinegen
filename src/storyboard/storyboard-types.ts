@@ -1,3 +1,5 @@
+import type { StoryboardPreviewStyle } from '@/storyboard/storyboard-preview-styles';
+
 export type StoryboardFrame = {
   id: number;
   scene: string;
@@ -16,6 +18,8 @@ export type StoryboardFrame = {
   generatedPrompt?: string;
   /** Optional user-edited override that takes precedence over auto-generation. */
   userPromptOverride?: string;
+  /** Storyboard image style for generation (default illustrative B&W). */
+  previewStyle?: StoryboardPreviewStyle;
 };
 
 export type StoryboardVisibilityPart = 'scene' | 'frame' | 'notes';

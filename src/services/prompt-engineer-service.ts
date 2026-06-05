@@ -1,3 +1,4 @@
+import { convertScriptTextForPrompt } from '@/script/script-prompt-sanitize';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import type { SceneShot, SceneDetail } from '@/workspace/scene-types';
 import type { StyleGuide, CharacterGuideEntry, LocationGuideEntry } from '@/services/ai/agents-service';
@@ -102,13 +103,18 @@ function resolveSubjectText(frame: StoryboardFrame, shot: SceneShot, scene: Scen
     parts.push(shot.label);
   }
   if (frame.scriptLink) {
-    parts.push(frame.scriptLink);
+    const sanitized = convertScriptTextForPrompt(frame.scriptLink).promptText;
+    if (sanitized) parts.push(sanitized);
+    else if (!/^(INT|EXT|EST|INT\/EXT|I\/E)/i.test(frame.scriptLink.trim())) {
+      parts.push(frame.scriptLink);
+    }
   }
   if (frame.label && !parts.some(p => p.toLowerCase().includes(frame.label!.toLowerCase()))) {
     parts.push(frame.label);
   }
-  if (scene?.title) {
-    parts.push(`in ${scene.title}`);
+  const location = scene?.title?.replace(/^(INT\.|EXT\.)\s*/i, '').split(' - ')[0]?.trim();
+  if (location) {
+    parts.push(`in ${location}`);
   }
   return parts.length ? parts.join('. ') + '.' : '';
 }

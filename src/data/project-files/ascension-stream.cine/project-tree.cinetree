@@ -50,14 +50,6 @@
           "desc": "Scene-by-scene element analysis"
         },
         {
-          "name": "Shot List",
-          "type": "list",
-          "icon": "fa-list-check",
-          "view": "asset-detail",
-          "detailKey": "shot-list",
-          "desc": "All production shots across every scene"
-        },
-        {
           "name": "Treatment",
           "type": "treatment",
           "icon": "fa-file-lines",
@@ -81,6 +73,14 @@
           "icon": "fa-pen-ruler",
           "view": "shot-designer",
           "desc": "Full shot composition: cinematography, effects, characters, and composition canvas"
+        },
+        {
+          "name": "Shot List",
+          "type": "list",
+          "icon": "fa-list-check",
+          "view": "asset-detail",
+          "detailKey": "shot-list",
+          "desc": "All production shots across every scene"
         },
         {
           "name": "Shot Library",

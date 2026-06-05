@@ -4,9 +4,11 @@ import { markProjectDirty } from '@/services/project-service';
 import type { SceneShot } from '@/workspace/scene-types';
 import type { StoryboardFrame } from '@/storyboard/storyboard-types';
 import { buildStoryboardPrompt, STORYBOARD_STYLE_PROMPT } from '@/storyboard/storyboard-prompt-builder';
+import { previewStylePrompt, resolvePreviewStyle } from '@/storyboard/storyboard-preview-styles';
 import { resolveModalityVendorRoute } from '@/services/ai/resolve-modality-vendor';
 import { buildProxyHeaders, proxyPath } from '@/services/ai/provider-router';
 import { ImageGenerationService } from '@/services/ai/image-generation-service';
+import { VideoGenerationService } from '@/services/ai/video-generation-service';
 import type { AiVendorRoute } from '@/services/ai/types';
 import { assignFrameToShot, reconcileShotFrameLinks, sceneNumberFromSceneId } from '@/workspace/shot-frame-bridge';
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
@@ -205,6 +207,68 @@ export async function generateFrameImage(frame: StoryboardFrame): Promise<string
   return generateFrameImageForPrompt(prompt, size, refImages, vendor, model);
 }
 
+/** Generate a storyboard still for the active frame using the current preview style. */
+export async function generateStoryboardForFrame(frame: StoryboardFrame, sceneId: string): Promise<void> {
+  const live = (storyboardFrames as StoryboardFrame[]).find((f) => f.id === frame.id) ?? frame;
+  if (live.generatingStatus && !live.generatingStatus.startsWith('error:')) return;
+
+  live.generatingStatus = 'Generating…';
+  window.dispatchEvent(new CustomEvent(CG_STORYBOARD_FRAMES_CHANGED));
+
+  const route = resolveModalityVendorRoute('image');
+  let queueJobId: string | null = null;
+
+  try {
+    const promptResult = buildStoryboardPrompt(live);
+    live.generatedPrompt = promptResult.prompt;
+
+    if (route && live.shotId != null) {
+      const job = enqueueGenerationJob({
+        sceneId,
+        shotId: live.shotId,
+        modality: 'image',
+        provider: route.vendor.providerId || route.vendor.slotId || 'image',
+        model: route.model,
+        prompt: promptResult.prompt,
+      });
+      queueJobId = job.id;
+      updateGenerationJob(job.id, { status: 'running' });
+    }
+
+    if (!route) {
+      const shot = sceneId && live.shotId != null
+        ? (currentSceneData[sceneId]?.coverage as SceneShot[] | undefined)?.find((s) => s.id === live.shotId)
+        : null;
+      const style = resolvePreviewStyle(live.previewStyle, shot?.storyboardPreviewStyle);
+      live.notes = `Storyboard slate — configure image provider\nStyle: ${previewStylePrompt(style)}`;
+      live.generatingStatus = 'slate';
+      window.dispatchEvent(new CustomEvent(CG_STORYBOARD_FRAMES_CHANGED));
+      markProjectDirty(['storyboard']);
+      return;
+    }
+
+    const dataUrl = await generateFrameImageForPrompt(
+      promptResult.prompt,
+      promptResult.size,
+      promptResult.refImageUrls,
+      route.vendor,
+      route.model
+    );
+    live.imageUrl = dataUrl;
+    live.generatingStatus = undefined;
+    if (queueJobId) updateGenerationJob(queueJobId, { status: 'complete', outputUrl: dataUrl });
+    markProjectDirty(['storyboard']);
+    window.dispatchEvent(new CustomEvent(CG_STORYBOARD_FRAMES_CHANGED));
+    getCinegenStoryboard()?.refresh();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    live.generatingStatus = `error:${msg}`;
+    if (queueJobId) updateGenerationJob(queueJobId, { status: 'failed', error: msg });
+    window.dispatchEvent(new CustomEvent(CG_STORYBOARD_FRAMES_CHANGED));
+    throw err;
+  }
+}
+
 /** Generate an image via the configured provider and return a data URL. */
 async function generateFrameImageForPrompt(
   prompt: string,
@@ -378,6 +442,51 @@ function getSizeForAspectRatio(aspectRatio?: string): string {
     '16:9': '1024x576', '2.39:1': '1024x432', '1:1': '1024x1024',
   };
   return ASPECT_RATIO_TO_SIZE[aspectRatio || ''] || '1024x576';
+}
+
+const _videoService = new VideoGenerationService();
+
+/** Generate a rendered video clip for a shot using the configured video provider. */
+export async function generateVideoForShot(
+  sceneId: string,
+  shotId: number,
+  prompt: string
+): Promise<string | undefined> {
+  const route = resolveModalityVendorRoute('video');
+  if (!route) {
+    throw new Error('No video generation provider configured. Open Settings → AI Models & Modalities.');
+  }
+
+  const job = enqueueGenerationJob({
+    sceneId,
+    shotId,
+    modality: 'video',
+    provider: route.vendor.providerId || route.vendor.slotId || 'video',
+    model: route.model,
+    prompt,
+  });
+  updateGenerationJob(job.id, { status: 'running' });
+
+  try {
+    const result = await _videoService.generate({
+      vendor: route.vendor,
+      model: route.model,
+      prompt,
+      duration: 5,
+      aspectRatio: '16:9',
+      resolution: '480p',
+    });
+    const clip = result.data?.data?.[0];
+    const url = clip?.video?.url || clip?.url;
+    if (!url) throw new Error('No video URL in provider response');
+    updateGenerationJob(job.id, { status: 'complete', outputUrl: url });
+    markProjectDirty(['generationQueue']);
+    return url;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    updateGenerationJob(job.id, { status: 'failed', error: msg });
+    throw err;
+  }
 }
 
 /**

@@ -41,6 +41,20 @@ This is a **Lit + TypeScript + Vite** filmmaking web app with a Node proxy backe
 - **`.cine` doc types** are canonical in `src/data/project-data.ts`. Add new doc types there, not as ad-hoc files.
 - **Keys go through server-backed API endpoints** (`POST /api/settings/keys`), not frontend localStorage.
 
+## GUI styleguide
+
+Static control reference (not bundled by Vite). Open in a browser while `npm run dev` is running, or serve `source/` locally.
+
+| File | Purpose |
+|------|---------|
+| `styleguide/CineGenBaseGUI-Controls-Styleguide.html` | Master–detail sheet for buttons, inputs, panels, and chrome |
+| `styleguide/CineGenBaseGUI-button-shapes.css` | Button shape modifiers (pill, square, icon-only, etc.) |
+| `styleguide/CineGenBaseGUI-button-surfaces.css` | Button finish/relief variants (matte/reflective, protruded/inset) |
+
+Production CSS lives in `css/` (`CineGenBaseGUI.css`, `CineGenBaseGUI-tokens.css`, `CineGenBaseGUI-button-surfaces.css`, `CineGenBaseGUI-controls-extra.css`). The styleguide HTML links both the local `styleguide/` button sheets and the shared `css/` bundle.
+
+**URL (dev):** `http://localhost:5173/styleguide/CineGenBaseGUI-Controls-Styleguide.html`
+
 ## Key structural gotchas
 
 - **Two separate key stores**: `server/keys.json` (UI-entered, used by proxy) and `backends/.env` (used by Mastra agents). Not yet unified.
