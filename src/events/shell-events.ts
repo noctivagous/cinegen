@@ -24,6 +24,9 @@ export const CG_STORYBOARD_REFERENCES_CHANGED = 'storyboard-references-changed';
 /** Drafts: entries array changed (append or patch). */
 export const CG_DRAFTS_CHANGED = 'cg-drafts-changed';
 
+/** Project: name or scene data changed (status bar refresh). */
+export const CG_PROJECT_NAME_CHANGED = 'cinegen:project-name-changed';
+
 export interface CgTreeNodeSelectDetail {
   name: string;
   type: string;

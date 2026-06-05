@@ -19,6 +19,7 @@ import {
 } from '@/services/project-features-service';
 import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
 import { applyWorkspaceViewDom } from '@/workspace/view-routing';
+import { CG_PROJECT_NAME_CHANGED } from '@/events/shell-events';
 import type { WizardOutput } from '@/wizard/wizard-output-types';
 
 export interface WizardCompletionOptions {
@@ -251,6 +252,9 @@ export function applyWizardOutput(output: WizardOutput): void {
   markProjectDirty(dirtyDocs);
   requestProjectTreeRefresh();
   persistActiveProjectSnapshot();
+
+  // Notify status bar to refresh scene count
+  window.dispatchEvent(new Event(CG_PROJECT_NAME_CHANGED));
 
   if (output.targetView) {
     applyWorkspaceViewDom(output.targetView.viewName, output.targetView.label, output.targetView.sectionKey ?? null);

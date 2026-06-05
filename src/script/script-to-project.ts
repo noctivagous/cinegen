@@ -11,6 +11,7 @@ import {
 import { alertCG } from '@/utils/alert-cg';
 import { markProjectDirty } from '@/services/project-service';
 import { requestProjectTreeRefresh } from '@/tree/project-tree-service';
+import { CG_PROJECT_NAME_CHANGED } from '@/events/shell-events';
 import { formatPrevisDuration, DEFAULT_SHOT_DURATION_SECONDS } from '@/workspace/shot-frame-bridge';
 import type { SceneDetail, SceneShot } from '@/workspace/scene-types';
 import type { TreeNode } from '@/tree/tree-types';
@@ -376,6 +377,11 @@ export function syncFountainToProject(text: string, _projectId?: string): Script
   // Add asset placeholders
   addAssetPlaceholders('characters', allCharacters);
   addAssetPlaceholders('locations', allLocations);
+
+  // Notify status bar to refresh
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CG_PROJECT_NAME_CHANGED));
+  }
 
   return {
     sceneCount: scenes.length,
