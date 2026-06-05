@@ -26,7 +26,11 @@ export type SceneShot = {
   lens?: string; // Wide (14–24mm), Standard (35–50mm), Portrait (85mm), Telephoto (135mm+), Macro, Anamorphic
   lightingTechnique?: string; // 3-Point, High-Key, Low-Key, Side, Backlit, Rim, Golden Hour, Blue Hour, Practical, Gels, Hard, Soft
   composition?: string; // Rule of Thirds, Centered, Leading Lines, Symmetry, Frame-within-Frame, Depth of Field, Negative Space
-  atmosphereTags?: string[];
+  sfxSelections?: {
+    atmosphere?: { abbr: string; params?: Record<string, unknown> };
+    weather?: { abbr: string; params?: Record<string, unknown> };
+    particleFx?: { abbr: string; params?: Record<string, unknown> };
+  };
 
   /** Shot lifecycle status */
   status?: 'planned' | 'storyboarded' | 'prompted' | 'queued' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'locked';

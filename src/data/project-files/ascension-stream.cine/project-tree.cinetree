@@ -79,9 +79,8 @@
           "name": "Shot Designer",
           "type": "shot-designer",
           "icon": "fa-pen-ruler",
-          "view": "camera-lighting",
-          "clSection": "shot-designer",
-          "desc": "Compose shots: angle, movement, lens, lighting mood, and spatial annotations"
+          "view": "shot-designer",
+          "desc": "Full shot composition: cinematography, effects, characters, and composition canvas"
         },
         {
           "name": "Shot Library",
@@ -122,6 +121,40 @@
           "view": "asset-detail",
           "detailKey": "spatial-annotations",
           "desc": "Per-shot arrows, masks, motion paths, and blocking notes"
+        }
+      ]
+    },
+    {
+      "name": "Special Effects Department",
+      "type": "folder",
+      "icon": "fa-wand-magic-sparkles",
+      "view": "overview",
+      "desc": "Atmospheric, weather, and particle effects to enhance the visual atmosphere",
+      "expanded": false,
+      "children": [
+        {
+          "name": "Atmospheric Effects",
+          "type": "sfx",
+          "icon": "fa-cloud-rain",
+          "view": "shot-designer",
+          "clSection": "sfx-atmosphere",
+          "desc": "Fog, rain, god rays, dust, haze, smoke, snow, heat shimmer"
+        },
+        {
+          "name": "Weather & Environment",
+          "type": "sfx",
+          "icon": "fa-cloud-sun",
+          "view": "shot-designer",
+          "clSection": "sfx-weather",
+          "desc": "Rain storms, snowfall, fog, thunder, wind, desert haze, neon rain, underwater caustics"
+        },
+        {
+          "name": "Particle Effects",
+          "type": "sfx",
+          "icon": "fa-sparkles",
+          "view": "shot-designer",
+          "clSection": "sfx-particle",
+          "desc": "Embers, magic dust, smoke, flares, holograms, splashes, debris, energy auras, butterflies"
         }
       ]
     },

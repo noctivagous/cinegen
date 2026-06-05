@@ -519,7 +519,11 @@ export interface PromptEngineerContext {
   lens?: string;
   lightingTechnique?: string;
   composition?: string;
-  atmosphereTags?: string[];
+  sfxSelections?: {
+    atmosphere?: { abbr: string; params?: Record<string, unknown> };
+    weather?: { abbr: string; params?: Record<string, unknown> };
+    particleFx?: { abbr: string; params?: Record<string, unknown> };
+  };
 }
 
 /**
@@ -548,7 +552,7 @@ export async function buildGenerationPrompt(
       lens: context?.lens,
       lightingTechnique: context?.lightingTechnique,
       composition: context?.composition,
-      atmosphereTags: context?.atmosphereTags,
+      sfxSelections: context?.sfxSelections,
     }),
   });
 }

@@ -95,7 +95,7 @@ export async function generateStoryboardFrameForShot(
     if (shot.lens) slateLines.push(`Lens: ${shot.lens}`);
     if (shot.lightingTechnique) slateLines.push(`Light: ${shot.lightingTechnique}`);
     if (shot.composition) slateLines.push(`Composition: ${shot.composition}`);
-    if (shot.atmosphereTags?.length) slateLines.push(`Atmosphere: ${shot.atmosphereTags.join(', ')}`);
+    if (shot.sfxSelections?.atmosphere) slateLines.push(`Atmosphere: ${shot.sfxSelections.atmosphere.abbr}`);
     slateLines.push(`Style: ${STORYBOARD_STYLE_PROMPT}`);
     frame.notes = slateLines.join('\n');
     frame.generatingStatus = 'slate';

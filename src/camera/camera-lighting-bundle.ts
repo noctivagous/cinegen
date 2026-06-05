@@ -16,10 +16,22 @@ declare global {
   function renderGlobalAssets(idx: number): void;
 }
 
-interface CameraItem {
+export interface CameraItemParam {
+  key: string;
+  label: string;
+  type: 'select' | 'range' | 'toggle';
+  defaultValue: string | number | boolean;
+  options?: { label: string; value: string }[];
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface CameraItem {
   abbr: string;
   name: string;
   desc: string;
+  params?: CameraItemParam[];
 }
 
 interface CameraSubcategory {
@@ -41,7 +53,6 @@ interface CameraLightingData extends Record<string, CameraSection> {
   lighting: CameraSection;
   composition: CameraSection;
   movements: CameraSection;
-  atmosphere: CameraSection;
 }
 
 // ==================== CAMERA / LIGHTING / ATMOSPHERE DATA ====================
@@ -51,14 +62,14 @@ export const cameraLightingData: CameraLightingData = {
     title: 'Shot Types & Framing',
     icon: 'fa-expand',
     items: [
-      { abbr: 'MCU',    name: 'Medium Close-Up',     desc: 'Chest up — balances character with subtle environment' },
-      { abbr: 'CU',     name: 'Close-Up',            desc: 'Face or object fills the frame — builds intimacy and connection' },
-      { abbr: 'ECU',    name: 'Extreme Close-Up',    desc: 'Tight on eyes, texture or small object — intense emotion or fine detail' },
-      { abbr: 'MLS',    name: 'Medium Long Shot',    desc: 'Thighs up (3/4 shot) — balances subject and setting' },
-      { abbr: 'Cowboy', name: 'Cowboy Shot',         desc: 'Mid-thigh up — like MLS extended further down' },
-      { abbr: 'MS',     name: 'Medium Shot',         desc: 'Waist up — cuts at belt line; natural for dialogue and body language' },
-      { abbr: 'ELS',    name: 'Extreme Long Shot',   desc: 'Vast landscape with tiny figure — creates awe and isolation' },
-      { abbr: 'LS/WS',  name: 'Long / Wide Shot',   desc: 'Full shot — head to toe, figure fills frame with minimal margin' },
+      { abbr: 'MCU',    name: 'Medium Close-Up',     desc: 'Chest up — balances character with subtle environment', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '70mm', options: [{ label: '35mm', value: '35mm' }, { label: '40mm', value: '40mm' }, { label: '50mm', value: '50mm' }, { label: '70mm', value: '70mm' }, { label: '85mm', value: '85mm' }, { label: '100mm', value: '100mm' }] }] },
+      { abbr: 'CU',     name: 'Close-Up',            desc: 'Face or object fills the frame — builds intimacy and connection', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '85mm', options: [{ label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }, { label: '50mm', value: '50mm' }, { label: '70mm', value: '70mm' }, { label: '85mm', value: '85mm' }, { label: '100mm', value: '100mm' }, { label: '135mm', value: '135mm' }] }] },
+      { abbr: 'ECU',    name: 'Extreme Close-Up',    desc: 'Tight on eyes, texture or small object — intense emotion or fine detail', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '100mm', options: [{ label: '50mm', value: '50mm' }, { label: '70mm', value: '70mm' }, { label: '85mm', value: '85mm' }, { label: '100mm', value: '100mm' }, { label: '120mm', value: '120mm' }, { label: '135mm', value: '135mm' }, { label: '200mm', value: '200mm' }] }] },
+      { abbr: 'MLS',    name: 'Medium Long Shot',    desc: 'Thighs up (3/4 shot) — balances subject and setting', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '35mm', options: [{ label: '18mm', value: '18mm' }, { label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }, { label: '40mm', value: '40mm' }, { label: '50mm', value: '50mm' }] }] },
+      { abbr: 'Cowboy', name: 'Cowboy Shot',         desc: 'Mid-thigh up — like MLS extended further down', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '40mm', options: [{ label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }, { label: '40mm', value: '40mm' }, { label: '50mm', value: '50mm' }, { label: '70mm', value: '70mm' }] }] },
+      { abbr: 'MS',     name: 'Medium Shot',         desc: 'Waist up — cuts at belt line; natural for dialogue and body language', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '50mm', options: [{ label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }, { label: '40mm', value: '40mm' }, { label: '50mm', value: '50mm' }, { label: '70mm', value: '70mm' }, { label: '85mm', value: '85mm' }] }] },
+      { abbr: 'ELS',    name: 'Extreme Long Shot',   desc: 'Vast landscape with tiny figure — creates awe and isolation', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '18mm', options: [{ label: '14mm', value: '14mm' }, { label: '18mm', value: '18mm' }, { label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }] }] },
+      { abbr: 'LS/WS',  name: 'Long / Wide Shot',   desc: 'Full shot — head to toe, figure fills frame with minimal margin', params: [{ key: 'focalLength', label: 'Focal Length', type: 'select', defaultValue: '24mm', options: [{ label: '14mm', value: '14mm' }, { label: '18mm', value: '18mm' }, { label: '24mm', value: '24mm' }, { label: '35mm', value: '35mm' }, { label: '40mm', value: '40mm' }] }] },
     ],
     subcategories: [
       { title: 'Close Shots', abbrs: ['MCU', 'CU', 'ECU'] },
@@ -86,18 +97,18 @@ export const cameraLightingData: CameraLightingData = {
     title: 'Lighting Techniques',
     icon: 'fa-lightbulb',
     items: [
-      { abbr: '3-Point',   name: 'Three-Point Lighting',        desc: 'Key + fill + backlight — classic balance and subject separation' },
-      { abbr: 'High-Key',  name: 'High-Key Lighting',           desc: 'Bright, even, low contrast — clean, upbeat, optimistic feel' },
-      { abbr: 'Low-Key',   name: 'Low-Key Lighting',            desc: 'Deep shadows, high contrast — mystery, drama and tension' },
-      { abbr: 'Side',      name: 'Side Lighting',               desc: 'Light from left or right — sculpts texture and adds depth' },
-      { abbr: 'Backlit',   name: 'Backlighting / Silhouette',   desc: 'Light behind subject — mystery, outlines or ethereal glow' },
-      { abbr: 'Rim',       name: 'Rim Lighting',                desc: 'Thin highlight around edges — separation and elegance' },
-      { abbr: 'Golden Hr', name: 'Golden Hour',                 desc: 'Warm sunrise/sunset light — natural warmth and romance' },
-      { abbr: 'Blue Hr',   name: 'Blue Hour / Cool',            desc: 'Twilight tones — moody, calm and introspective' },
-      { abbr: 'Practical', name: 'Practical Lighting',          desc: 'Visible sources like lamps, windows, fire — grounded realism' },
-      { abbr: 'Gels',      name: 'Colored Gels / Motivated',    desc: 'Tinted lights for emotional tone — neon, firelight or moonlight' },
-      { abbr: 'Hard',      name: 'Hard Light',                  desc: 'Sharp shadows — tense, realistic, high energy' },
-      { abbr: 'Soft',      name: 'Soft Light',                  desc: 'Diffused gentle shadows — flattering, dreamy, approachable' },
+      { abbr: '3-Point',   name: 'Three-Point Lighting',        desc: 'Key + fill + backlight — classic balance and subject separation', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Neutral', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }, { key: 'contrast', label: 'Contrast', type: 'select', defaultValue: 'Normal', options: [{ label: 'Normal', value: 'Normal' }, { label: 'High', value: 'High' }, { label: 'Low', value: 'Low' }] }] },
+      { abbr: 'High-Key',  name: 'High-Key Lighting',           desc: 'Bright, even, low contrast — clean, upbeat, optimistic feel', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Warm', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }] },
+      { abbr: 'Low-Key',   name: 'Low-Key Lighting',            desc: 'Deep shadows, high contrast — mystery, drama and tension', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Cool', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }] },
+      { abbr: 'Side',      name: 'Side Lighting',               desc: 'Light from left or right — sculpts texture and adds depth', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Neutral', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }, { key: 'contrast', label: 'Contrast', type: 'select', defaultValue: 'Normal', options: [{ label: 'Normal', value: 'Normal' }, { label: 'High', value: 'High' }, { label: 'Low', value: 'Low' }] }] },
+      { abbr: 'Backlit',   name: 'Backlighting / Silhouette',   desc: 'Light behind subject — mystery, outlines or ethereal glow', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Warm', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }, { key: 'intensity', label: 'Intensity', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Rim',       name: 'Rim Lighting',                desc: 'Thin highlight around edges — separation and elegance', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Cool', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }, { key: 'intensity', label: 'Intensity', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Golden Hr', name: 'Golden Hour',                 desc: 'Warm sunrise/sunset light — natural warmth and romance', params: [{ key: 'warmth', label: 'Warmth', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Blue Hr',   name: 'Blue Hour / Cool',            desc: 'Twilight tones — moody, calm and introspective', params: [{ key: 'coolness', label: 'Coolness', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Practical', name: 'Practical Lighting',          desc: 'Visible sources like lamps, windows, fire — grounded realism', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Warm', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }, { key: 'intensity', label: 'Intensity', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Gels',      name: 'Colored Gels / Motivated',    desc: 'Tinted lights for emotional tone — neon, firelight or moonlight', params: [{ key: 'gelColor', label: 'Gel Color', type: 'select', defaultValue: 'Blue', options: [{ label: 'Red', value: 'Red' }, { label: 'Blue', value: 'Blue' }, { label: 'Green', value: 'Green' }, { label: 'Amber', value: 'Amber' }, { label: 'Pink', value: 'Pink' }, { label: 'Purple', value: 'Purple' }, { label: 'Orange', value: 'Orange' }] }, { key: 'intensity', label: 'Intensity', type: 'select', defaultValue: 'Medium', options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] }] },
+      { abbr: 'Hard',      name: 'Hard Light',                  desc: 'Sharp shadows — tense, realistic, high energy', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Neutral', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }] },
+      { abbr: 'Soft',      name: 'Soft Light',                  desc: 'Diffused gentle shadows — flattering, dreamy, approachable', params: [{ key: 'colorTemp', label: 'Color Temp', type: 'select', defaultValue: 'Neutral', options: [{ label: 'Warm (3200K)', value: 'Warm' }, { label: 'Neutral (4400K)', value: 'Neutral' }, { label: 'Cool (5600K)', value: 'Cool' }] }] },
     ]
   },
   composition: {
@@ -128,6 +139,7 @@ export const cameraLightingData: CameraLightingData = {
     title: 'Camera Movements',
     icon: 'fa-arrows-left-right',
     items: [
+      { abbr: 'Static',     name: 'Static Locked Off Shot',  desc: 'Absolutely still camera on tripod — no movement, pure composition' },
       { abbr: 'POV Track',  name: 'POV Tracking Shot',      desc: 'Camera follows character smoothly through space — creates immersion' },
       { abbr: 'Dolly Zoom', name: 'Dolly Zoom',             desc: 'Camera moves while zooming opposite way — disorienting emotional effect' },
       { abbr: 'Pan',        name: 'Pan',                    desc: 'Horizontal sweep across scene — reveals environment' },
@@ -136,37 +148,27 @@ export const cameraLightingData: CameraLightingData = {
       { abbr: 'Handheld',   name: 'Handheld',               desc: 'Shaky, organic movement — realism, urgency or intimacy' },
       { abbr: 'Steadicam',  name: 'Steadicam / Glide',      desc: 'Fluid floating motion — elegant and controlled' },
       { abbr: 'Zoom',       name: 'Zoom In / Out',          desc: 'Gradual push or pull — shift focus or reveal scale' },
-    ]
-  },
-  atmosphere: {
-    id: 'atmosphere',
-    title: 'Atmospheric Effects',
-    icon: 'fa-cloud-rain',
-    items: [
-      { abbr: 'Fog',       name: 'Fog / Mist',              desc: 'Low visibility — mysterious depth and ethereal mood' },
-      { abbr: 'Rain',      name: 'Rain',                    desc: 'Wet surfaces and falling drops — tension, melancholy or romance' },
-      { abbr: 'God Rays',  name: 'God Rays / Vol. Light',   desc: 'Shafts of light through haze — dramatic and sacred atmosphere' },
-      { abbr: 'Dust',      name: 'Dust / Particles',        desc: 'Floating motes in the air — age, decay or dry heat' },
-      { abbr: 'Haze',      name: 'Haze / Atmos. Haze',     desc: 'Soft horizon diffusion — distance and scale in outdoor shots' },
-      { abbr: 'Smoke',     name: 'Smoke',                   desc: 'Billowing or drifting smoke — danger, mystery or aftermath' },
-      { abbr: 'Snow',      name: 'Snow / Frost',            desc: 'Falling flakes or ice — isolation, purity or cold threat' },
-      { abbr: 'Heat',      name: 'Heat Shimmer',            desc: 'Shimmering distortion off hot surfaces — oppressive heat' },
+      { abbr: 'Push In',    name: 'Slow Steady Push In',    desc: 'Gradual dolly forward — builds tension or draws attention' },
+      { abbr: 'Whip Pan',   name: 'Dynamic Whip Pan',       desc: 'Extremely fast pan between subjects — kinetic energy' },
+      { abbr: 'Crane',      name: 'Crane Rising Shot',      desc: 'Camera rises vertically — reveals scale and grandeur' },
+      { abbr: 'Drone',      name: 'Drone Aerial Sweep',     desc: 'Sweeping bird\'s-eye movement — epic establishing scope' },
     ]
   }
 };
 
 export let cameraLightingSelections: Record<string, string | null> = {
   shotTypes: null, angles: null, lighting: null,
-  composition: null, movements: null, atmosphere: null
+  composition: null, movements: null
 };
 
-const SECTION_TO_SHOT_FIELD: Record<string, keyof typeof cameraLightingData | 'atmosphereTags'> = {
+export let cameraLightingParams: Record<string, Record<string, unknown>> = {};
+
+const SECTION_TO_SHOT_FIELD: Record<string, keyof typeof cameraLightingData> = {
   shotTypes: 'shotType',
   angles: 'cameraAngle',
   lighting: 'lightingTechnique',
   composition: 'composition',
   movements: 'cameraMovement',
-  atmosphere: 'atmosphereTags',
 };
 
 function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): void {
@@ -179,15 +181,7 @@ function writeSelectionToActiveShot(sectionKey: string, abbr: string | null): vo
   const field = SECTION_TO_SHOT_FIELD[sectionKey];
   if (!field) return;
 
-  if (field === 'atmosphereTags') {
-    if (abbr) {
-      shot.atmosphereTags = [abbr];
-    } else {
-      shot.atmosphereTags = [];
-    }
-  } else {
-    (shot as Record<string, unknown>)[field] = abbr ?? undefined;
-  }
+  (shot as Record<string, unknown>)[field] = abbr ?? undefined;
 
   // Mirror back into currentSceneData so the change is persisted
   const scene = currentSceneData[sceneId];
@@ -225,7 +219,6 @@ export function syncCameraSelectionsFromActiveShot(): void {
     lighting: null,
     composition: null,
     movements: null,
-    atmosphere: null,
   };
 
   for (const [field, section] of Object.entries(fieldToSection)) {
@@ -233,10 +226,6 @@ export function syncCameraSelectionsFromActiveShot(): void {
     if (typeof val === 'string') {
       cameraLightingSelections[section] = val;
     }
-  }
-
-  if (Array.isArray(shot.atmosphereTags) && shot.atmosphereTags.length) {
-    cameraLightingSelections['atmosphere'] = shot.atmosphereTags[0];
   }
 }
 
@@ -261,6 +250,7 @@ function renderCameraChip(sectionKey: string, item: CameraItem): string {
 }
 
 function renderSectionChips(sectionKey: string, sec: CameraSection): string {
+  let chipsHtml: string;
   if (sec.subcategories?.length) {
     const byAbbr = new Map(sec.items.map(item => [item.abbr, item]));
     const boxes = sec.subcategories.map(sub => {
@@ -275,9 +265,33 @@ function renderSectionChips(sectionKey: string, sec: CameraSection): string {
           <div class="cl-chips-grid cl-chips-grid--nested">${chips}</div>
         </div>`;
     }).join('');
-    return `<div class="cl-subcategories">${boxes}</div>`;
+    chipsHtml = `<div class="cl-subcategories">${boxes}</div>`;
+  } else {
+    chipsHtml = `<div class="cl-chips-grid">${sec.items.map(item => renderCameraChip(sectionKey, item)).join('')}</div>`;
   }
-  return `<div class="cl-chips-grid">${sec.items.map(item => renderCameraChip(sectionKey, item)).join('')}</div>`;
+  return chipsHtml + renderSectionParams(sectionKey);
+}
+
+function renderSectionParams(sectionKey: string): string {
+  const sel = cameraLightingSelections[sectionKey];
+  if (!sel) return '';
+  const item = cameraLightingData[sectionKey]?.items.find(i => i.abbr === sel);
+  if (!item?.params?.length) return '';
+  const currentParams = cameraLightingParams[sectionKey] || {};
+  const paramHtml = item.params.map(p => {
+    const val = currentParams[p.key] ?? p.defaultValue;
+    if (p.type === 'select' && p.options) {
+      const opts = p.options.map(o =>
+        `<option value="${o.value}"${o.value === val ? ' selected' : ''}>${o.label}</option>`
+      ).join('');
+      return `<label class="cl-param cl-param--select">
+        <span class="cl-param-label">${p.label}</span>
+        <select class="cl-param-input bevel-sunken" onchange="setCameraItemParam('${sectionKey}','${p.key}',this.value)">${opts}</select>
+      </label>`;
+    }
+    return '';
+  }).join('');
+  return `<div class="cl-params-bar">${paramHtml}</div>`;
 }
 
 export function renderCameraLighting(scrollToSection?: string): void {
@@ -285,7 +299,7 @@ export function renderCameraLighting(scrollToSection?: string): void {
   const content = document.getElementById('camera-lighting-content');
   if (!content) return;
 
-  const sectionOrder = ['shotTypes', 'angles', 'composition', 'movements', 'lighting', 'atmosphere'];
+  const sectionOrder = ['shotTypes', 'angles', 'composition', 'movements', 'lighting'];
 
   content.innerHTML = sectionOrder.map(key => {
     const sec = cameraLightingData[key];
@@ -316,7 +330,15 @@ export function _updateCameraPromptBar() {
     .filter(([, v]) => v !== null)
     .map(([k, abbr]) => {
       const item = cameraLightingData[k]?.items.find(i => i.abbr === abbr);
-      return item ? item.name : abbr;
+      if (!item) return abbr;
+      let name = item.name;
+      const paramValues = item.params
+        ?.map(p => cameraLightingParams[k]?.[p.key] ?? null)
+        .filter(v => v !== null) as string[];
+      if (paramValues?.length) {
+        name += ` (${paramValues.join(', ')})`;
+      }
+      return name;
     });
   if (parts.length) {
     txt.textContent = parts.join(' · ');
@@ -329,17 +351,39 @@ export function _updateCameraPromptBar() {
 export function selectCameraItem(sectionKey: string, abbr: string): void {
   const next = cameraLightingSelections[sectionKey] === abbr ? null : abbr;
   cameraLightingSelections[sectionKey] = next;
+  if (next !== abbr) {
+    delete cameraLightingParams[sectionKey];
+  } else {
+    cameraLightingParams[sectionKey] = {};
+  }
   writeSelectionToActiveShot(sectionKey, next);
   renderCameraLighting();
   updateInspector('camera-lighting', cameraLightingSelections);
 }
 
-function buildPromptPartsFromSelections(selections: Record<string, string | null>): string[] {
+export function setCameraItemParam(sectionKey: string, paramKey: string, value: string): void {
+  if (!cameraLightingParams[sectionKey]) {
+    cameraLightingParams[sectionKey] = {};
+  }
+  cameraLightingParams[sectionKey][paramKey] = value;
+  renderCameraLighting();
+  updateInspector('camera-lighting', cameraLightingSelections);
+}
+
+export function buildPromptPartsFromSelections(selections: Record<string, string | null>): string[] {
   return Object.entries(selections)
     .filter((entry): entry is [string, string] => entry[1] !== null)
     .map(([k, abbr]) => {
       const item = cameraLightingData[k]?.items.find((i: CameraItem) => i.abbr === abbr);
-      return item ? item.name : abbr;
+      if (!item) return abbr;
+      let name = item.name;
+      const paramValues = item.params
+        ?.map(p => cameraLightingParams[k]?.[p.key] ?? null)
+        .filter(v => v !== null) as string[];
+      if (paramValues?.length) {
+        name += ` (${paramValues.join(', ')})`;
+      }
+      return name;
     });
 }
 
@@ -363,11 +407,6 @@ function buildLocalCameraPrompt(): string | null {
       for (const [field, section] of Object.entries(fieldToSection)) {
         const val = (shot as Record<string, unknown>)[field];
         shotSelections[section] = typeof val === 'string' ? val : null;
-      }
-      if (Array.isArray(shot.atmosphereTags) && shot.atmosphereTags.length) {
-        shotSelections['atmosphere'] = shot.atmosphereTags[0];
-      } else {
-        shotSelections['atmosphere'] = null;
       }
       parts = buildPromptPartsFromSelections(shotSelections);
 
@@ -440,7 +479,7 @@ export async function buildCameraPrompt(): Promise<void> {
             lens: shot?.lens,
             lightingTechnique: shot?.lightingTechnique,
             composition: shot?.composition,
-            atmosphereTags: shot?.atmosphereTags,
+            sfxSelections: shot?.sfxSelections,
           },
         );
         if (result.ok && result.data) {
@@ -467,6 +506,7 @@ export async function buildCameraPrompt(): Promise<void> {
 
 export function clearCameraSelections(): void {
   Object.keys(cameraLightingSelections).forEach((k: string) => { cameraLightingSelections[k] = null; });
+  cameraLightingParams = {};
   renderCameraLighting();
   updateInspector('camera-lighting', cameraLightingSelections);
 }
@@ -490,6 +530,8 @@ export function installCameraLightingBundleGlobals(): void {
   w.addAssetToScene = addAssetToScene;
   w.cameraLightingData = cameraLightingData;
   w.cameraLightingSelections = cameraLightingSelections;
+  w.cameraLightingParams = cameraLightingParams;
+  w.setCameraItemParam = setCameraItemParam;
 
   // Auto-sync camera lighting chips when shot selection changes
   window.addEventListener(CG_PREVIS_SELECTION_CHANGED, () => {

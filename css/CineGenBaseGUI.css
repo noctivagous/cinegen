@@ -6734,6 +6734,39 @@ cg-modal-shell cinegen-project-features-modal {
   line-height: 1.35;
 }
 
+/* Params bar — focal length selector under shot type chips */
+.cl-params-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  margin-top: -4px;
+}
+.cl-param {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-min);
+}
+.cl-param-label {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.cl-param-input {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--surface-sunken);
+  color: var(--text-main);
+  border: 1px solid var(--border-dim);
+  min-width: 80px;
+  cursor: pointer;
+}
+.cl-param-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* Chip navigation — right-click menu & double-click destinations */
 .chip-nav-target {
   cursor: pointer;

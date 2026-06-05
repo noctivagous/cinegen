@@ -187,7 +187,13 @@ function resolveLighting(shot: SceneShot, scene: SceneDetail, snapshot: ProjectS
   if (shot.lightingTechnique) parts.push(shot.lightingTechnique);
   if (scene?.lightingOverride) parts.push(scene.lightingOverride);
   if (snapshot.styleGuide?.lightingMood) parts.push(snapshot.styleGuide.lightingMood);
-  if (shot.atmosphereTags?.length) parts.push(shot.atmosphereTags.join(', '));
+  if (shot.sfxSelections) {
+    const sfxParts: string[] = [];
+    if (shot.sfxSelections.atmosphere) sfxParts.push(shot.sfxSelections.atmosphere.abbr);
+    if (shot.sfxSelections.weather) sfxParts.push(shot.sfxSelections.weather.abbr);
+    if (shot.sfxSelections.particleFx) sfxParts.push(shot.sfxSelections.particleFx.abbr);
+    if (sfxParts.length) parts.push(sfxParts.join(', '));
+  }
   return parts.length ? `Lighting: ${parts.join(', ')}.` : '';
 }
 

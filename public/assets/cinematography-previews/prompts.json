@@ -581,6 +581,46 @@
       "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Zoom effect: the mannequin face is sharp and centered while the surrounding frame radiates subtle streaking lines outward from the center — as if the lens is pushing in or pulling out optically. The figure stays the same position while the perspective feels like it is being magnified. Clear zoom in-out demonstration."
     },
     {
+      "id": "movements-static",
+      "sectionKey": "movements",
+      "abbr": "Static",
+      "file": "movements/static.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. The camera is completely locked off on a tripod — perfectly level, rock-steady framing, no blur, no shake, no movement cues. Mannequin centered, arms at sides, sharp and still. The static composition emphasizes that there is zero camera motion. Clear static locked-off shot demonstration."
+    },
+    {
+      "id": "movements-push-in",
+      "sectionKey": "movements",
+      "abbr": "Push In",
+      "file": "movements/push-in.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot. Gradual forward camera movement toward the mannequin: subtle radial streaking lines emanating outward from the center of the frame suggesting the camera is dollying slowly forward. The mannequin face remains sharp while the background edges show soft motion vectors converging outward. Slow steady deliberate push. Clear slow steady push in demonstration."
+    },
+    {
+      "id": "movements-whip-pan",
+      "sectionKey": "movements",
+      "abbr": "Whip Pan",
+      "file": "movements/whip-pan.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Extremely fast horizontal camera pan: the entire frame is swept with aggressive horizontal motion blur. The mannequin is heavily blurred left-to-right, the studio background is reduced to horizontal streaks. The image should read as a rapid blur of motion — not a static figure. Clear dynamic whip pan demonstration."
+    },
+    {
+      "id": "movements-crane",
+      "sectionKey": "movements",
+      "abbr": "Crane",
+      "file": "movements/crane.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Low angle looking up at the mannequin with strong vertical motion blur rising upward — the studio ceiling and walls stretch vertically suggesting the camera is rising on a crane. The mannequin appears to be descending in frame as the camera rises, vertical perspective lines converge upward. Clear crane rising shot demonstration."
+    },
+    {
+      "id": "movements-drone",
+      "sectionKey": "movements",
+      "abbr": "Drone",
+      "file": "movements/drone.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Overhead bird's-eye view: camera looking straight down at the mannequin standing on the studio floor. Gentle diagonal motion blur sweeps across the frame suggesting forward aerial travel. The mannequin is small in frame surrounded by the studio floor receding in all directions. Clear drone aerial sweep demonstration."
+    },
+    {
       "id": "atmosphere-fog",
       "sectionKey": "atmosphere",
       "abbr": "Fog",

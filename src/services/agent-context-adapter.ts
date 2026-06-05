@@ -215,9 +215,7 @@ function applyAgentShots(agentShots: AgentShot[]): {
         lens: existing.lens || mapped.lens,
         lightingTechnique: existing.lightingTechnique || mapped.lightingTechnique,
         composition: existing.composition || mapped.composition,
-        atmosphereTags: existing.atmosphereTags?.length
-          ? existing.atmosphereTags
-          : mapped.atmosphereTags,
+        sfxSelections: existing.sfxSelections || mapped.sfxSelections,
         status: existing.status || mapped.status,
       };
       shotsUpdated++;
