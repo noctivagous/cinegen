@@ -1,6 +1,7 @@
 import type { CinegenAssetsPanel } from '@/components/panels/cinegen-assets-panel';
 import type { CinegenWorkspace } from '@/components/panels/cinegen-workspace';
 import type { OverviewViewMode } from '@/workspace/workspace-panel-bridge';
+import { workspaceState } from '@/workspace/workspace-state';
 
 /**
  * Event delegation for workspace views (dynamic HTML + overview/scene panels).
@@ -85,6 +86,17 @@ export function wireWorkspaceDelegation(): void {
     const toggleWrap = el.closest('[data-ws-ov-toggle-wrap]') as HTMLElement | null;
     if (toggleWrap) {
       e.stopPropagation();
+      const pair = parseIdxPair(toggleWrap.dataset.wsOvPreview);
+      if (pair) {
+        const [childIdx, itemIdx] = pair;
+        const child = (typeof workspaceState !== 'undefined' ? workspaceState.overviewNodeRefs?.[childIdx] : null) as Record<string, unknown> | null;
+        const childNode = (child?.children as Record<string, unknown>[] | undefined)?.[itemIdx] as Record<string, unknown> | undefined;
+        if (childNode?.view && childNode.view !== 'overview') {
+          callGlobal('_selectTreeItemByNode', childNode);
+          callGlobal('_renderNodeView', childNode);
+          return;
+        }
+      }
       callGlobal('toggleOvColItem', toggleWrap.parentElement);
       return;
     }
