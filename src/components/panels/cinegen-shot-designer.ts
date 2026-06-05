@@ -1237,7 +1237,7 @@ export class CinegenShotDesigner extends CgLightElement {
     `;
   }
 
-private _renderListMode(): unknown {
+  private _renderListMode(): unknown {
     const rows = buildShotListRows();
     if (!rows.length) {
       return html`<div class="prompt-stack-empty">No shots yet. Add scene coverage to populate this list.</div>`;
