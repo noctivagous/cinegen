@@ -27,13 +27,70 @@ export class CinegenCameraLightingView extends CgLightElement {
     this._unsub?.();
   }
 
+  private _onThumbSlider(e: Event): void {
+    const val = parseFloat((e.target as HTMLInputElement).value);
+    document.documentElement.style.setProperty('--cl-thumb-scale', String(val));
+    window.CineGen?.savePreferences?.({ cameraThumbnailScale: val });
+  }
+
+  private _resetSlider(): void {
+    const prefs = window.CineGen?.preferences;
+    if (!prefs) return;
+    document.documentElement.style.setProperty('--cl-thumb-scale', '1');
+    window.CineGen?.savePreferences?.({ cameraThumbnailScale: 1 });
+    const input = this.querySelector<HTMLInputElement>('.toolbar-range');
+    if (input) input.value = '1';
+  }
+
+  private _onVisToggle(e: CustomEvent): void {
+    const { part, checked } = e.detail;
+    if (part === 'thumbnails') {
+      window.CineGen?.savePreferences?.({ cameraChipsShowThumbnails: checked });
+    } else if (part === 'descriptions') {
+      window.CineGen?.savePreferences?.({ cameraChipsShowDescriptions: checked });
+    }
+    this.requestUpdate();
+    (window as any).renderCameraLighting?.();
+  }
+
   render() {
+    const prefs = window.CineGen?.preferences;
+    const savedScale = prefs?.cameraThumbnailScale ?? 1;
+    const showThumbs = prefs?.cameraChipsShowThumbnails ?? true;
+    const showDescs = prefs?.cameraChipsShowDescriptions ?? true;
     return html`
       <cg-panel-header>
         <span slot="title" class="workspace-panel-title"
           ><i class="fa-solid fa-camera"></i> CAMERA, LIGHTING &amp; ATMOSPHERE</span
         >
         <div slot="actions" class="flex gap-1">
+          <cg-vis-toggle
+            label="Thumbnails"
+            title="Show/hide camera chip thumbnail images"
+            ?checked=${showThumbs}
+            @cg-change=${this._onVisToggle}
+            data-storyboard-part="thumbnails"
+          ></cg-vis-toggle>
+          <cg-vis-toggle
+            label="Descriptions"
+            title="Show/hide camera chip description text"
+            ?checked=${showDescs}
+            @cg-change=${this._onVisToggle}
+            data-storyboard-part="descriptions"
+          ></cg-vis-toggle>
+          <span class="script-editor-annotation-tools-sep" aria-hidden="true"></span>
+          <label class="toolbar-slider-label" title="Thumbnail size  (double-click camera icon to reset)">
+            <i class="fa-solid fa-camera" @dblclick=${this._resetSlider}></i>
+            <input
+              type="range"
+              class="toolbar-range"
+              min="0.5"
+              max="1.5"
+              step="0.1"
+              .value="${savedScale}"
+              @input=${this._onThumbSlider}
+            />
+          </label>
           <button
             class="toolbar-btn btn-ai"
             style="padding: 2px 8px; font-size: 10px;"

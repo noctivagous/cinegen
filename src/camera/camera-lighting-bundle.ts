@@ -7,6 +7,8 @@ import { CG_PREVIS_SELECTION_CHANGED } from '@/events/shell-events';
 import { markProjectDirty } from '@/services/project-service';
 import { markActiveShotPrompted } from '@/services/generation-queue-service';
 import { getAgentHealth, buildGenerationPrompt } from '@/services/ai/agents-service';
+import { getCameraLightingPreviewSrc } from '@/camera/camera-lighting-previews';
+import { findExpressionById } from '@/components/panels/expression-palette';
 
 /** Camera, lighting and atmosphere option data */
 
@@ -20,11 +22,17 @@ interface CameraItem {
   desc: string;
 }
 
+interface CameraSubcategory {
+  title: string;
+  abbrs: string[];
+}
+
 interface CameraSection {
   id: string;
   title: string;
   icon: string;
   items: CameraItem[];
+  subcategories?: CameraSubcategory[];
 }
 
 interface CameraLightingData extends Record<string, CameraSection> {
@@ -43,14 +51,20 @@ export const cameraLightingData: CameraLightingData = {
     title: 'Shot Types & Framing',
     icon: 'fa-expand',
     items: [
-      { abbr: 'ECU',    name: 'Extreme Close-Up',    desc: 'Tight on eyes, texture or small object — intense emotion or fine detail' },
-      { abbr: 'CU',     name: 'Close-Up',            desc: 'Face or object fills the frame — builds intimacy and connection' },
       { abbr: 'MCU',    name: 'Medium Close-Up',     desc: 'Chest up — balances character with subtle environment' },
-      { abbr: 'MS',     name: 'Medium Shot',         desc: 'Waist up — natural for dialogue and body language' },
-      { abbr: 'MLS',    name: 'Medium Long Shot',    desc: 'Knees up — shows action within the setting' },
-      { abbr: 'LS/WS',  name: 'Long / Wide Shot',   desc: 'Full body or entire scene — establishes context and scale' },
+      { abbr: 'CU',     name: 'Close-Up',            desc: 'Face or object fills the frame — builds intimacy and connection' },
+      { abbr: 'ECU',    name: 'Extreme Close-Up',    desc: 'Tight on eyes, texture or small object — intense emotion or fine detail' },
+      { abbr: 'MLS',    name: 'Medium Long Shot',    desc: 'Thighs up (3/4 shot) — balances subject and setting' },
+      { abbr: 'Cowboy', name: 'Cowboy Shot',         desc: 'Mid-thigh up — like MLS extended further down' },
+      { abbr: 'MS',     name: 'Medium Shot',         desc: 'Waist up — cuts at belt line; natural for dialogue and body language' },
       { abbr: 'ELS',    name: 'Extreme Long Shot',   desc: 'Vast landscape with tiny figure — creates awe and isolation' },
-    ]
+      { abbr: 'LS/WS',  name: 'Long / Wide Shot',   desc: 'Full shot — head to toe, figure fills frame with minimal margin' },
+    ],
+    subcategories: [
+      { title: 'Close Shots', abbrs: ['MCU', 'CU', 'ECU'] },
+      { title: 'Mid-Range Shots', abbrs: ['MLS', 'Cowboy', 'MS'] },
+      { title: 'Wide / Long Shots', abbrs: ['ELS', 'LS/WS'] },
+    ],
   },
   angles: {
     id: 'angles',
@@ -226,6 +240,46 @@ export function syncCameraSelectionsFromActiveShot(): void {
   }
 }
 
+function renderCameraChip(sectionKey: string, item: CameraItem): string {
+  const selected = cameraLightingSelections[sectionKey] === item.abbr;
+  const safeAbbr = item.abbr.replace(/'/g, '\\x27');
+  const prefs = window.CineGen?.preferences;
+  const showThumbs = prefs?.cameraChipsShowThumbnails !== false;
+  const showDescs = prefs?.cameraChipsShowDescriptions !== false;
+  const previewSrc = getCameraLightingPreviewSrc(sectionKey, item.abbr);
+  const thumb = previewSrc && showThumbs
+    ? `<img class="cl-chip-thumb" src="${previewSrc}" alt="${item.name} preview" width="124" height="70" loading="lazy" />`
+    : '';
+  const hasThumbClass = previewSrc && showThumbs ? ' cl-chip--has-thumb' : '';
+  return `<div class="cl-chip${selected ? ' cl-chip--selected' : ''}${hasThumbClass}"
+               onclick="selectCameraItem('${sectionKey}','${safeAbbr}')">
+    ${thumb}
+    <span class="cl-chip-abbr">${item.abbr}</span>
+    <span class="cl-chip-name">${item.name}</span>
+    ${showDescs ? `<span class="cl-chip-desc">${item.desc}</span>` : ''}
+  </div>`;
+}
+
+function renderSectionChips(sectionKey: string, sec: CameraSection): string {
+  if (sec.subcategories?.length) {
+    const byAbbr = new Map(sec.items.map(item => [item.abbr, item]));
+    const boxes = sec.subcategories.map(sub => {
+      const chips = sub.abbrs
+        .map(abbr => byAbbr.get(abbr))
+        .filter((item): item is CameraItem => item != null)
+        .map(item => renderCameraChip(sectionKey, item))
+        .join('');
+      return `
+        <div class="cl-subcategory">
+          <div class="cl-subcategory-header">${sub.title}</div>
+          <div class="cl-chips-grid cl-chips-grid--nested">${chips}</div>
+        </div>`;
+    }).join('');
+    return `<div class="cl-subcategories">${boxes}</div>`;
+  }
+  return `<div class="cl-chips-grid">${sec.items.map(item => renderCameraChip(sectionKey, item)).join('')}</div>`;
+}
+
 export function renderCameraLighting(scrollToSection?: string): void {
   syncCameraSelectionsFromActiveShot();
   const content = document.getElementById('camera-lighting-content');
@@ -242,18 +296,7 @@ export function renderCameraLighting(scrollToSection?: string): void {
           <span>${sec.title}</span>
           <span class="cl-section-count">${sec.items.length} options</span>
         </div>
-        <div class="cl-chips-grid">
-          ${sec.items.map((item: CameraItem) => {
-            const selected = cameraLightingSelections[key] === item.abbr;
-            const safeAbbr = item.abbr.replace(/'/g, '\\x27');
-            return `<div class="cl-chip${selected ? ' cl-chip--selected' : ''}"
-                         onclick="selectCameraItem('${key}','${safeAbbr}')">
-              <span class="cl-chip-abbr">${item.abbr}</span>
-              <span class="cl-chip-name">${item.name}</span>
-              <span class="cl-chip-desc">${item.desc}</span>
-            </div>`;
-          }).join('')}
-        </div>
+        ${renderSectionChips(key, sec)}
       </div>`;
   }).join('');
 
@@ -327,6 +370,22 @@ function buildLocalCameraPrompt(): string | null {
         shotSelections['atmosphere'] = null;
       }
       parts = buildPromptPartsFromSelections(shotSelections);
+
+      // Inject expression/performance data when available
+      if (shot.expression) {
+        const expr = findExpressionById(shot.expression);
+        if (expr) {
+          parts.push(`performance: ${expr.promptDesc}`);
+        } else {
+          parts.push(`performance: ${shot.expression}`);
+        }
+      }
+      if (shot.emotion && shot.emotion !== shot.expression) {
+        parts.push(`emotion: ${shot.emotion}`);
+      }
+      if (shot.beatSequence) {
+        parts.push(`emotional arc: ${shot.beatSequence}`);
+      }
     }
   }
 
@@ -366,9 +425,23 @@ export async function buildCameraPrompt(): Promise<void> {
     try {
       const health = await getAgentHealth();
       if (health.ready) {
+        const shot = getShotById(sceneId, shotId);
         const result = await buildGenerationPrompt(
           activeProjectId,
           String(shotId),
+          {
+            sceneId,
+            expression: shot?.expression,
+            emotion: shot?.emotion,
+            beatSequence: shot?.beatSequence,
+            shotType: shot?.shotType,
+            cameraAngle: shot?.cameraAngle,
+            cameraMovement: shot?.cameraMovement,
+            lens: shot?.lens,
+            lightingTechnique: shot?.lightingTechnique,
+            composition: shot?.composition,
+            atmosphereTags: shot?.atmosphereTags,
+          },
         );
         if (result.ok && result.data) {
           markActiveShotPrompted(sceneId, shotId);

@@ -7,6 +7,7 @@ import {
   readBody,
   __dirname,
 } from './proxy-utils.js';
+import { PROVIDER_PROMPT_LIMITS } from '../../backends/agents/providers.js';
 
 let _agentModule = null;
 
@@ -211,16 +212,48 @@ export async function handleAgentApi(req, res) {
   if (url === AGENT_STATIC_ROUTES.CINEMATOGRAPHY_BUILD_PROMPT && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
-    const { projectId, shotId, preferredProvider } = body;
+    const {
+      projectId, shotId, preferredProvider, sceneId,
+      expression, emotion, beatSequence,
+      shotType, cameraAngle, cameraMovement, lens, lightingTechnique, composition, atmosphereTags,
+    } = body;
     if (!projectId || !shotId) { json(res, 400, { error: 'projectId and shotId are required' }); return; }
     try {
       const { getMastra } = await getAgentModule();
       const mastra = await getMastra();
       const agent = mastra.getAgentById('promptEngineerAgent');
-      const result = await agent.generate(
-        `Build an optimized generation prompt for shot "${shotId}" in project "${projectId}".` +
-        (preferredProvider ? ` Preferred provider: ${preferredProvider}.` : ''),
-      );
+
+      const limitInfo = preferredProvider
+        ? PROVIDER_PROMPT_LIMITS[preferredProvider.toLowerCase()]
+        : null;
+      const charLimit = limitInfo ? `Maximum ${limitInfo.maxChars} characters for this provider.` : '';
+      const refLimit = limitInfo ? `Maximum ${limitInfo.maxRefs} reference images.` : '';
+
+      const elements = [
+        expression ? `[3] PERFORMANCE: ${expression}${beatSequence ? ` (arc: ${beatSequence})` : ''}` : '',
+        shotType ? `[5] FRAMING: ${shotType}${cameraAngle ? `, ${cameraAngle}` : ''}${composition ? `, ${composition}` : ''}` : '',
+        cameraMovement ? `[6] CAMERA MOVE: ${cameraMovement}` : '',
+        lens ? `[7] LENS: ${lens}` : '',
+        lightingTechnique ? `[9] LIGHTING: ${lightingTechnique}${atmosphereTags?.length ? `, atmosphere: ${atmosphereTags.join(', ')}` : ''}` : '',
+      ].filter(Boolean).join('\n');
+
+      const result = await agent.generate([
+        `Optimize the generation prompt for shot "${shotId}" in project "${projectId}".`,
+        preferredProvider ? `Target provider: ${preferredProvider}.` : '',
+        sceneId ? `Scene: ${sceneId}.` : '',
+        charLimit,
+        refLimit,
+        '',
+        'Available context elements:',
+        elements || '(no shot metadata provided — build from project data)',
+        '',
+        'Rules:',
+        '- Keep [1] SUBJECT + [2] ACTION + [5] FRAMING if truncation needed',
+        '- Never truncate [9] LIGHTING',
+        '- Use cinematic camera terminology',
+        '- Output ONLY the optimized prompt text, no explanation',
+      ].filter(Boolean).join('\n'));
+
       json(res, 200, { ok: true, projectId, shotId, data: result.text });
     } catch (err) {
       console.error('[cinegen/agents] cinematography/build-prompt error:', err.message);

@@ -36,8 +36,34 @@
 
 - **Primary (out-of-box):** Unsplash + Pixabay — register free API keys, search images by query terms extracted from script/character/location descriptions.
 - **Secondary (when Pinterest-specific):** Apify Pinterest scraper for mood board seeding with Pinterest visual search.
+- **AI provider web search (when configured):** xAI Grok, OpenAI GPT with browsing, Perplexity, or any LLM provider that offers tool-calling with web search. Returns broader results including film stills, blog articles, cinematography references, tutorials. Useful for research ("how to light a film noir scene") and finding specific visual references that free image APIs don't cover.
 - **Fallback (no keys):** Wikimedia Commons API — no key needed, search by CC-licensed images. Embed directly in app's search UI.
 - All three consumption paths: **drop zone** → image is fetched (not uploaded by user) → added to mood board / reference slot / draft.
+
+### Search Source Decision Tree
+
+```
+User requests: "Find references for Victorian-era mourning dress"
+
+1. Image APIs (if keys configured)
+   → Unsplash/Pexels: "victorian mourning dress"
+   → Returns free-license photos
+   → Good for: direct mood board use, character costume refs
+
+2. AI provider web search (if LLM search tool configured)
+   → Web search: "victorian mourning dress historical references"
+   → Returns articles, museum collection pages, period film stills
+   → Good for: research, understanding context, finding specific visual styles
+   → Images shown as "Web Reference" (not downloadable — user must verify license)
+
+3. Wikimedia Commons (fallback, no key needed)
+   → Returns CC-licensed historical images
+   → Good for: public domain period references
+
+4. All results are presented in a unified grid
+   → Tagged by source: "Free License" | "Web Reference" | "CC License"
+   → User selects which to add as mood board item or reference slot
+```
 
 ### Reference Budget & Provider Limits
 

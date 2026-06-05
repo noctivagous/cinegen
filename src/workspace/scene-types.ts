@@ -20,7 +20,7 @@ export type SceneShot = {
   frameIds?: number[];
 
   /** Cinematography metadata (P0 Shot Architecture) */
-  shotType?: string; // ECU, CU, MCU, MS, MLS, LS/WS, ELS
+  shotType?: string; // ECU, CU, MCU, MS, MLS, Cowboy, LS/WS, ELS
   cameraAngle?: string; // Eye-Level, Low Angle, High Angle, Dutch, Overhead, Worm's Eye, OTS, POV
   cameraMovement?: string; // Static, Pan, Tilt, Dolly, Truck, Zoom, Handheld, Steadicam, Arc, Crane, Drone
   lens?: string; // Wide (14–24mm), Standard (35–50mm), Portrait (85mm), Telephoto (135mm+), Macro, Anamorphic
@@ -38,6 +38,11 @@ export type SceneShot = {
 
   /** Reference image IDs (characters, location plates, style refs) for generation */
   sceneReferenceSlots?: string[];
+
+  /** Expression / Performance (Prompt Engineer Agent element [3]) */
+  expression?: string;
+  emotion?: string;
+  beatSequence?: string;
 };
 
 export type SceneBroll = {

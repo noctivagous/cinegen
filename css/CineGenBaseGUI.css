@@ -213,6 +213,55 @@ cinegen-toolbar .toolbar-split--open .toolbar-split-trigger.btn-ai {
   );
 }
 
+/* Camera & Lighting thumbnail size slider */
+.toolbar-slider-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px;
+  padding: 2px 6px 2px 8px;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.toolbar-slider-label i {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.toolbar-range {
+  width: 52px;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--chrome-border-outer);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.toolbar-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  border: 1px solid var(--chrome-border-highlight);
+  cursor: pointer;
+}
+.toolbar-range::-webkit-slider-thumb:hover {
+  background: var(--text-main);
+}
+.toolbar-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  border: 1px solid var(--chrome-border-highlight);
+  cursor: pointer;
+}
+
 cinegen-toolbar .toolbar-btn--setup-incomplete {
   background: linear-gradient(
     to bottom,
@@ -6583,6 +6632,37 @@ cg-modal-shell cinegen-project-features-modal {
   font-size: var(--font-size-min);
 }
 
+/* Shot-type subcategory boxes — flow horizontally */
+.cl-subcategories {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+.cl-subcategory {
+  flex: 1 1 220px;
+  min-width: 0;
+  background: #1e1e1e;
+  border: 1px solid #1a1a1a;
+  border-top-color: #333;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.cl-subcategory-header {
+  padding: 6px 8px;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  user-select: none;
+  background: linear-gradient(to bottom, #262626 0%, #1f1f1f 100%);
+}
+.cl-chips-grid--nested {
+  padding: 6px;
+}
+
 /* Chips grid — wraps naturally */
 .cl-chips-grid {
   display: flex;
@@ -6595,13 +6675,27 @@ cg-modal-shell cinegen-project-features-modal {
 .cl-chip {
   display: flex;
   flex-direction: column;
-  width: 140px;
+  width: calc(140px * var(--cl-thumb-scale, 1));
   background: #2a2a2a;
   border: 1px solid #1a1a1a;
   border-top-color: #3d3d3d;
   cursor: pointer;
   transition: border-color 0.1s, transform 0.1s, background 0.1s;
   padding: 6px 8px;
+  overflow: hidden;
+}
+.cl-chip--has-thumb {
+  padding-top: 0;
+}
+.cl-chip-thumb {
+  display: block;
+  width: calc(100% + 16px);
+  max-width: none;
+  height: calc(70px * var(--cl-thumb-scale, 1));
+  margin: 0 -8px 6px;
+  object-fit: cover;
+  border-bottom: 1px solid #1a1a1a;
+  background: #1a1a1a;
 }
 .cl-chip:hover {
   border-color: var(--accent-blue);

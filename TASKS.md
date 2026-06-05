@@ -181,13 +181,16 @@ Rationale: The 12 registered agent routes handle orchestration, but the filmmake
   - Optionally splits composite into individual images when the target provider supports multi-ref (e.g., Kling Elements).
   - See `TASKS-2.md §1 — Reference Budget & Provider Limits` for limits documentation.
 
-- [ ] **Image Fetch Agent** — Searches reference image APIs from project descriptions.
+- [ ] **Image Fetch Agent** — Searches reference image APIs and web from project descriptions.
   - Accepts a search query automatically extracted from project data (character desc, location desc, prop name, mood keyword).
-  - Dispatches to available backends in priority order: Unsplash → Pexels → Pixabay → Wikimedia Commons (fallback when no key).
+  - **Two-tier search:**
+    1. **Image APIs** (when keys configured): Unsplash → Pexels → Pixabay — returns vetted, free-license downloadable images for mood boards, character refs, location plates.
+    2. **AI provider web search** (when an LLM provider with search tool is configured): xAI Grok, OpenAI GPT with browsing, Perplexity, etc. — returns broader results including film stills, blog articles, tutorials, cinematography references. Good for research and finding "what does this look like" references.
+  - **Fallback (no keys):** Wikimedia Commons API — no key needed, unlimited, CC-licensed images.
   - Returns images as options grid in the UI for user selection.
   - Caches results server-side per query for 24 hours; deduplicates across departments.
   - Tracks API quota usage and surfaces remaining requests to the user.
-  - See `TASKS-2.md §1 — Rate Limit & Caching Strategy`.
+  - See `TASKS-2.md §1 — Image Fetch & Reference APIs`.
 
 - [ ] **Chaining / Sequence Assembly Agent** — Manages 5–10s clip chaining with last-frame carryover.
   - Plans each shot as a sequence of 5–10 second generation segments.

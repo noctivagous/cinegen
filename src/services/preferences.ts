@@ -38,6 +38,12 @@ export interface CineGenPreferences {
   storyboardThumbnailScale: number;
   /** Project hierarchy sidebar: tree, top-level grid, or grid with nested child buttons. */
   projectHierarchyViewMode: 'tree' | 'grid' | 'grid-plus';
+  /** Camera & Lighting thumbnail chip scale (0.5–1.5). */
+  cameraThumbnailScale: number;
+  /** Show thumbnail images on camera & lighting chips. */
+  cameraChipsShowThumbnails: boolean;
+  /** Show description text on camera & lighting chips. */
+  cameraChipsShowDescriptions: boolean;
   /** Mood board quick generation provider keys */
   moodBoardImageProvider: string;
   moodBoardVideoProvider: string;
@@ -66,6 +72,9 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   statusBarScale: 1.1,
   storyboardViewMode: 'shots',
   storyboardThumbnailScale: 1,
+  cameraThumbnailScale: 1,
+  cameraChipsShowThumbnails: true,
+  cameraChipsShowDescriptions: true,
   projectHierarchyViewMode: 'tree',
   moodBoardImageProvider: '',
   moodBoardVideoProvider: '',
@@ -117,4 +126,6 @@ export function initCineGenPreferences(): void {
   window.CineGen.savePreferences = savePreferences;
   window.CineGen.preferenceKey = PREFS_KEY;
   window.CineGen.loaderVersion = '2.0-lit';
+  const prefs = window.CineGen.preferences;
+  document.documentElement.style.setProperty('--cl-thumb-scale', String(prefs.cameraThumbnailScale ?? 1));
 }

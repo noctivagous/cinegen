@@ -109,4 +109,14 @@ function getDefaultLLMConfig() {
   return null;
 }
 
+export const PROVIDER_PROMPT_LIMITS = {
+  runway: { maxChars: 1000, maxRefs: 3, notes: 'Concise, motion-focused prompts best' },
+  luma: { maxChars: 5000, maxRefs: 3, notes: 'Longer prompts OK up to 5000' },
+  kling: { maxChars: Infinity, maxRefs: 4, notes: 'No strict limit, multi-step structure helps' },
+  veo: { maxChars: 5000, maxRefs: 3, notes: 'Structured with clear subject-action-setting' },
+  pika: { maxChars: 1000, maxRefs: 3, notes: 'Brevity key, under 200 chars ideal' },
+  seedance: { maxChars: 5000, maxRefs: 9, notes: 'Keep under 200 words for best results' },
+  sora: { maxChars: 1000, maxRefs: 0, notes: 'Similar to Runway style' },
+};
+
 export { loadStoredKeys, loadStoredRouting, buildProviders, getDefaultLLMConfig };

@@ -507,18 +507,49 @@ export async function generateStoryboardFrames(
 
 // ── Phase 3: Cinematography pipeline ─────────────────────────────────────────
 
+export interface PromptEngineerContext {
+  sceneId?: string;
+  expression?: string;
+  emotion?: string;
+  beatSequence?: string;
+  preferredProvider?: string;
+  shotType?: string;
+  cameraAngle?: string;
+  cameraMovement?: string;
+  lens?: string;
+  lightingTechnique?: string;
+  composition?: string;
+  atmosphereTags?: string[];
+}
+
 /**
  * Build an optimized generation prompt for a specific shot.
  * Called from the Cinematography department "Build Prompt" action.
+ * Sends richer context so the backend agent can optimize per-provider.
  */
 export async function buildGenerationPrompt(
   projectId: string,
   shotId: string,
-  preferredProvider?: string,
+  context?: PromptEngineerContext,
 ): Promise<{ ok: boolean; projectId: string; shotId: string; data: string }> {
   return agentFetch(AGENT_STATIC_ROUTES.CINEMATOGRAPHY_BUILD_PROMPT, {
     method: 'POST',
-    body: JSON.stringify({ projectId, shotId, preferredProvider }),
+    body: JSON.stringify({
+      projectId,
+      shotId,
+      preferredProvider: context?.preferredProvider,
+      sceneId: context?.sceneId,
+      expression: context?.expression,
+      emotion: context?.emotion,
+      beatSequence: context?.beatSequence,
+      shotType: context?.shotType,
+      cameraAngle: context?.cameraAngle,
+      cameraMovement: context?.cameraMovement,
+      lens: context?.lens,
+      lightingTechnique: context?.lightingTechnique,
+      composition: context?.composition,
+      atmosphereTags: context?.atmosphereTags,
+    }),
   });
 }
 

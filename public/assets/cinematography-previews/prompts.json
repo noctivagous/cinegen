@@ -1,0 +1,648 @@
+{
+  "version": 3,
+  "conventions": {
+    "purpose": "Static preview thumbnails for the Camera, Lighting & Atmosphere panel. Each chip shows a generic visual example of one cinematography concept — not project-specific art.",
+    "subject": {
+      "type": "matte gray male display mannequin",
+      "gender": "male",
+      "details": "Matte gray male display mannequin with sculpted facial features — defined eye sockets, upper and lower eyelids, brows, nose, lips, and chin. Same mannequin identity across every thumbnail in a section set. Not a female mannequin",
+      "facialFeatures": "Mannequin face must have clear hard-surface sculpting: visible eyelids with depth beneath the brow, defined nose and mouth forms — not blank smooth eye ovals or featureless face planes",
+      "forbidden": "No realistic human skin texture, no real people, no anonymous silhouettes, no recognizable celebrity likeness, no live models, no female mannequin, no blank featureless mannequin face, no colored fabric on clothing, no realistic cloth or leather textures"
+    },
+    "wardrobe": "Sculpted dress shirt with collar and button placket, sculpted chino pants, sculpted belt with visible buckle, sculpted dress shoes — all the same matte gray hard-surface mannequin material as the body and face, one unified gray sculpt throughout. Shirt and pants are smooth hard-surface sculpt with minimal folds only — no fabric wrinkles, no realistic cloth folds, no fabric colors, no cloth texture, no leather texture, no logos or text on clothing. Belt must be visible at waist on medium shot and wider framings.",
+    "standardPose": "Neutral standing pose, facing camera, arms relaxed naturally at sides, hands at thigh level — no raised arms, no gestures, no action poses, no clutching pose",
+    "environment": {
+      "setting": "Neutral gray seamless studio backdrop",
+      "palette": "Dark desaturated tones compatible with charcoal UI (#242424)",
+      "lighting": "Soft even studio lighting unless the concept being demonstrated is itself a lighting technique",
+      "genre": "Generic film-school reference — not genre-specific (no sci-fi, noir, etc.)"
+    },
+    "composition": {
+      "medium": "Pure photography only — not illustration, not 3D render look, not diagram",
+      "lens": "Cinematic 35mm lens look",
+      "focus": "Single clear visual demonstration of the named concept; keep background empty unless the concept requires environment"
+    },
+    "noText": "Zero typography anywhere: no text, letters, words, numbers, captions, subtitles, labels, title cards, watermarks, logos, signage, UI overlays, diagrams with writing, or annotated charts",
+    "mannequinIdentity": {
+      "identityFile": "shot-types/mannequin-identity.jpg",
+      "derivedFrom": "shot-types/ms.jpg",
+      "role": "Canonical matte gray male mannequin face, hair, and wardrobe. Pass identityFile as image_paths for any thumbnail that must match this mannequin — especially ECU, CU, MCU, MS, and downstream sections (angles, lighting, movements, atmosphere).",
+      "matchReference": "Use the exact same matte gray male mannequin identity — same face sculpt, side-parted hair, brow, nose, lips, chin, and smooth sculpted gray dress shirt with belt — from the reference image.",
+      "doNotUseAsFramingAnchor": "identityFile establishes WHO the mannequin is, not shot framing. Close shots (ECU, CU) still use tight crop prompts; wide shots (LS/WS, ELS) use their own framing rules.",
+      "wardrobeSculpt": "Shirt and pants are smooth hard-surface gray sculpt — flat matte planes, minimal folds only, no fabric wrinkles, no cloth texture. Belt with visible buckle required on MS and wider framings."
+    },
+    "consistency": {
+      "anchorFile": "shot-types/mannequin-identity.jpg",
+      "anchorRole": "Mannequin identity reference for shot-types and all mannequin-based sections. Regenerate mannequin-identity.jpg from ms.jpg if MS identity drifts; then re-sync ECU and CU.",
+      "matchReference": "Use the exact same matte gray male mannequin identity — same face sculpt, side-parted hair, brow, nose, lips, and sculpted gray dress shirt wardrobe — from the reference image.",
+      "wideShots": "LS/WS and ELS require a complete standing full-body mannequin in sculpted gray dress shirt, pants, belt, and shoes — never a bust on the floor. Generate LS/WS without the identity reference; use ls-ws.jpg as reference for ELS."
+    },
+    "outputSpec": {
+      "grokAspectRatio": "16:9",
+      "grokResolution": "1k",
+      "grokModel": "grok-imagine-image",
+      "targetWidth": 640,
+      "targetHeight": 360,
+      "displayWidth": 124,
+      "displayHeight": 70,
+      "format": "jpg",
+      "postProcess": "Downscale Grok output to 640x360 before committing"
+    },
+    "fileLayout": {
+      "root": "source/public/assets/cinematography-previews/",
+      "sections": {
+        "shotTypes": "shot-types/",
+        "angles": "angles/",
+        "lighting": "lighting/",
+        "composition": "composition/",
+        "movements": "movements/",
+        "atmosphere": "atmosphere/"
+      },
+      "naming": "Lowercase abbr; replace slashes with hyphens (LS/WS → ls-ws.jpg)"
+    },
+    "promptTemplate": "{referenceClause}Pure photographic film-school reference still. {noText}. Matte gray male display mannequin with sculpted facial features, {wardrobe}, {standardPose}. Neutral gray studio, dark desaturated charcoal-friendly palette, cinematic 35mm lens, muted tones. {conceptClause}",
+    "appWiring": "Register each sample in source/src/camera/camera-lighting-previews.ts as {sectionKey}:ABBR → /assets/cinematography-previews/{file}"
+  },
+  "sectionConventions": {
+    "shotTypes": {
+      "category": "Shot Types & Framing",
+      "sectionKey": "shotTypes",
+      "sectionId": "shotTypes",
+      "folder": "shot-types/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec, environment, mannequinIdentity)",
+      "identityFile": "shot-types/mannequin-identity.jpg",
+      "identityRole": "Canonical mannequin face and wardrobe. ECU and CU must reference identityFile to match MCU/MS. MCU and MS were used to establish this identity plate.",
+      "matchReference": "Use the exact same matte gray male mannequin identity — same face sculpt, side-parted hair, brow, nose, lips, chin, and smooth sculpted gray dress shirt with belt — from the reference image.",
+      "framingExceptions": "ECU and CU are face-only crops. MS cuts at waistline at belt. MLS / 3/4 shot is thighs up. Cowboy shot matches MLS but extends further down — bottom at mid-thigh. LS/WS is head-to-toe with minimal margin. ELS is figure tiny in vast studio."
+    },
+    "angles": {
+      "category": "Camera Angles",
+      "sectionKey": "angles",
+      "sectionId": "angles",
+      "folder": "angles/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec, environment)",
+      "anchorFile": "angles/eye-level.jpg",
+      "anchorRole": "Generate Eye-Level first. Pass anchorFile as image_paths for every other angle in this section.",
+      "matchReference": "Use the exact same matte gray male mannequin, wardrobe, pose, and neutral gray studio from the reference image.",
+      "framing": "Hold medium shot (waist up) constant across the angle set — only camera height, tilt, and perspective change",
+      "emphasis": "Camera position must read clearly; subject always in standardPose with full wardrobe visible in frame",
+      "forbidden": "No bust on floor, no raised arms, no horizon tilt unless Dutch angle, no text or diagrams",
+      "framingExceptions": "Overhead uses top-down view; OTS uses foreground shoulder + distinct second subject; POV uses subjective first-person view",
+      "otsSubject": "Foreground mannequin: back/shoulder only in sculpted gray dress shirt, soft blur. Facing-camera subject: second distinct matte gray male mannequin (different face sculpt and proportions), same unified gray sculpted wardrobe, standardPose, facing camera"
+    },
+    "composition": {
+      "category": "Frame Composition",
+      "sectionKey": "composition",
+      "sectionId": "composition",
+      "folder": "composition/",
+      "inherits": "Global noText, outputSpec, environment palette only — does NOT use mannequin subject or wardrobe",
+      "subject": "Grayscale primitive geometric solids only — matte volumes (sphere, cylinder, pyramid, rod, cube, incline, cuboid) in varied grays. No people, no mannequins, no color",
+      "primitiveVocabulary": "Exact set reused in every thumbnail: sphere (medium gray), cylinder (light gray), pyramid (dark gray), rod (light gray, tall thin column), cube (medium-dark gray), incline (dark gray wedge/ramp), cuboid (light gray, rectangular prism)",
+      "anchorFile": "composition/base-scene.jpg",
+      "anchorRole": "Generate base-scene first. Pass anchorFile as image_paths for every composition thumbnail so primitive shapes, materials, and studio stay consistent",
+      "matchReference": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image.",
+      "framing": "Eye-level camera, soft even studio lighting unless the concept requires tighter or wider crop",
+      "forbidden": "No text, no grid overlays, no drawn composition guides, no colored blocks, no people, no mannequins, no diagrams with labels"
+    },
+    "lighting": {
+      "category": "Lighting Techniques",
+      "sectionKey": "lighting",
+      "sectionId": "lighting",
+      "folder": "lighting/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec, environment)",
+      "anchorFile": "angles/eye-level.jpg",
+      "anchorRole": "Reference for every lighting thumbnail. Pass anchorFile as image_paths so the mannequin, wardrobe, pose, and studio stay consistent.",
+      "matchReference": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image.",
+      "framing": "Medium shot waist-up constant across all lighting thumbnails — same as angles/eye-level.jpg framing",
+      "emphasis": "The named lighting technique must be the primary visual subject. Other light sources should be as neutral as possible so the technique reads clearly.",
+      "forbidden": "No text, no lighting diagrams, no arrows showing light positions, no multiple mannequins, no colored gels unless the concept is Gels"
+    },
+    "movements": {
+      "category": "Camera Movements",
+      "sectionKey": "movements",
+      "sectionId": "movements",
+      "folder": "movements/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, noText, outputSpec, environment) — except standardPose which may vary to imply motion. Studio backdrop remains neutral gray.",
+      "anchorFile": "shot-types/ms.jpg",
+      "anchorRole": "Reference for every movement thumbnail. Pass anchorFile as image_paths so the mannequin, wardrobe, and studio stay consistent. Some movement concepts may alter standardPose or add motion blur.",
+      "matchReference": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image.",
+      "framing": "Medium shot or wider depending on the movement concept — some require wider frame to suggest camera motion through space",
+      "emphasis": "Static image must read as implying the named camera movement through composition, motion blur, or perspective cues — not freeze-frame a moment in the movement",
+      "forbidden": "No text, no motion arrows, no diagrams, no multiple exposure trails of the mannequin, no drawn camera path lines, no video player UI"
+    },
+    "atmosphere": {
+      "category": "Atmospheric Effects",
+      "sectionKey": "atmosphere",
+      "sectionId": "atmosphere",
+      "folder": "atmosphere/",
+      "inherits": "Global conventions (subject, facialFeatures, wardrobe, standardPose, noText, outputSpec) — environment lighting may vary to accommodate the atmospheric effect. Studio backdrop remains neutral gray but the atmosphere effect fills the space.",
+      "anchorFile": "angles/eye-level.jpg",
+      "anchorRole": "Reference for every atmosphere thumbnail. Pass anchorFile as image_paths so the mannequin, wardrobe, and studio stay consistent. Atmosphere effects are overlaid on this consistent scene.",
+      "matchReference": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image.",
+      "framing": "Medium shot waist-up constant — atmosphere effect fills the frame around and in front of the mannequin",
+      "emphasis": "The atmospheric effect is the primary subject — large-scale, filling the environment around and interacting with the mannequin. Mannequin remains in standardPose, passive to the atmosphere.",
+      "forbidden": "No text, no weather icons, no diagrams, no fantasy elements beyond the named effect"
+    }
+  },
+  "samples": [
+    {
+      "id": "shot-types-mannequin-identity",
+      "sectionKey": "shotTypes",
+      "abbr": "_identity",
+      "file": "shot-types/mannequin-identity.jpg",
+      "derivedFrom": "shot-types/ms.jpg",
+      "isIdentityAnchor": true,
+      "prompt": "Use the exact same matte gray male mannequin face and side-parted hair from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Matte gray male display mannequin. Smooth sculpted dress shirt with collar and button placket, sculpted chino pants, sculpted belt with visible buckle — all same matte gray hard-surface material as body, unified gray sculpt, smooth surfaces with minimal folds only, no fabric wrinkles, no cloth texture. Neutral standing pose, facing camera, arms at sides. Neutral gray studio, dark desaturated palette, cinematic 35mm lens. Medium shot waist up: belt clearly visible at waist, top of chino pants visible, clear MS demonstration. Canonical mannequin identity plate."
+    },
+    {
+      "id": "shot-types-cu",
+      "sectionKey": "shotTypes",
+      "abbr": "CU",
+      "file": "shot-types/cu.jpg",
+      "referenceFile": "shot-types/mannequin-identity.jpg",
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference image — SAME face sculpt, SAME side-parted combed hair, SAME brow, nose, lips, chin. Do NOT make bald. Keep the side-parted hairstyle visible. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, dark desaturated palette, cinematic 35mm lens. True close-up framing ONLY: face and hair fill frame from top of hair to chin, tight portrait crop — no torso, no chest. At most tiny sliver of sculpted gray shirt collar at bottom edge. Clear CU demonstration."
+    },
+    {
+      "id": "shot-types-ecu",
+      "sectionKey": "shotTypes",
+      "abbr": "ECU",
+      "file": "shot-types/ecu.jpg",
+      "referenceFile": "shot-types/mannequin-identity.jpg",
+      "prompt": "Use the exact same matte gray male mannequin identity — same face sculpt, brow, nose bridge, and eye shape — from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. Same gray hard-surface sculpt material throughout. Neutral gray seamless studio, dark desaturated palette, cinematic macro lens, muted tones. True extreme close-up ONLY: both eyes and brow fill the entire frame, cropped extremely tight. Frame cuts off above hairline and below nose bridge. Absolutely no shirt, no collar, no clothing, no fabric, nothing in foreground blocking the face. Face surface and eyes only. Clear ECU demonstration."
+    },
+    {
+      "id": "shot-types-mcu",
+      "sectionKey": "shotTypes",
+      "abbr": "MCU",
+      "file": "shot-types/mcu.jpg",
+      "referenceFile": "shot-types/mannequin-identity.jpg",
+      "prompt": "Use the exact same matte gray male mannequin identity — same face sculpt, side-parted hair — from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Medium close-up chest up, arms at sides. Shirt is smooth hard-surface gray sculpt like the mannequin body — flat matte planes on chest and sleeves, almost no folds, no fabric wrinkles, no cloth texture, no realistic shirt creases. Collar and button placket sculpted. Clear MCU demonstration."
+    },
+    {
+      "id": "shot-types-ms",
+      "sectionKey": "shotTypes",
+      "abbr": "MS",
+      "file": "shot-types/ms.jpg",
+      "referenceFile": "shot-types/mannequin-identity.jpg",
+      "isIdentitySource": true,
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Facing camera, arms at sides. Smooth sculpted gray dress shirt, belt at waist — hard-surface gray sculpt. Neutral gray studio, cinematic 35mm lens. Medium shot waist up ONLY: bottom edge cuts exactly at belt line — NO trousers visible below belt, NO thighs. Frame ends at waist. Clear MS demonstration."
+    },
+    {
+      "id": "shot-types-mls",
+      "sectionKey": "shotTypes",
+      "abbr": "MLS",
+      "file": "shot-types/mls.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference — frontal pose facing camera, head straight, eyes at camera. Film-school reference still, no text. Smooth sculpted gray dress shirt, chino pants, belt with buckle — hard-surface gray sculpt, minimal folds. Neutral gray studio, cinematic 35mm lens. Medium long shot / 3/4 shot (MLS): framed from thighs up. Bottom edge at upper thigh or knees — full thighs visible, balances subject and setting. Wider than cowboy mid-thigh crop. No shins, no feet. Clear MLS demonstration."
+    },
+    {
+      "id": "shot-types-cowboy",
+      "sectionKey": "shotTypes",
+      "abbr": "Cowboy",
+      "file": "shot-types/cowboy.jpg",
+      "referenceFile": "shot-types/mls.jpg",
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference — same frontal pose, lighting, studio, smooth sculpted gray dress shirt and chino pants, belt with buckle. Film-school reference still, no text. No holster, no gun, no western props. Cowboy shot: identical to MLS medium long shot but frame extends further down — bottom edge cuts at mid-thigh. No knees, no shins, no feet. Clear cowboy shot demonstration."
+    },
+    {
+      "id": "shot-types-ls-ws",
+      "sectionKey": "shotTypes",
+      "abbr": "LS/WS",
+      "file": "shot-types/ls-ws.jpg",
+      "referenceFile": null,
+      "prompt": "Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Matte gray male display mannequin with sculpted face, side-parted hair, facing camera, arms at sides. Smooth sculpted gray dress shirt, chino pants, belt, dress shoes — unified gray hard-surface sculpt. Neutral gray studio. Full shot (FS): camera close enough that entire standing body head to toe fills 90% of frame height. Tiny headroom, tiny footroom — shoes near bottom edge, hair near top edge. NOT small figure in large empty room. Clear full shot demonstration."
+    },
+    {
+      "id": "shot-types-els",
+      "sectionKey": "shotTypes",
+      "abbr": "ELS",
+      "file": "shot-types/els.jpg",
+      "referenceFile": "shot-types/ls-ws.jpg",
+      "prompt": "Match the full-length standing matte gray male mannequin in sculpted gray dress shirt, sculpted gray chino pants, belt, and shoes from the reference. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Neutral gray studio, dark desaturated palette, cinematic 35mm lens. Extreme long shot: same full standing mannequin tiny in vast empty gray studio, arms at sides, not a bust on floor, clear ELS demonstration."
+    },
+    {
+      "id": "angles-eye-level",
+      "sectionKey": "angles",
+      "abbr": "Eye-Level",
+      "file": "angles/eye-level.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "isAnchor": true,
+      "prompt": "Use the exact same matte gray male mannequin identity from the reference. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Facing camera, arms at sides. Smooth sculpted gray dress shirt, chino pants, belt with visible buckle — hard-surface gray sculpt, minimal folds, no fabric wrinkles. Neutral gray studio, cinematic 35mm lens. Medium shot waist up. Eye-level camera, level horizon, straight-on, clear eye-level demonstration."
+    },
+    {
+      "id": "angles-low-angle",
+      "sectionKey": "angles",
+      "abbr": "Low Angle",
+      "file": "angles/low-angle.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms relaxed at sides, facing camera. Low angle: camera below mannequin looking upward, chin and shirt collar visible from below, clear low angle demonstration."
+    },
+    {
+      "id": "angles-high-angle",
+      "sectionKey": "angles",
+      "abbr": "High Angle",
+      "file": "angles/high-angle.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. High angle: camera above mannequin looking down, top of head and sculpted gray dress shirt visible from above, clear high angle demonstration."
+    },
+    {
+      "id": "angles-dutch",
+      "sectionKey": "angles",
+      "abbr": "Dutch",
+      "file": "angles/dutch.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms relaxed at sides. Dutch tilt: horizon diagonal, mannequin and sculpted gray dress shirt tilted in frame, clear dutch angle demonstration."
+    },
+    {
+      "id": "angles-overhead",
+      "sectionKey": "angles",
+      "abbr": "Overhead",
+      "file": "angles/overhead.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Overhead bird's eye: camera straight down on standing mannequin, top of head, shoulders, and sculpted gray dress shirt visible from above, arms at sides, clear overhead demonstration."
+    },
+    {
+      "id": "angles-worms-eye",
+      "sectionKey": "angles",
+      "abbr": "Worm's Eye",
+      "file": "angles/worms-eye.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Worm's eye: camera at floor looking steeply up, mannequin in sculpted gray dress shirt towers against ceiling, clear worm's eye demonstration."
+    },
+    {
+      "id": "angles-ots",
+      "sectionKey": "angles",
+      "abbr": "OTS",
+      "file": "angles/ots.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. Neutral gray studio, dark desaturated palette, cinematic 35mm lens, muted tones. Over-the-shoulder angle: foreground back and shoulder of first matte gray male mannequin in sculpted gray dress shirt, soft blur. Facing camera: second distinct matte gray male mannequin (different face sculpt, different proportions) in same sculpted gray dress shirt, sculpted gray chino pants, belt, arms relaxed at sides, medium shot waist up, clear OTS demonstration."
+    },
+    {
+      "id": "angles-pov",
+      "sectionKey": "angles",
+      "abbr": "POV",
+      "file": "angles/pov.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays. No realistic human skin. Dark desaturated palette, cinematic 35mm lens, muted tones. Point-of-view: subjective first-person view looking at mannequin face and sculpted gray dress shirt in medium shot waist up, subject arms at sides, clear POV demonstration."
+    },
+    {
+      "id": "composition-base-scene",
+      "sectionKey": "composition",
+      "abbr": "_base",
+      "file": "composition/base-scene.jpg",
+      "isAnchor": true,
+      "prompt": "Pure photographic film-school reference still. Zero typography anywhere: no text, no letters, no words, no numbers, no captions, no labels, no watermarks, no logos, no signage, no UI overlays, no drawn grid lines on image. Minimal grayscale primitive geometric solid set on dark charcoal seamless studio floor and backdrop. Exact primitive vocabulary: one sphere (medium gray), one cylinder (light gray), one pyramid (dark gray), one rod (light gray, tall thin column), one cube (medium-dark gray), one incline (dark gray wedge/ramp), one cuboid (light gray, rectangular prism). All matte hard-surface geometric solids, no color, no people, no mannequins. Soft even studio lighting, eye-level camera, medium shot showing full primitive set with room around them. Neutral establishing layout for composition teaching."
+    },
+    {
+      "id": "composition-rule-of-thirds",
+      "sectionKey": "composition",
+      "abbr": "Rule of ⅓",
+      "file": "composition/rule-of-thirds.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Rule of thirds composition: cuboid placed at left third vertical line and upper third horizontal intersection, supporting primitives arranged naturally. Clear rule of thirds demonstration."
+    },
+    {
+      "id": "composition-centered",
+      "sectionKey": "composition",
+      "abbr": "Centered",
+      "file": "composition/centered.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Centered composition: cuboid directly centered in frame, other primitives balanced symmetrically around center. Clear centered composition demonstration."
+    },
+    {
+      "id": "composition-asymmetrical",
+      "sectionKey": "composition",
+      "abbr": "Asymm.",
+      "file": "composition/asymmetrical.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Asymmetrical balance: uneven placement of primitives with contrasting visual weights that still feel balanced and complete. Clear asymmetrical balance demonstration."
+    },
+    {
+      "id": "composition-symmetrical",
+      "sectionKey": "composition",
+      "abbr": "Symm.",
+      "file": "composition/symmetrical.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Symmetrical balance: mirror-like left-right arrangement of primitives around vertical center axis. Clear symmetrical balance demonstration."
+    },
+    {
+      "id": "composition-leading-lines",
+      "sectionKey": "composition",
+      "abbr": "Lead Lines",
+      "file": "composition/leading-lines.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Leading lines composition: rod and incline form strong lines that guide the eye toward the cuboid as focal point. Clear leading lines demonstration."
+    },
+    {
+      "id": "composition-frame-within-frame",
+      "sectionKey": "composition",
+      "abbr": "Frame²",
+      "file": "composition/frame-within-frame.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Framing within a frame: primitives arranged to form a rectangular doorway or window frame around the cuboid inside. Clear frame-within-frame demonstration."
+    },
+    {
+      "id": "composition-negative-space",
+      "sectionKey": "composition",
+      "abbr": "Neg Space",
+      "file": "composition/negative-space.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Negative space: cuboid small in frame with vast empty dark charcoal studio surrounding it. Clear negative space demonstration."
+    },
+    {
+      "id": "composition-phi-grid",
+      "sectionKey": "composition",
+      "abbr": "φ Grid",
+      "file": "composition/phi-grid.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Golden ratio phi grid placement: cuboid at golden ratio intersection point, organic pleasing balance. Clear phi grid demonstration."
+    },
+    {
+      "id": "composition-foreground-mid-back",
+      "sectionKey": "composition",
+      "abbr": "FMB",
+      "file": "composition/foreground-mid-back.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Foreground midground background layers: rod in sharp foreground, cube in midground, cuboid in background — clear depth separation. Clear foreground midground background demonstration."
+    },
+    {
+      "id": "composition-diagonal",
+      "sectionKey": "composition",
+      "abbr": "Diagonal",
+      "file": "composition/diagonal.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Diagonal composition: primitives arranged along strong diagonal axis from lower left to upper right — dynamic slanted placement. Clear diagonal composition demonstration."
+    },
+    {
+      "id": "composition-tight",
+      "sectionKey": "composition",
+      "abbr": "Tight",
+      "file": "composition/tight.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Tight framing: cropped close around cuboid filling most of frame — intensity and confinement. Clear tight framing demonstration."
+    },
+    {
+      "id": "composition-loose",
+      "sectionKey": "composition",
+      "abbr": "Loose",
+      "file": "composition/loose.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Loose framing: wide shot with all primitives small in frame and generous empty studio space around them — openness and context. Clear loose framing demonstration."
+    },
+    {
+      "id": "composition-overlap",
+      "sectionKey": "composition",
+      "abbr": "Overlap",
+      "file": "composition/overlap.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Overlapping elements: primitives partially overlapping each other in depth creating layered interaction. Clear overlapping elements demonstration."
+    },
+    {
+      "id": "composition-s-curve",
+      "sectionKey": "composition",
+      "abbr": "S-Curve",
+      "file": "composition/s-curve.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. S-curve composition: primitives arranged along a flowing S-curve path through the frame guiding the eye. Clear S-curve demonstration."
+    },
+    {
+      "id": "composition-pyramid-triangular",
+      "sectionKey": "composition",
+      "abbr": "△ Comp",
+      "file": "composition/pyramid-triangular.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Pyramid triangular composition: primitives arranged in upward triangular pyramid shape with pyramid at apex. Clear pyramid triangular demonstration."
+    },
+    {
+      "id": "composition-circular",
+      "sectionKey": "composition",
+      "abbr": "○ Comp",
+      "file": "composition/circular.jpg",
+      "referenceFile": "composition/base-scene.jpg",
+      "prompt": "Use the exact same grayscale primitive geometric solids — same sphere, cylinder, pyramid, rod, cube, incline, and cuboid — same matte hard-surface materials and dark charcoal studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays, no drawn grid lines. Circular composition: primitives arranged in circular or ring pattern drawing attention inward to center. Clear circular composition demonstration."
+    },
+    {
+      "id": "lighting-3-point",
+      "sectionKey": "lighting",
+      "abbr": "3-Point",
+      "file": "lighting/3-point.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Three-point lighting: strong key light at 45° creating clear nose shadow across face, soft fill from opposite side to open shadows, rim light hitting back edge of mannequin and shoulder for separation. All three sources visible in the light sculpting. Clear three-point lighting demonstration."
+    },
+    {
+      "id": "lighting-high-key",
+      "sectionKey": "lighting",
+      "abbr": "High-Key",
+      "file": "lighting/high-key.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. High-key lighting: very bright even illumination across the entire mannequin and background — minimal shadows, open and airy. Flat fill from all sides producing low contrast, face fully lit with no deep shadow pockets. Clear high-key lighting demonstration."
+    },
+    {
+      "id": "lighting-low-key",
+      "sectionKey": "lighting",
+      "abbr": "Low-Key",
+      "file": "lighting/low-key.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Low-key lighting: deep shadows dominate the frame, single hard key light from one side leaving most of the mannequin face in shadow. High contrast ratio, dark background, only part of the sculpted gray dress shirt and face illuminated. Clear low-key lighting demonstration."
+    },
+    {
+      "id": "lighting-side",
+      "sectionKey": "lighting",
+      "abbr": "Side",
+      "file": "lighting/side.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Side lighting: light striking from directly left or right of the mannequin — one half of the face fully lit, the other half in deep shadow. Vertical shadow line runs down center of nose and chin, sculpted facial features emphasized by dramatic cross-light. Clear side lighting demonstration."
+    },
+    {
+      "id": "lighting-backlit",
+      "sectionKey": "lighting",
+      "abbr": "Backlit",
+      "file": "lighting/backlit.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Backlighting silhouette: strong light source behind the mannequin facing camera — mannequin face and dress shirt appear dark against bright background, rim of light outlines the silhouette of head, shoulders, and arms. Minimal to no fill on the front. Clear backlighting silhouette demonstration."
+    },
+    {
+      "id": "lighting-rim",
+      "sectionKey": "lighting",
+      "abbr": "Rim",
+      "file": "lighting/rim.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Rim lighting: thin bright highlight tracing the edge of the mannequin profile — along the jawline, shoulder, and arm. Mannequin face is mostly in shadow, only the crisp bright rim separates the figure from the dark background. Clear rim lighting demonstration."
+    },
+    {
+      "id": "lighting-golden-hr",
+      "sectionKey": "lighting",
+      "abbr": "Golden Hr",
+      "file": "lighting/golden-hr.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Golden hour lighting: warm low-angle sunlight from the side, long soft shadows cast across the studio floor, the mannequin bathed in warm amber-gold glow with warm highlights on the face and dress shirt. Clear golden hour lighting demonstration."
+    },
+    {
+      "id": "lighting-blue-hr",
+      "sectionKey": "lighting",
+      "abbr": "Blue Hr",
+      "file": "lighting/blue-hr.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Blue hour cool lighting: cold twilight tones bathing the mannequin and studio in deep blue cool light from above — long cool shadows falling across the face and dress shirt, desaturated and moody, introspective atmosphere. Clear blue hour lighting demonstration."
+    },
+    {
+      "id": "lighting-practical",
+      "sectionKey": "lighting",
+      "abbr": "Practical",
+      "file": "lighting/practical.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Practical lighting: a visible desk lamp or bare bulb in the frame casting warm directional light onto the mannequin face and dress shirt — the light source itself is in the shot, creating a natural motivated lighting feel with realistic falloff. Clear practical lighting demonstration."
+    },
+    {
+      "id": "lighting-gels",
+      "sectionKey": "lighting",
+      "abbr": "Gels",
+      "file": "lighting/gels.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Colored gel lighting: two distinct colored light sources hitting the mannequin from opposite sides — for example warm magenta or red from one side, cool cyan or blue from the other — creating dramatic split-color lighting across the face and sculpted gray dress shirt. Clear colored gel lighting demonstration."
+    },
+    {
+      "id": "lighting-hard",
+      "sectionKey": "lighting",
+      "abbr": "Hard",
+      "file": "lighting/hard.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Hard light: a small intense directional light source casting sharply defined shadows across the mannequin face — crisp dark shadow under the nose, sharp shadow under the chin, clear shadow edge on the neck and collarbone. High-contrast, texture-revealing. Clear hard light demonstration."
+    },
+    {
+      "id": "lighting-soft",
+      "sectionKey": "lighting",
+      "abbr": "Soft",
+      "file": "lighting/soft.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, pose, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Soft light: a large diffused light source wrapping around the mannequin — shadows are gentle and gradual with no hard edges, the face is evenly bathed in smooth flattering light, the sculpted gray dress shirt shows subtle gentle modeling. Low contrast, approachable. Clear soft light demonstration."
+    },
+    {
+      "id": "movements-pov-track",
+      "sectionKey": "movements",
+      "abbr": "POV Track",
+      "file": "movements/pov-track.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "4-panel composite showing a POV tracking shot as four keyframes — the camera tracks laterally alongside the walking mannequin, following the subject at constant speed. All four panels use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Zero typography anywhere. Dark desaturated palette, cinematic 35mm lens, muted tones. In all 4 frames the mannequin is centered in frame in profile, walking with arms at sides — the camera follows alongside at the same speed. Horizontal motion blur on the studio background in every frame to imply camera movement. FRAME 1: mannequin mid-stride, left leg forward. FRAME 2: mannequin standing leg transition, legs together. FRAME 3: mannequin mid-stride, right leg forward. FRAME 4: mannequin at rest position. Same centered framing in all 4 panels — the camera follows the subject. Clear POV tracking shot demonstration."
+    },
+    {
+      "id": "movements-dolly-zoom",
+      "sectionKey": "movements",
+      "abbr": "Dolly Zoom",
+      "file": "movements/dolly-zoom.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens. Medium shot, mannequin centered and in focus. The perspective distortion of a dolly zoom effect: the mannequin face remains the same size in frame while the background appears compressed and pulled in tight around the subject — the classic vertigo effect visual. Clear dolly zoom demonstration."
+    },
+    {
+      "id": "movements-pan",
+      "sectionKey": "movements",
+      "abbr": "Pan",
+      "file": "movements/pan.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Horizontal motion blur across the entire frame — both the mannequin and the studio background are swept with strong horizontal blur lines running left to right at the same speed, suggesting the camera is panning horizontally while the mannequin stays facing forward. Clear pan movement demonstration."
+    },
+    {
+      "id": "movements-tilt",
+      "sectionKey": "movements",
+      "abbr": "Tilt",
+      "file": "movements/tilt.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up, arms at sides. Vertical motion blur across the entire frame — both the mannequin and the studio background swept with strong vertical blur lines running top to bottom, suggesting the camera is tilting upward or downward while the mannequin remains stationary. Clear tilt movement demonstration."
+    },
+    {
+      "id": "movements-orbit",
+      "sectionKey": "movements",
+      "abbr": "Orbit",
+      "file": "movements/orbit.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "4-panel composite showing an orbit circle shot as four keyframes of the camera circling 360° around the stationary mannequin. All four panels use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Zero typography anywhere. Dark desaturated palette, cinematic 35mm lens, muted tones. FRAME 1 (0° front): mannequin facing camera, centered, arms at sides. FRAME 2 (90° right profile): same mannequin seen from right side in profile, centered. FRAME 3 (180° back): same mannequin seen from behind, centered. FRAME 4 (270° left profile): same mannequin seen from left side in profile, centered. All frames medium shot waist up, soft even lighting. Clear orbit circle shot demonstration."
+    },
+    {
+      "id": "movements-handheld",
+      "sectionKey": "movements",
+      "abbr": "Handheld",
+      "file": "movements/handheld.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. The framing is slightly tilted and off-balance — not level, not plumb — with subtle uneven crop suggesting an unsteady hand holding the camera. A very slight blur at the frame edges reinforces the organic handheld feel. No smooth lines, no steady horizon. Clear handheld camera demonstration."
+    },
+    {
+      "id": "movements-steadicam",
+      "sectionKey": "movements",
+      "abbr": "Steadicam",
+      "file": "movements/steadicam.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. The mannequin in a slightly wider frame in motion: one leg forward as if walking, subtle forward-leaning posture suggesting fluid movement. Perfectly level horizon, smooth composition, no shake or blur — the mannequin is crisp and centered. The clean stable framing suggests a camera gliding effortlessly alongside. Clear steadicam glide demonstration."
+    },
+    {
+      "id": "movements-zoom",
+      "sectionKey": "movements",
+      "abbr": "Zoom",
+      "file": "movements/zoom.jpg",
+      "referenceFile": "shot-types/ms.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Zoom effect: the mannequin face is sharp and centered while the surrounding frame radiates subtle streaking lines outward from the center — as if the lens is pushing in or pulling out optically. The figure stays the same position while the perspective feels like it is being magnified. Clear zoom in-out demonstration."
+    },
+    {
+      "id": "atmosphere-fog",
+      "sectionKey": "atmosphere",
+      "abbr": "Fog",
+      "file": "atmosphere/fog.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Thick rolling fog fills the studio space — dense low-lying mist swirls around the mannequin base and drifts upward, the mannequin face emerges from the fog with soft diffusion, the background is lost in white-gray haze. A mysterious ethereal depth. Clear fog mist atmosphere demonstration."
+    },
+    {
+      "id": "atmosphere-rain",
+      "sectionKey": "atmosphere",
+      "abbr": "Rain",
+      "file": "atmosphere/rain.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Heavy rain falls diagonally across the frame — visible streaks of water between the camera and the mannequin, droplets catch the light. The mannequin surface is wet with sheen and droplets on the sculpted gray face and dress shirt. Dark moody atmosphere. Clear rain atmosphere demonstration."
+    },
+    {
+      "id": "atmosphere-god-rays",
+      "sectionKey": "atmosphere",
+      "abbr": "God Rays",
+      "file": "atmosphere/god-rays.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Dramatic volumetric god rays: thick shafts of light beam diagonally down through hazy studio air, cutting across the frame and landing on the mannequin face and chest. The light beams are visible as solid columns in the haze. Sacred dramatic atmosphere. Clear god rays volumetric light demonstration."
+    },
+    {
+      "id": "atmosphere-dust",
+      "sectionKey": "atmosphere",
+      "abbr": "Dust",
+      "file": "atmosphere/dust.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Floating dust particles suspended in the air — thousands of tiny specks catch the light throughout the frame between camera and mannequin. The particles are visible against darker areas, creating a dusty aged atmosphere. Clear dust particles atmosphere demonstration."
+    },
+    {
+      "id": "atmosphere-haze",
+      "sectionKey": "atmosphere",
+      "abbr": "Haze",
+      "file": "atmosphere/haze.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Soft atmospheric haze diffusion throughout the studio — the mannequin is visible but softened, contrast is lowered, the background fades into a uniform warm-gray atmospheric blanket. Not fog (no rolling mist), just a gentle overall diffusion softening edges and distance. Clear atmospheric haze demonstration."
+    },
+    {
+      "id": "atmosphere-smoke",
+      "sectionKey": "atmosphere",
+      "abbr": "Smoke",
+      "file": "atmosphere/smoke.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Thick billowing smoke drifts across the frame in dark gray clouds — the mannequin is partially obscured by the moving smoke, face half-visible, dark smoke wisps curl around the sculpted gray dress shirt and shoulders. Gritty dangerous aftermath atmosphere. Clear smoke atmosphere demonstration."
+    },
+    {
+      "id": "atmosphere-snow",
+      "sectionKey": "atmosphere",
+      "abbr": "Snow",
+      "file": "atmosphere/snow.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Heavy snowfall fills the frame — large soft white flakes falling in front of and behind the mannequin, some flakes settled on the mannequin shoulders and head. Cold desaturated blue-white tones, isolated frozen atmosphere. Clear snow frost atmosphere demonstration."
+    },
+    {
+      "id": "atmosphere-heat",
+      "sectionKey": "atmosphere",
+      "abbr": "Heat",
+      "file": "atmosphere/heat.jpg",
+      "referenceFile": "angles/eye-level.jpg",
+      "prompt": "Use the exact same matte gray male mannequin, sculpted gray dress shirt, sculpted gray chino pants, belt, wardrobe, and neutral gray studio from the reference image. Pure photographic film-school reference still. Zero typography: no text, letters, words, numbers, captions, labels, watermarks, logos, signage, UI overlays. Dark desaturated palette, cinematic 35mm lens, muted tones. Medium shot waist up. Heat shimmer distortion visible in the air between camera and mannequin — wavy refractive ripples distort the mannequin silhouette and the background, as if looking across a hot surface. Warm baked oppressive tone, the mannequin slightly warped by the heat waves. Clear heat shimmer atmosphere demonstration."
+    }
+  ]
+}
