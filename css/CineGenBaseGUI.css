@@ -9234,7 +9234,29 @@ textarea.cg-field {
 .storyboard-frame-editor-body {
   flex: 1;
   min-height: 0;
-  padding: 14px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shot Designer — scrollable tab body (light DOM; flex chain from workspace/modal) */
+cinegen-shot-designer:not(.hidden) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+cinegen-shot-designer .sd-shell {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+cinegen-shot-designer .sd-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 

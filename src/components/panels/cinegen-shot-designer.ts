@@ -105,14 +105,16 @@ export class CinegenShotDesigner extends CgLightElement {
     :host {
       display: flex;
       flex-direction: column;
+      flex: 1 1 0;
       height: 100%;
       min-height: 0;
+      overflow: hidden;
       user-select: text;
     }
     .sd-shell {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      flex: 1 1 0;
       min-height: 0;
       overflow: hidden;
     }
@@ -122,6 +124,7 @@ export class CinegenShotDesigner extends CgLightElement {
       gap: 8px;
       padding: 4px 8px;
       flex-wrap: wrap;
+      flex-shrink: 0;
       border-bottom: 1px solid var(--border-dim);
     }
     .sd-toolbar cg-segmented {
@@ -129,9 +132,11 @@ export class CinegenShotDesigner extends CgLightElement {
       min-width: 0;
     }
     .sd-body {
-      flex: 1;
+      flex: 1 1 0;
       min-height: 0;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .sd-pane {
       padding: 10px;
@@ -392,7 +397,7 @@ export class CinegenShotDesigner extends CgLightElement {
   connectedCallback(): void {
     super.connectedCallback();
     if (!this.id) this.id = 'view-shot-designer';
-    this.classList.add('flex', 'flex-col', 'h-full');
+    this.classList.add('flex', 'flex-col', 'flex-1', 'min-h-0', 'h-full', 'overflow-hidden');
     if (!this._isModal) this.classList.add('hidden');
     window.addEventListener(CG_PREVIS_SELECTION_CHANGED, this._onSelectionChanged);
     window.addEventListener(CG_WORKSPACE_VIEW_CHANGE, this._onWorkspaceChange);
@@ -1288,7 +1293,7 @@ private _renderListMode(): unknown {
   }
 render(): unknown {
     return html`
-      <div class="bevel-flat sd-shell workspace-section-cinematography" style="height:100%">
+      <div class="bevel-flat sd-shell workspace-section-cinematography flex flex-1 flex-col min-h-0 overflow-hidden">
         ${!this._isModal
           ? html`
               <cg-panel-header>
@@ -1308,7 +1313,7 @@ render(): unknown {
             `
           : nothing}
         <div class="bevel-sunken sd-toolbar">${this._renderTabs()}</div>
-        <div class="sd-body">
+        <div class="sd-body flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
           ${this._mode === 'list'
             ? this._renderListMode()
             : this._mode === 'compose'
