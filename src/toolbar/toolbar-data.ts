@@ -92,6 +92,12 @@ export const SETTINGS_MODAL_TILES: SettingsTile[] = [
     desc: 'Workspace layout, autosave, and defaults.',
   },
   {
+    id: 'ui-magnification',
+    icon: 'fa-solid fa-expand',
+    title: 'UI Magnification',
+    desc: 'Text and control size (Small / Medium / Large / X-Large).',
+  },
+  {
     id: 'ai-providers',
     icon: 'fa-solid fa-key',
     title: 'AI Providers & Models',

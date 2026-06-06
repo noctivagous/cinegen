@@ -1,14 +1,3 @@
-/**
- * ── NOTE: Preferences use server-backed persistence ──
- *
- * Preferences are stored via the ServerPersistence back-end so state can be
- * shared across browser instances connected to the same server URL.
- *
- * This file stores UI preferences only (font size, sidebar widths, etc.).
- * It does NOT store API keys or auth tokens.
- * ─────────────────────────────────────────────────────────────────────
- */
-
 import { patchAppShellState } from '@/stores/app-shell-state';
 import { PREFERENCES_STORAGE_KEY } from '@/constants/storage-keys';
 import { storageService } from '@/services/persistence';
@@ -32,25 +21,18 @@ export interface CineGenPreferences {
   previsPaneSplitPercent: number;
   activeProjectId: string;
   statusBarScale: number;
-  /** Storyboard pane: group by shot vs. flat sequence grid. */
   storyboardViewMode: 'shots' | 'sequence';
-  /** Storyboard thumbnail scale (0.5–2). */
   storyboardThumbnailScale: number;
-  /** Project hierarchy sidebar: tree, top-level grid, or grid with nested child buttons. */
   projectHierarchyViewMode: 'tree' | 'grid' | 'grid-plus';
-  /** Camera & Lighting thumbnail chip scale (0.5–1.5). */
   cameraThumbnailScale: number;
-  /** Show thumbnail images on camera & lighting chips. */
   cameraChipsShowThumbnails: boolean;
-  /** Show description text on camera & lighting chips. */
   cameraChipsShowDescriptions: boolean;
-  /** Mood board quick generation provider keys */
   moodBoardImageProvider: string;
   moodBoardVideoProvider: string;
   moodBoardAudioProvider: string;
   moodBoardLLMProvider: string;
-  /** Last selected project hierarchy node name, keyed by project id. */
   projectTreeSelectedByProjectId?: Record<string, string>;
+  uiMagnificationLevel: number;
 }
 
 export const DEFAULT_PREFERENCES: CineGenPreferences = {
@@ -80,6 +62,7 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   moodBoardVideoProvider: '',
   moodBoardAudioProvider: '',
   moodBoardLLMProvider: '',
+  uiMagnificationLevel: 1, // Medium (1.25x) is default
 };
 
 export function loadPreferences(): CineGenPreferences {
@@ -111,8 +94,6 @@ export function savePreferences(
   const shellPatch: { preferences: CineGenPreferences; activeProjectId?: string } = {
     preferences: merged,
   };
-  // Only sync activeProjectId when callers explicitly set it — otherwise unrelated
-  // preference writes (e.g. tree selection during project switch) revert the shell.
   if (nextPreferences && Object.prototype.hasOwnProperty.call(nextPreferences, 'activeProjectId')) {
     shellPatch.activeProjectId = merged.activeProjectId;
   }
@@ -128,4 +109,9 @@ export function initCineGenPreferences(): void {
   window.CineGen.loaderVersion = '2.0-lit';
   const prefs = window.CineGen.preferences;
   document.documentElement.style.setProperty('--cl-thumb-scale', String(prefs.cameraThumbnailScale ?? 1));
+  
+  // Apply UI magnification on load
+  if (typeof prefs.uiMagnificationLevel === 'number') {
+    import('@/services/magnification').then(m => m.applyMagnification(prefs.uiMagnificationLevel));
+  }
 }

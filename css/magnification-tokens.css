@@ -1,0 +1,65 @@
+/* CineGen UI scaling tokens - scale automatically via --ui-scale */
+:root {
+  --ui-scale: 1;
+}
+
+/* Typography tokens - scale via --ui-scale */
+:root {
+  --text-8px: calc(8px * var(--ui-scale));
+  --text-9px: calc(9px * var(--ui-scale));
+  --text-10px: calc(10px * var(--ui-scale));
+  --text-11px: calc(11px * var(--ui-scale));
+  --text-12px: calc(12px * var(--ui-scale));
+  --text-13px: calc(13px * var(--ui-scale));
+  --text-14px: calc(14px * var(--ui-scale));
+  --text-15px: calc(15px * var(--ui-scale));
+  --text-16px: calc(16px * var(--ui-scale));
+  --text-18px: calc(18px * var(--ui-scale));
+  --text-20px: calc(20px * var(--ui-scale));
+  --text-24px: calc(24px * var(--ui-scale));
+  --text-28px: calc(28px * var(--ui-scale));
+  --text-40px: calc(40px * var(--ui-scale));
+  --text-48px: calc(48px * var(--ui-scale));
+}
+
+/* Spacing tokens - scale via --ui-scale */
+:root {
+  --space-2px: calc(2px * var(--ui-scale));
+  --space-3px: calc(3px * var(--ui-scale));
+  --space-4px: calc(4px * var(--ui-scale));
+  --space-5px: calc(5px * var(--ui-scale));
+  --space-6px: calc(6px * var(--ui-scale));
+  --space-8px: calc(8px * var(--ui-scale));
+  --space-10px: calc(10px * var(--ui-scale));
+  --space-11px: calc(11px * var(--ui-scale));
+  --space-12px: calc(12px * var(--ui-scale));
+  --space-13px: calc(13px * var(--ui-scale));
+  --space-14px: calc(14px * var(--ui-scale));
+  --space-15px: calc(15px * var(--ui-scale));
+  --space-16px: calc(16px * var(--ui-scale));
+  --space-18px: calc(18px * var(--ui-scale));
+  --space-20px: calc(20px * var(--ui-scale));
+  --space-22px: calc(22px * var(--ui-scale));
+  --space-24px: calc(24px * var(--ui-scale));
+  --space-28px: calc(28px * var(--ui-scale));
+  --space-30px: calc(30px * var(--ui-scale));
+  --space-32px: calc(32px * var(--ui-scale));
+  --space-36px: calc(36px * var(--ui-scale));
+  --space-40px: calc(40px * var(--ui-scale));
+  --space-44px: calc(44px * var(--ui-scale));
+  --space-48px: calc(48px * var(--ui-scale));
+  --space-52px: calc(52px * var(--ui-scale));
+  --space-56px: calc(56px * var(--ui-scale));
+  --space-60px: calc(60px * var(--ui-scale));
+  --space-64px: calc(64px * var(--ui-scale));
+  --space-72px: calc(72px * var(--ui-scale));
+  --space-80px: calc(80px * var(--ui-scale));
+}
+
+/* Radius tokens - scale via --ui-scale with rounding (JS overrides for exact rounding) */
+:root {
+  --radius-2px: calc(2px * var(--ui-scale));
+  --radius-3px: calc(3px * var(--ui-scale));
+  --radius-4px: calc(4px * var(--ui-scale));
+  --radius-6px: calc(6px * var(--ui-scale));
+}

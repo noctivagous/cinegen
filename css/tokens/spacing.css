@@ -1,0 +1,36 @@
+/* Design tokens — spacing (8px grid base: 4px unit) */
+:root {
+  --space-0:  0;
+  --space-px: 1px;
+  --space-2px: 2px;
+  --space-3px: 3px;
+  --space-4px: 4px;
+  --space-5px: 5px;
+  --space-6px: 6px;
+  --space-8px: 8px;
+  --space-10px: 10px;
+  --space-12px: 12px;
+  --space-14px: 14px;
+  --space-16px: 16px;
+  --space-18px: 18px;
+  --space-20px: 20px;
+  --space-22px: 22px;
+  --space-24px: 24px;
+  --space-28px: 28px;
+  --space-32px: 32px;
+  --space-36px: 36px;
+  --space-40px: 40px;
+  --space-44px: 44px;
+  --space-48px: 48px;
+  --space-52px: 52px;
+  --space-56px: 56px;
+  --space-64px: 64px;
+  --space-72px: 72px;
+  --space-80px: 80px;
+  --gap-xs: var(--space-2px);
+  --gap-sm: var(--space-3px);
+  --gap-md: var(--space-4px);
+  --gap-lg: var(--space-5px);
+  --gap-xl: var(--space-6px);
+  --gap-2xl: var(--space-8px);
+}

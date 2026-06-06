@@ -1,0 +1,32 @@
+/* Design tokens — dimensions (borders, radius, sizes) */
+:root {
+  /* Border widths */
+  --border-width-sm: 1px;
+  --border-width-md: 1px;
+  --border-width-lg: 2px;
+  
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+  
+  /* Control heights */
+  --height-btn: 24px;
+  --height-btn-sm: 22px;
+  --height-btn-lg: 28px;
+  --height-slider: 4px;
+  --height-slider-thumb: 12px;
+  
+  /* Control widths */
+  --width-btn-min: 22px;
+  --width-slider-thumb: 12px;
+  
+  /* Z-index layers */
+  --z-modal: 2000;
+  --z-dropdown: 500;
+  --z-header: 1000;
+  --z-sidebar: 100;
+}

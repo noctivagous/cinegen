@@ -258,6 +258,11 @@ function launchSettingsAction(actionId: string): void {
     openProjectSettingsModal();
     return;
   }
+  if (actionId === 'ui-magnification') {
+    closeSettingsModal();
+    openMagnificationModal();
+    return;
+  }
   if (actionId === 'ai-providers' || actionId === 'ai-api' || actionId === 'api-keys') {
     closeSettingsModal();
     void openAiProvidersModal();
@@ -452,6 +457,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'guide-modal', bodyClass: 'guide-modal-open' });
   registerModal({ id: 'projects-modal' });
   registerModal({ id: 'settings-modal' });
+  registerModal({ id: 'magnification-modal' });
   registerModal({ id: 'ai-assist-modal' });
   registerModal({ id: 'wizards-modal' });
   registerModal({ id: 'project-settings-modal' });
@@ -632,12 +638,46 @@ export function wireToolbarModalDismissals(): void {
   }
 
   const projectActions: Record<string, () => void | Promise<void>> = {
-    'blank-project': openBlankProjectWizard,
-    'script-wizard': openScriptWizardModal,
-    'visual-wizard': openVisualWizardModal,
-    'concept-wizard': openConceptWizardModal,
-    'asset-wizard': openAssetWizardModal,
-    'storyboard-wizard': openStoryboardWizardModal,
-  };
-  wireWizardNavigationAndActions(WIZARD_SLIDES, projectActions);
+  'blank-project': openBlankProjectWizard,
+  'script-wizard': openScriptWizardModal,
+  'visual-wizard': openVisualWizardModal,
+  'concept-wizard': openConceptWizardModal,
+  'asset-wizard': openAssetWizardModal,
+  'storyboard-wizard': openStoryboardWizardModal,
+};
+wireWizardNavigationAndActions(WIZARD_SLIDES, projectActions);
 }
+
+export function openMagnificationModal(): void {
+  closeAllToolbarSplitMenus();
+  closeAllModalsExcept('magnification-modal');
+  openModal('magnification-modal');
+  updateMagnificationSelection();
+}
+
+export function closeMagnificationModal(): void {
+  closeModal('magnification-modal');
+}
+
+function updateMagnificationSelection(): void {
+  const level = window.CineGenMagnification?.getMagnificationLevel() ?? 1;
+  const seg = document.querySelector('.magnification-selector') as HTMLElement;
+  if (!seg) return;
+  seg.querySelectorAll('.cg-segmented-segment').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.getAttribute('data-mag-level')) === level);
+  });
+}
+
+// Wire magnification modal buttons
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement;
+  const levelBtn = target.closest('.magnification-selector .cg-segmented-segment') as HTMLElement;
+  if (levelBtn) {
+    const level = Number(levelBtn.getAttribute('data-mag-level'));
+    if (!isNaN(level)) {
+      window.CineGenMagnification?.setMagnification(level);
+      updateMagnificationSelection();
+      alertCG(`UI magnification set to: ${window.CineGenMagnification?.SCALE_LABELS[level]}`);
+    }
+  }
+});
