@@ -110,7 +110,7 @@ function renderEntityChipsHtml(values: any, removeAction: any, chipType: any) {
     .join('');
 }
 
-const SCRIPT_INFO_SECTIONS = [
+export const SCRIPT_INFO_SECTIONS = [
   { type: 'characters', label: 'Characters', icon: 'fa-user', chipType: 'character' },
   { type: 'locations', label: 'Locations', icon: 'fa-map-location-dot', chipType: 'location' },
   { type: 'props', label: 'Props', icon: 'fa-box-open', chipType: 'prop' },
@@ -276,5 +276,6 @@ export function installUtilsBundleGlobals(): void {
   w.initScriptEditorOptionsToolbar = initScriptEditorOptionsToolbar;
   w.positionMenuWithinViewport = positionMenuWithinViewport;
   w.escapeHtml = escapeHtml;
+  w.SCRIPT_INFO_SECTIONS = SCRIPT_INFO_SECTIONS;
   _exposeMutableStateOnWindow();
 }

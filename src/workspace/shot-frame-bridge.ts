@@ -426,7 +426,8 @@ export function highlightScriptForShot(sceneId: string, shot: SceneShot): void {
 /** Create a coverage shot linked 1:1 to a new storyboard frame. */
 export function createCoverageShotForFrame(
   frame: Pick<StoryboardFrame, 'id' | 'label'> & { scene?: string; scriptLink?: string; shotId?: number },
-  shotIdOverride?: number
+  shotIdOverride?: number,
+  cinematography?: Partial<Pick<SceneShot, 'shotType' | 'cameraAngle' | 'cameraMovement' | 'lens' | 'lightingTechnique' | 'composition' | 'expression' | 'emotion'>>,
 ): SceneShot | null {
   const sceneId = sceneIdFromStoryboardFrame(frame);
   const scenes = currentSceneData as Record<string, SceneDetail>;
@@ -445,6 +446,7 @@ export function createCoverageShotForFrame(
     durationSeconds: DEFAULT_SHOT_DURATION_SECONDS,
     scriptLink: frame.scriptLink,
     frameIds: [frame.id],
+    ...cinematography,
   };
   scene.coverage.push(shot);
   frame.shotId = id;

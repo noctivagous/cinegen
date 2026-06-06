@@ -52,6 +52,8 @@ import {
   generateAllShotStoryboards,
   generateFrameImage,
   buildStoryboardDraftFrames,
+  agentShotsToDraftFrames,
+  type AgentShotData,
 } from '@/storyboard/storyboard-generation-service';
 import {
   STORYBOARD_GENERATION_MODE_STORAGE_KEY,
@@ -353,9 +355,54 @@ export async function generateBoards(): Promise<void> {
   }
   emitStoryboardRunLog('reference-gate-passed', { sceneKey });
 
-  const drafts = buildStoryboardDraftFrames(scene, sceneHeading, anchor, sceneBodyLines);
+  let drafts: ReturnType<typeof buildStoryboardDraftFrames>;
+  let agentShots: AgentShotData[] | null = null;
+
+  try {
+    const agents = (window as any).CineGen?.agents;
+    if (agents?.generateStoryboardFrames) {
+      const sceneContent = { heading: sceneHeading || `Scene ${scene}`, bodyLines: sceneBodyLines };
+      const result = await agents.generateStoryboardFrames(
+        (window as any).activeProjectId || 'proj-001',
+        undefined,
+        sceneContent,
+      );
+      if (result?.ok && result?.data?.shots?.length > 0) {
+        const shots: AgentShotData[] = result.data.shots;
+        agentShots = shots;
+        drafts = agentShotsToDraftFrames(scene, shots);
+      } else {
+        drafts = buildStoryboardDraftFrames(scene, sceneHeading, anchor, sceneBodyLines);
+      }
+    } else {
+      drafts = buildStoryboardDraftFrames(scene, sceneHeading, anchor, sceneBodyLines);
+    }
+  } catch {
+    console.warn('[generateBoards] Agent unavailable, using generic drafts');
+    drafts = buildStoryboardDraftFrames(scene, sceneHeading, anchor, sceneBodyLines);
+  }
+
   drafts.forEach((frame) => storyboardFrames.push(frame));
-  linkDraftFramesToCoverage(drafts);
+
+  if (agentShots) {
+    const cm: Record<number, any> = {};
+    drafts.forEach((_f, idx) => {
+      const a = agentShots![idx] || {};
+      cm[idx] = {
+        shotType: a.shotType,
+        cameraAngle: a.cameraAngle,
+        cameraMovement: a.cameraMovement,
+        lens: a.lens,
+        lightingTechnique: a.lightingTechnique,
+        composition: a.composition,
+        expression: a.expression,
+        emotion: a.emotion,
+      };
+    });
+    linkDraftFramesToCoverage(drafts, cm);
+  } else {
+    linkDraftFramesToCoverage(drafts);
+  }
   window.selectedStoryboardFrameId = drafts[0]?.id || null;
   renderStoryboard();
   if (drafts[0]) updateInspector('storyboard-frame', drafts[0]);

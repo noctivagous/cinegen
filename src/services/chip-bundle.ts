@@ -10,6 +10,7 @@ import { persistProjectTreeExpandedState } from '@/services/project-service';
 import { sceneIdFromStoryboardFrame } from '@/workspace/shot-frame-bridge';
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { getCurrentScriptText } from '@/script/fountain-bundle';
+import { SCRIPT_INFO_SECTIONS } from '@/services/utils-bundle';
 import {
   projectData,
   breakdownData,

@@ -22,6 +22,7 @@ import {
 import { maybeAdvanceShotToStoryboarded } from '@/workspace/shot-lifecycle';
 import { applyScriptLinkRangeToFrame } from '@/script/storyboard-link-ranges';
 import { generateFrameImage } from '@/storyboard/storyboard-generation-service';
+import type { SceneShot } from '@/workspace/scene-types';
 
 interface StoryboardFrame {
   id: number;
@@ -46,10 +47,13 @@ function inheritShotIdForNewFrame(frame: StoryboardFrame): void {
   }
 }
 
-export function linkDraftFramesToCoverage(drafts: StoryboardFrame[]): void {
+export function linkDraftFramesToCoverage(
+  drafts: StoryboardFrame[],
+  cinematographyMap?: Record<number, Partial<Pick<SceneShot, 'shotType' | 'cameraAngle' | 'cameraMovement' | 'lens' | 'lightingTechnique' | 'composition' | 'expression' | 'emotion'>>>
+): void {
   const base = Date.now();
   drafts.forEach((frame, idx) => {
-    createCoverageShotForFrame(frame, base + idx);
+    createCoverageShotForFrame(frame, base + idx, cinematographyMap?.[idx]);
   });
   if (drafts[0]) reconcileShotFrameLinks(sceneIdFromStoryboardFrame(drafts[0]));
   (window as any).refreshShotFrameTree?.();

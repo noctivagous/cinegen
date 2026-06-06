@@ -489,6 +489,38 @@ export async function generateVideoForShot(
   }
 }
 
+export interface AgentShotData {
+  label: string;
+  scriptLink?: string;
+  shotType?: string;
+  cameraAngle?: string;
+  cameraMovement?: string;
+  lens?: string;
+  lightingTechnique?: string;
+  composition?: string;
+  expression?: string;
+  emotion?: string;
+  notes?: string;
+}
+
+export function agentShotsToDraftFrames(
+  scene: string,
+  agentShots: AgentShotData[]
+): StoryboardFrame[] {
+  return agentShots.map((shot, idx) => ({
+    id: Date.now() + idx,
+    scene,
+    label: shot.label,
+    scriptLink: shot.scriptLink,
+    notes: shot.notes || [
+      shot.shotType ? `Shot: ${shot.shotType}` : '',
+      shot.cameraAngle ? `Angle: ${shot.cameraAngle}` : '',
+      shot.cameraMovement ? `Move: ${shot.cameraMovement}` : '',
+    ].filter(Boolean).join(' | ') || undefined,
+    durationSeconds: 3,
+  }));
+}
+
 /**
  * Build inline draft frames from the script scene content.
  * Pure builder — no side effects, no mutations.

@@ -498,10 +498,11 @@ export async function buildLocationGuides(
 export async function generateStoryboardFrames(
   projectId: string,
   shotIds?: string[],
-): Promise<{ ok: boolean; projectId: string; data: string }> {
+  sceneContent?: { heading: string; bodyLines: string[] },
+): Promise<{ ok: boolean; projectId: string; data: any }> {
   return agentFetch(AGENT_STATIC_ROUTES.STORYBOARD_GENERATE, {
     method: 'POST',
-    body: JSON.stringify({ projectId, shotIds }),
+    body: JSON.stringify({ projectId, shotIds, sceneContent }),
   });
 }
 

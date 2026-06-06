@@ -153,19 +153,54 @@ export async function handleAgentApi(req, res) {
   if (url === AGENT_STATIC_ROUTES.STORYBOARD_GENERATE && req.method === 'POST') {
     let body;
     try { body = await readBody(req); } catch { json(res, 400, { error: 'Invalid JSON body' }); return; }
-    const { projectId, shotIds } = body;
+    const { projectId, shotIds, sceneContent } = body;
     if (!projectId) { json(res, 400, { error: 'projectId is required' }); return; }
     try {
       const { getMastra } = await getAgentModule();
       const mastra = await getMastra();
       const agent = mastra.getAgentById('storyboardAgent');
-      const scope = Array.isArray(shotIds) && shotIds.length
-        ? `for shot IDs: ${shotIds.join(', ')}`
-        : 'for all pending shots';
-      const result = await agent.generate(
-        `Generate storyboard frames for project "${projectId}" ${scope}.`,
-      );
-      json(res, 200, { ok: true, projectId, data: result.text });
+
+      let prompt;
+      let options = {};
+
+      if (sceneContent && sceneContent.heading) {
+        const { heading } = sceneContent;
+        const bodyLines = Array.isArray(sceneContent.bodyLines) ? sceneContent.bodyLines : [];
+        prompt = [
+          'You are a professional cinematographer and storyboard artist. Analyze this film scene and generate intelligent shot breakdowns with full cinematography metadata.',
+          '',
+          `Scene Heading: ${heading}`,
+          'Scene Content:',
+          bodyLines.join('\n') || '(no body text — use the heading to infer scene content)',
+          '',
+          'For each shot, provide this JSON structure:',
+          '{',
+          '  "label": "Descriptive shot title (e.g. \'Wide - Arcology Spire Night\')",',
+          '  "scriptLink": "The most relevant text snippet from the scene for this shot",',
+          '  "shotType": "ECU | CU | MCU | MS | MLS | LS | EWS | Cowboy | OTS | POV",',
+          '  "cameraAngle": "Eye-Level | Low Angle | High Angle | Dutch | Over-the-Shoulder | Bird\'s-Eye | Worm\'s-Eye | POV",',
+          '  "cameraMovement": "Static | Pan | Tilt | Dolly | Truck | Crane | Steadicam | Handheld | Zoom | Arc | Drone",',
+          '  "lens": "Wide 14-24mm | Standard 35-50mm | Portrait 85mm | Tele 135mm+ | Macro | Anamorphic | Fisheye",',
+          '  "lightingTechnique": "3-Point | Low-Key | High-Key | Backlit | Practical | Natural | Chiaroscuro | Silhouette | Rembrandt | Golden Hour | Night",',
+          '  "composition": "Rule of Thirds | Leading Lines | Symmetry | Frame-within-Frame | Deep Focus | Shallow Focus | Dutch Angle | Center Framing | Negative Space | Golden Ratio | Dynamic Asymmetry",',
+          '  "expression": "Character expression if applicable, or empty string",',
+          '  "emotion": "Emotional tone of the shot",',
+          '  "notes": "Directorial or cinematography notes"',
+          '}',
+          '',
+          'Generate 2-6 shots depending on scene complexity. Return a JSON object with a "shots" array containing the shot objects.',
+          'Use ONLY valid shot types and values from the options listed above.',
+        ].join('\n');
+        options = { output: 'object' };
+      } else {
+        const scope = Array.isArray(shotIds) && shotIds.length
+          ? `for shot IDs: ${shotIds.join(', ')}`
+          : 'for all pending shots';
+        prompt = `Generate storyboard frames for project "${projectId}" ${scope}.`;
+      }
+
+      const result = await agent.generate(prompt, options);
+      json(res, 200, { ok: true, projectId, data: result.object ?? result.text });
     } catch (err) {
       console.error('[cinegen/agents] storyboard/generate error:', err.message);
       json(res, 503, { error: err.message });
