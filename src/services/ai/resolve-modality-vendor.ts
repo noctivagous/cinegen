@@ -1,5 +1,5 @@
 import { storageService } from '@/services/persistence';
-import { loadProviderModelCatalog } from '@/services/provider-model-catalog';
+import { loadProviderModelCatalog, mergeRoutingModelOptions } from '@/services/provider-model-catalog';
 import type { AiVendorRoute } from '@/services/ai/types';
 import { AI_API_SETTINGS_STORAGE_KEY } from '@/constants/storage-keys';
 import { loadAiApiSettings } from '@/settings/ai-api-settings-bundle';
@@ -21,7 +21,7 @@ export function resolveModalityVendorRoute(modality: ModalityVendorKey): Modalit
     const cfg = settings?.modalities?.[modality] as
       | { provider?: string; vendorId?: string; model?: string; baseUrl?: string }
       | undefined;
-    if (!cfg?.model) return null;
+    if (!cfg) return null;
 
     const catalog = loadProviderModelCatalog();
     const vendors = catalog.vendors || {};
@@ -55,6 +55,21 @@ export function resolveModalityVendorRoute(modality: ModalityVendorKey): Modalit
     if (!rec) return null;
     const keyRec = keyCache.get(vendorId);
 
+    /* Resolve model — prefer live models for the selected vendor */
+    let model = cfg.model || '';
+    const vendorModels = mergeRoutingModelOptions(cfg.provider || rec.providerId, modality, vendorId);
+    const modelIsAvailable = vendorModels.some((m: any) => m?.id === model);
+    if (!model || !modelIsAvailable) {
+      const pick = vendorModels.find((m: any) => m?.id);
+      if (pick) {
+        model = pick.id;
+      } else if (rec.modalities?.[modality]?.models?.length) {
+        const direct = rec.modalities[modality].models.find((m: any) => m?.id);
+        if (direct) model = direct.id;
+      }
+    }
+    if (!model) return null;
+
     const vendor: AiVendorRoute = {
       id: vendorId,
       name: keyRec?.name || rec.providerId || vendorId,
@@ -63,7 +78,7 @@ export function resolveModalityVendorRoute(modality: ModalityVendorKey): Modalit
       baseUrl: keyRec?.baseUrl || cfg.baseUrl || '',
     };
 
-    return { vendor, model: cfg.model };
+    return { vendor, model };
   } catch {
     return null;
   }

@@ -235,7 +235,19 @@ function selectedSceneHeadingAndLines(): { sceneHeading: string; sceneBodyLines:
 }
 
 export async function generateStoryboardReferences(): Promise<void> {
-  await generateStoryboardReferencesForScene(sceneKeyFromCurrentScene());
+  try {
+    await generateStoryboardReferencesForScene(sceneKeyFromCurrentScene());
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[generateStoryboardReferences] Failed:', msg);
+    (window as any).referenceGenerationStatus = 'error';
+    saveReferenceState();
+    // Show error in UI via a toast/notification
+    if (typeof (window as any).showToast === 'function') {
+      (window as any).showToast('Reference generation failed: ' + msg, 'error');
+    }
+    throw error;
+  }
 }
 
 export async function generateStoryboardReferencesForScene(sceneKey: string): Promise<void> {
