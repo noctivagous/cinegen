@@ -11,6 +11,7 @@ import {
   type FeatureCatalogNode,
 } from '@/tree/project-feature-catalog';
 import { TREE_SECTION_BY_NAME } from '@/tree/hierarchy-section-theme';
+import { modalQueryString } from '@/routing/modal-routing';
 
 /* ── URL path ↔ catalog id helpers ────────────────────────────────────── */
 
@@ -137,7 +138,25 @@ export function syncUrlFromView(
     state = { view: viewName, label, sectionKey };
   }
 
-  history.replaceState(state, '', url);
+  // Preserve any open modal param when updating the view URL
+  const modalQs = modalQueryString();
+
+  const fullUrl = modalQs ? `${url}?${modalQs}` : url;
+
+  history.replaceState(state, '', fullUrl);
+}
+
+/* ── Open modal from URL params (used after view switch) ───────────────── */
+
+function restoreModalFromUrl(): void {
+  import('@/routing/modal-routing').then(({ extractModalParams }) => {
+    const { modalId, nested } = extractModalParams();
+    if (modalId) {
+      import('@/services/modal-manager').then(({ openModal }) =>
+        openModal(modalId, nested)
+      );
+    }
+  });
 }
 
 /* ── Popstate handler (back/forward) ──────────────────────────────────── */
@@ -150,6 +169,17 @@ function handlePopState(e: PopStateEvent): void {
     if (state?.view) {
       switchView(state.view as string, (state.label as string) || '', (state.sectionKey as string) || null).finally(() => {
         _skipUrlSync = false;
+        // Restore modal from state if present
+        if (state.modal) {
+          import('@/services/modal-manager').then(({ openModal }) =>
+            openModal(state.modal as string, (state.modalNested as Record<string, string>) ?? undefined)
+          );
+        } else {
+          // Close all modals if navigating to a state without one
+          import('@/services/modal-manager').then(({ closeAllModals }) =>
+            closeAllModals()
+          );
+        }
       });
       return;
     }
@@ -164,6 +194,7 @@ function handlePopState(e: PopStateEvent): void {
     switchView(node.view || 'overview', node.name, sectionKey).finally(() => {
       _skipUrlSync = false;
       setViewModeFromUrl();
+      restoreModalFromUrl();
     });
   } finally {
     // Ensure _skipUrlSync is reset even on early returns or errors
@@ -185,6 +216,7 @@ export async function initRouting(): Promise<void> {
   const sectionKey = sectionKeyFromId(path);
   await switchView(node.view || 'overview', node.name, sectionKey);
   setViewModeFromUrl();
+  restoreModalFromUrl();
 }
 
 /* ── Programmatic navigation ──────────────────────────────────────────── */

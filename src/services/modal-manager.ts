@@ -50,12 +50,15 @@ export function unregisterModal(id: ModalId): void {
 }
 
 /** Show a modal and close all other registered modals first. */
-export function openModal(id: ModalId): void {
-  void openModalAsync(id);
+export function openModal(id: ModalId, nestedParams?: Record<string, string>): void {
+  void openModalAsync(id, nestedParams);
 }
 
 /** Async variant — awaits lazy-loaded modal chunks before showing. */
-export async function openModalAsync(id: ModalId): Promise<void> {
+export async function openModalAsync(
+  id: ModalId,
+  nestedParams?: Record<string, string>
+): Promise<void> {
   await ensureModalReady(id);
 
   const entry = registry.get(id);
@@ -85,6 +88,11 @@ export async function openModalAsync(id: ModalId): Promise<void> {
 
   entry.onAfterOpen?.();
   _broadcastModalState();
+
+  // Sync URL after modal opens
+  import('@/routing/modal-routing').then(({ syncUrlFromModal }) =>
+    syncUrlFromModal(id, nestedParams)
+  );
 }
 
 /** Hide a modal if it is currently open. */
@@ -109,6 +117,18 @@ export function closeModal(id: ModalId): void {
 
   entry.onAfterClose?.();
   _broadcastModalState();
+
+  // Sync URL after modal closes — check if another modal is now topmost
+  const nextOpen = getOpenModalId();
+  if (nextOpen) {
+    import('@/routing/modal-routing').then(({ syncUrlFromModal }) =>
+      syncUrlFromModal(nextOpen)
+    );
+  } else {
+    import('@/routing/modal-routing').then(({ syncUrlFromModal }) =>
+      syncUrlFromModal(null)
+    );
+  }
 }
 
 /** Close every registered modal. */
