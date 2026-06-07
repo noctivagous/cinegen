@@ -38,9 +38,26 @@ import {
   openModal,
   openModalAsync,
   registerModal,
+  getOpenModalId,
 } from '@/services/modal-manager';
 import { buildCheckboxTreeNodes, getCurrentSectionKey } from '@/services/section-visibility-service';
 import { resetScriptWizardState } from '@/wizard/script-wizard-state';
+
+// Single delegated handler for ALL modal close buttons (data-cg-close)
+if (typeof window !== 'undefined' && !document.body.dataset.cgCloseWired) {
+  document.body.dataset.cgCloseWired = '1';
+  document.addEventListener('click', (e: Event) => {
+    const target = e.target as HTMLElement;
+    const closeBtn = target.closest('[data-cg-close]') as HTMLElement;
+    if (!closeBtn) return;
+    const modalId = closeBtn.getAttribute('data-cg-close');
+    if (modalId) {
+      e.preventDefault();
+      closeModal(modalId);
+    }
+  });
+}
+
 import { createScriptWizardSlides } from '@/wizard/script-wizard-bundle';
 import { VISUAL_WIZARD_SLIDES } from '@/toolbar/wizard-slides-visual';
 import { CONCEPT_WIZARD_SLIDES } from '@/toolbar/wizard-slides-concept';

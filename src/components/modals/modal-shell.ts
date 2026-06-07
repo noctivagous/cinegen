@@ -15,6 +15,10 @@ export interface ModalShellOptions {
   footer?: TemplateResult;
   /** When false, footer slot has no default Close button. */
   defaultClose?: boolean;
+  /** Extra class on <cg-modal-shell> host. */
+  modalClass?: string;
+  /** Extra class on .cg-modal-dialog inner div. */
+  dialogClass?: string;
 }
 
 /** Lit template factory for modals using &lt;cg-modal-shell&gt;. */
@@ -39,6 +43,8 @@ export function renderModalShell(opts: ModalShellOptions): TemplateResult {
       title=${opts.title}
       title-icon=${opts.titleIcon ?? ''}
       size=${size}
+      class=${opts.modalClass ?? ''}
+      dialog-class=${opts.dialogClass ?? ''}
       hidden
       aria-hidden="true"
     >

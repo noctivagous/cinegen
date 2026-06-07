@@ -32,6 +32,10 @@ export class CgModalShell extends CgLightElement {
   @property({ type: String, reflect: true })
   size: CgModalShellSize = 'default';
 
+  /** Extra class on .cg-modal-dialog inner div. */
+  @property({ type: String, attribute: 'dialog-class' })
+  dialogClass = '';
+
   @property({ type: Boolean, reflect: true })
   hidden = true;
 
@@ -97,11 +101,12 @@ export class CgModalShell extends CgLightElement {
   render() {
     const mid = this._resolvedModalId();
     const titleId = `${mid}-title`;
+    const dialogCls = `cg-modal-dialog bevel-raised ${this.dialogClass}`.trim();
 
     return html`
       <div class="cg-modal-backdrop" data-cg-close=${mid} aria-hidden="true"></div>
       <div
-        class="cg-modal-dialog bevel-raised"
+        class=${dialogCls}
         role="dialog"
         aria-modal="true"
         aria-labelledby=${titleId}
