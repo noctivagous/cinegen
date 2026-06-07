@@ -3,7 +3,6 @@ import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import { whenBootReady } from '@/app/boot-coordinator';
 import {
-  findProjectNodeByName,
   getProjectTreeChildren,
   getSelectedTreeName,
   getTreeSectionKeyForNode,
@@ -44,6 +43,15 @@ function gridPlusChildNodes(parent: TreeNode, sectionKey: string | null): TreeNo
     }
   }
   return out;
+}
+
+/** Whether `parent` or any of its descendants has the given name. */
+function treeContainsName(parent: TreeNode, name: string): boolean {
+  if (parent.name === name) return true;
+  for (const child of parent.children ?? []) {
+    if (treeContainsName(child, name)) return true;
+  }
+  return false;
 }
 
 /** Left project hierarchy panel (tree header + `cinegen-project-tree`). */
@@ -112,13 +120,11 @@ export class CinegenProjectSidebar extends CgLightElement {
       (n): n is TreeNode => n.type !== 'tree-divider'
     );
     const selectedName = getSelectedTreeName();
-    const selectedNode = selectedName ? findProjectNodeByName(selectedName) : null;
-    const selectedSectionKey = selectedNode ? getTreeSectionKeyForNode(selectedNode) : null;
     return html`
       <div class="hierarchy-grid">
         ${roots.map((node) => {
           const sectionKey = sectionKeyForTopLevelName(node.name);
-          const isSelected = Boolean(sectionKey && selectedSectionKey === sectionKey);
+          const isSelected = Boolean(sectionKey && selectedName && treeContainsName(node, selectedName));
           return html`
             <button
               type="button"
@@ -146,13 +152,11 @@ export class CinegenProjectSidebar extends CgLightElement {
       (n): n is TreeNode => n.type !== 'tree-divider'
     );
     const selectedName = getSelectedTreeName();
-    const selectedNode = selectedName ? findProjectNodeByName(selectedName) : null;
-    const selectedSectionKey = selectedNode ? getTreeSectionKeyForNode(selectedNode) : null;
     return html`
       <div class="hierarchy-grid hierarchy-grid-plus">
         ${roots.map((node) => {
           const sectionKey = sectionKeyForTopLevelName(node.name);
-          const isSelected = Boolean(sectionKey && selectedSectionKey === sectionKey);
+          const isSelected = Boolean(sectionKey && selectedName && treeContainsName(node, selectedName));
           const sectionClass = sectionKey
             ? `hierarchy-grid-plus-card--section-${sectionKey} tree-section-${sectionKey}${isSelected ? ' selected' : ''}`
             : '';

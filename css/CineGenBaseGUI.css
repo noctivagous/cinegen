@@ -2671,9 +2671,9 @@ cg-panel-modal .cg-panel-modal-close {
   color: var(--tree-tone-l0);
 }
 
-/* Grid-item selected — section-tinted to match tree selection */
+/* Grid-item selected — dark section-tinted background */
 #project-hierarchy-sidebar .hierarchy-grid-item[class*="tree-section-"].selected {
-  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  background: color-mix(in srgb, var(--tree-tone-l1) 30%, #181818);
   color: #fff;
 }
 
@@ -2809,14 +2809,20 @@ cg-panel-modal .cg-panel-modal-close {
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.75);
 }
 
-/* Grid+ card selected — section-tinted to match tree selection */
+/* Grid+ card selected — dark section-tinted background */
 #project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"].selected {
-  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  background: color-mix(in srgb, var(--tree-tone-l1) 30%, #181818);
   color: #fff;
 }
 
 /* Grid+ child-item selected */
 .hierarchy-grid-plus-child.selected {
+  background: linear-gradient(to bottom, #5a5a5a 0%, #484848 50%, #3e3e3e 51%, #424242 100%);
+  color: #fff;
+}
+
+/* Grid+ child-item selected must beat toolbar-btn:hover */
+.hierarchy-grid-plus-child.selected:hover {
   background: linear-gradient(to bottom, #5a5a5a 0%, #484848 50%, #3e3e3e 51%, #424242 100%);
   color: #fff;
 }
@@ -2905,9 +2911,9 @@ cg-panel-modal .cg-panel-modal-close {
   background: color-mix(in srgb, var(--tree-tone-l1) 15%, rgba(255,255,255,0.08));
 }
 
-/* Section-tinted selected — same approach as hover but brighter to distinguish */
+/* Section-tinted selected — dark section-tinted background */
 #project-hierarchy-sidebar .tree-item[class*="tree-section-"].selected {
-  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  background: color-mix(in srgb, var(--tree-tone-l1) 30%, #181818);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
