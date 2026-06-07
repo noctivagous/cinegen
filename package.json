@@ -10,6 +10,8 @@
     "prebuild": "npm run setup:key-files",
     "build": "npm run lint:legacy-globals && tsc --noEmit && vite build",
     "validate:cine": "npx tsx scripts/validate-cine-package-fs.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "node server/index.mjs",
     "postinstall": "npm run setup:key-files"
   },
@@ -26,11 +28,16 @@
     "yauzl": "^3.3.2"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.15.21",
     "autoprefixer": "^10.5.0",
+    "happy-dom": "^20.10.2",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^4.1.8"
   }
 }
