@@ -1,18 +1,19 @@
 import { html } from 'lit';
+import { renderModalShell } from '../modal-shell';
 
-export const sectionSettingsModalTemplate = html`
-  <cg-modal-shell
-    id="section-settings-modal"
-    modal-id="section-settings-modal"
-    title="Section Settings"
-    title-icon="fa-solid fa-gear"
-    size="narrow"
-    hidden
-    aria-hidden="true"
-  >
-    <p slot="body" class="section-settings-modal-lead">
+/** Migrated to renderModalShell — body = lead + section settings, default footer. */
+export const renderSectionSettingsModal = () => {
+  const body = html`
+    <p class="section-settings-modal-lead">
       Enable or disable sub-sections for the current project area.
     </p>
-    <cinegen-section-settings-modal slot="body"></cinegen-section-settings-modal>
-  </cg-modal-shell>
-`;
+    <cinegen-section-settings-modal></cinegen-section-settings-modal>
+  `;
+  return renderModalShell({
+    id: 'section-settings-modal',
+    title: 'Section Settings',
+    titleIcon: 'fa-solid fa-gear',
+    size: 'narrow',
+    body,
+  });
+};
