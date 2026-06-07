@@ -2,6 +2,7 @@ import { closeToolbarSplitMenu } from '@/services/toolbar-split-service';
 import { onToolbarSplitMenuOpen } from '@/services/toolbar-split-service';
 import { alertCG } from '@/utils/alert-cg';
 import {
+  flushDirtyDocuments,
   hydrateProjectRegistryFromPersistence,
   openProject as openProjectFromService,
   prepareActiveProjectTreeUiForSwitch,
@@ -83,7 +84,7 @@ function _renderProjectList(projects: Array<{ id: string; name: string; file?: s
     label.className = 'toolbar-menu-label';
     label.textContent = proj.name;
     btn.append(check, label);
-    btn.addEventListener('click', () => switchProject(proj.id));
+    btn.addEventListener('click', async () => { await switchProject(proj.id); });
     menu.appendChild(btn);
   }
 }
@@ -93,13 +94,14 @@ export async function renderProjectsMenu(): Promise<void> {
   _renderProjectList(projects);
 }
 
-function switchProject(projectId: string): void {
+async function switchProject(projectId: string): Promise<void> {
   const proj = projectRegistry.find((p) => p.id === projectId);
   if (!proj) return;
   if (projectId === appShellStore.activeProjectId) {
     closeToolbarSplitMenu('projects-split');
     return;
   }
+  await flushDirtyDocuments();
   prepareActiveProjectTreeUiForSwitch();
   resetProjectTreeUiRestoreFlag();
   let activeName = proj.name;

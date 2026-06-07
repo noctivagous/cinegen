@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "setup:key-files": "node scripts/ensure-backend-key-files.mjs",
-    "lint:legacy-globals": "node scripts/check-window-cinegen-writes.mjs && node scripts/check-raw-custom-event-strings.mjs",
+    "lint:legacy-globals": "node scripts/check-window-cinegen-writes.mjs && node scripts/check-raw-custom-event-strings.mjs && node scripts/check-no-localstorage.mjs",
     "predev": "npm run setup:key-files",
     "dev": "vite",
     "prebuild": "npm run setup:key-files",

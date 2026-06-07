@@ -4,6 +4,7 @@ import {
   createNewProject,
   persistActiveProjectSettings,
 } from '@/services/project-service';
+import { projectRegistry } from '@/data/project-data';
 import {
   buildAllEnabledFeaturesConfig,
   buildBlankProjectFeaturesConfig,
@@ -313,8 +314,9 @@ async function finishBlankProjectWizard(): Promise<void> {
     alertCG('Failed to create blank project. Check the server is running.');
     return;
   }
-  const registryEntry = (window as any).projectRegistry?.find?.((p: any) => p.id === created.id);
+  const registryEntry = projectRegistry.find((p) => p.id === created.id);
   if (registryEntry) {
+    registryEntry.name = created.name || name;
     registryEntry.settings = registryEntry.settings || {};
     const norm = (window as any).normalizeProjectAspectRatio;
     registryEntry.settings.aspectRatio = aspectEl && norm ? norm(aspectEl.value) : (aspectEl?.value ?? '2.39:1');

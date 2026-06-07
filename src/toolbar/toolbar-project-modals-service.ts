@@ -6,6 +6,7 @@ import { CG_PROJECT_OPEN } from '@/components/modals/cinegen-projects-modal-list
 import { activeProjectId, getActiveProjectRegistryEntry } from '@/data/project-data';
 import { closeAllModalsExcept, closeModal, openModal } from '@/services/modal-manager';
 import {
+  flushDirtyDocuments,
   hydrateProjectRegistryFromPersistence,
   loadServerProject,
   openProject as openProjectFromService,
@@ -62,6 +63,11 @@ export function renderProjectsModalList(): void {
 
 async function openProjectFromProjectsHub(projectId: string): Promise<void> {
   const isAlreadyActive = projectId === appShellStore.activeProjectId;
+
+  // Flush any pending autosave before switching projects
+  if (!isAlreadyActive) {
+    await flushDirtyDocuments();
+  }
 
   // Try server-resident project first (new P0 tier)
   const serverResult = isAlreadyActive ? null : await loadServerProject(projectId);

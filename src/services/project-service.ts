@@ -538,40 +538,57 @@ export async function flushDirtyDocuments(): Promise<void> {
   if (!DIRTY_DOCS.size || !activeProjectId) return;
 
   const entry = projectRegistry.find((p) => p.id === activeProjectId);
-  if (entry?.file) {
-    // Bundled samples are read-only — clear and ignore
-    DIRTY_DOCS.clear();
+  if (!entry?.file) {
+    // Server-resident project: write documents via API
+    updateSaveStatus('saving');
+
+    try {
+      const snapshot = captureRuntimeProjectSnapshot();
+      const dirtyDocTypes = Array.from(DIRTY_DOCS);
+      const { documents } = serializeAppliedProject(
+        snapshot,
+        activeProjectId,
+        String(entry?.name || (projectData as any)?.name || 'Untitled'),
+        dirtyDocTypes
+      );
+
+      const res = await fetch(`/api/projects/${encodeURIComponent(activeProjectId)}/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        throw new Error(`Server responded ${res.status}: ${errText}`);
+      }
+
+      DIRTY_DOCS.clear();
+      updateSaveStatus('saved');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('CineGen autosave failed:', msg);
+      updateSaveStatus('error', msg);
+    }
     return;
   }
 
-  updateSaveStatus('saving');
+  // Bundled .cine sample: read-only, cannot save
+  if (entry?.file) {
+    console.warn('CineGen: cannot autosave bundled .cine sample (read-only)');
+    updateSaveStatus('error', 'Bundled projects are read-only');
+    return;
+  }
 
+  // Local project: persist full snapshot to localStorage
   try {
-    const snapshot = captureRuntimeProjectSnapshot();
-    const dirtyDocTypes = Array.from(DIRTY_DOCS);
-    const { documents } = serializeAppliedProject(
-      snapshot,
-      activeProjectId,
-      String(entry?.name || (projectData as any)?.name || 'Untitled'),
-      dirtyDocTypes
-    );
-
-    const res = await fetch(`/api/projects/${encodeURIComponent(activeProjectId)}/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documents }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`Server responded ${res.status}: ${errText}`);
-    }
-
+    updateSaveStatus('saving');
+    persistActiveProjectSnapshot(activeProjectId);
     DIRTY_DOCS.clear();
     updateSaveStatus('saved');
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn('CineGen autosave failed:', msg);
+    console.warn('CineGen local project autosave failed:', msg);
     updateSaveStatus('error', msg);
   }
 }

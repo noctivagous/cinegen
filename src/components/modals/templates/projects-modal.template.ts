@@ -51,8 +51,10 @@ export const renderProjectsModal = () => {
   `;
 
   const footer = html`
-    <span class="projects-modal-footer-hint">Use the caret menu on the toolbar for a quick switch without closing the hub.</span>
-    <button type="button" class="toolbar-btn" data-cg-close="projects-modal">Close</button>
+    <div id="projects-modal-footer">
+      <span class="projects-modal-footer-hint">Use the caret menu on the toolbar for a quick switch without closing the hub.</span>
+      <button type="button" class="toolbar-btn" data-cg-close="projects-modal">Close</button>
+    </div>
   `;
 
   return renderModalShell({
