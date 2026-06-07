@@ -12,7 +12,7 @@ const cinegenDarkTheme = EditorView.theme({
     color: '#e0e0e0',
   },
   '.cm-content': {
-    fontFamily: "'Courier New', Courier, monospace",
+    fontFamily: "var(--font-body)",
     fontSize: 'var(--script-editor-font-size, 18pt)',
     lineHeight: '1.6',
     padding: '20px 28px',

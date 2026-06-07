@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
-import { loadPreferences } from '@/services/preferences';
+
 import { appShellStore } from '@/stores/app-shell';
 
 /** Bottom status strip: storage badge, AI ready, model splits, project + view labels. */
@@ -62,12 +62,6 @@ export class CinegenStatusBar extends CgLightElement {
     } catch {
       /* server unavailable — keep current count */
     }
-  }
-
-  protected firstUpdated(): void {
-    const prefs = loadPreferences();
-    const scale = prefs.statusBarScale || 1;
-    this.style.setProperty('--status-bar-scale', String(scale));
   }
 
   private _refreshStats(): void {

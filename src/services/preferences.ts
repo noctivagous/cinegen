@@ -33,6 +33,11 @@ export interface CineGenPreferences {
   moodBoardLLMProvider: string;
   projectTreeSelectedByProjectId?: Record<string, string>;
   uiMagnificationLevel: number;
+  fontTitlebar: string;
+  fontBody: string;
+  fontScreenplay: string;
+  fontBtn: string;
+  fontMono: string;
 }
 
 export const DEFAULT_PREFERENCES: CineGenPreferences = {
@@ -63,6 +68,11 @@ export const DEFAULT_PREFERENCES: CineGenPreferences = {
   moodBoardAudioProvider: '',
   moodBoardLLMProvider: '',
   uiMagnificationLevel: 1, // Medium (1.25x) is default
+  fontTitlebar: "'Space Grotesk', 'Inter', 'Segoe UI', sans-serif",
+  fontBody: "'Inter', 'Segoe UI', 'Lucida Grande', sans-serif",
+  fontScreenplay: "'Inter', 'Segoe UI', 'Lucida Grande', sans-serif",
+  fontBtn: "'Saira', 'Inter', 'Segoe UI', sans-serif",
+  fontMono: "'JetBrains Mono', 'Courier New', Courier, monospace",
 };
 
 export function loadPreferences(): CineGenPreferences {
@@ -113,5 +123,19 @@ export function initCineGenPreferences(): void {
   // Apply UI magnification on load
   if (typeof prefs.uiMagnificationLevel === 'number') {
     import('@/services/magnification').then(m => m.applyMagnification(prefs.uiMagnificationLevel));
+  }
+
+  // Apply font preferences on load
+  const fontProps: Record<string, string> = {
+    '--font-titlebar': prefs.fontTitlebar,
+    '--font-body': prefs.fontBody,
+    '--font-screenplay': prefs.fontScreenplay,
+    '--font-btn': prefs.fontBtn,
+    '--font-mono': prefs.fontMono,
+  };
+  for (const [prop, value] of Object.entries(fontProps)) {
+    if (value) {
+      document.documentElement.style.setProperty(prop, value);
+    }
   }
 }

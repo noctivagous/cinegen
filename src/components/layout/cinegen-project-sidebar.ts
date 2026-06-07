@@ -3,7 +3,9 @@ import { customElement, state } from 'lit/decorators.js';
 import { CgLightElement } from '@/components/lit-base';
 import { whenBootReady } from '@/app/boot-coordinator';
 import {
+  findProjectNodeByName,
   getProjectTreeChildren,
+  getSelectedTreeName,
   getTreeSectionKeyForNode,
   handleTreeNodeSelect,
   subscribeProjectTree,
@@ -109,15 +111,19 @@ export class CinegenProjectSidebar extends CgLightElement {
     const roots = getProjectTreeChildren().filter(
       (n): n is TreeNode => n.type !== 'tree-divider'
     );
+    const selectedName = getSelectedTreeName();
+    const selectedNode = selectedName ? findProjectNodeByName(selectedName) : null;
+    const selectedSectionKey = selectedNode ? getTreeSectionKeyForNode(selectedNode) : null;
     return html`
       <div class="hierarchy-grid">
         ${roots.map((node) => {
           const sectionKey = sectionKeyForTopLevelName(node.name);
+          const isSelected = Boolean(sectionKey && selectedSectionKey === sectionKey);
           return html`
             <button
               type="button"
               class="hierarchy-grid-item bevel-raised ${sectionKey
-                ? `hierarchy-grid-item--section-${sectionKey} tree-section-${sectionKey}`
+                ? `hierarchy-grid-item--section-${sectionKey} tree-section-${sectionKey}${isSelected ? ' selected' : ''}`
                 : ''}"
               data-section=${sectionKey ?? nothing}
               @click=${() => this._onGridItemClick(node, sectionKey)}
@@ -139,12 +145,16 @@ export class CinegenProjectSidebar extends CgLightElement {
     const roots = getProjectTreeChildren().filter(
       (n): n is TreeNode => n.type !== 'tree-divider'
     );
+    const selectedName = getSelectedTreeName();
+    const selectedNode = selectedName ? findProjectNodeByName(selectedName) : null;
+    const selectedSectionKey = selectedNode ? getTreeSectionKeyForNode(selectedNode) : null;
     return html`
       <div class="hierarchy-grid hierarchy-grid-plus">
         ${roots.map((node) => {
           const sectionKey = sectionKeyForTopLevelName(node.name);
+          const isSelected = Boolean(sectionKey && selectedSectionKey === sectionKey);
           const sectionClass = sectionKey
-            ? `hierarchy-grid-plus-card--section-${sectionKey} tree-section-${sectionKey}`
+            ? `hierarchy-grid-plus-card--section-${sectionKey} tree-section-${sectionKey}${isSelected ? ' selected' : ''}`
             : '';
           const children = gridPlusChildNodes(node, sectionKey);
           return html`
@@ -172,7 +182,7 @@ export class CinegenProjectSidebar extends CgLightElement {
                         (child) => html`
                           <button
                             type="button"
-                            class="hierarchy-grid-plus-child toolbar-btn"
+                            class="hierarchy-grid-plus-child toolbar-btn${child.name === selectedName ? ' selected' : ''}"
                             data-tree-depth="1"
                             data-name=${child.name}
                             @click=${(e: Event) => this._onGridPlusChildClick(child, e)}

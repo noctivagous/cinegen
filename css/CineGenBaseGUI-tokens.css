@@ -22,7 +22,14 @@
   --accent-ai-border: #152535;
   --accent-ai-highlight: #5a7090;
   --selected-bg: #4d4d4d;
-  --font-scene-list: 'Source Sans 3', 'Segoe UI', 'Lucida Grande', sans-serif;
+  /* Font family tokens (self-hosted — see fonts/fonts.css) */
+  --font-titlebar: 'Space Grotesk', 'Inter', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', 'Lucida Grande', sans-serif;
+  --font-scene-list: 'Inter', 'Segoe UI', 'Lucida Grande', sans-serif;
+  --font-screenplay: 'Source Sans 3', 'Courier New', Courier, monospace;
+  --font-btn: 'Saira', 'Inter', 'Segoe UI', sans-serif;
+  --font-tree: 'Fira Sans', 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
   --tree-section-preprod: #b8d8f4;
   --tree-section-preprod-item: #8eb8dc;
   --tree-section-cinematography: #f4b8b8;

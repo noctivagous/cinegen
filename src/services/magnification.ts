@@ -2,36 +2,23 @@ import { savePreferences } from '@/services/preferences';
 
 const SCALE_FACTORS = [1, 1.25, 1.5, 2];
 const SCALE_LABELS = ['Small (1x)', 'Medium (1.25x)', 'Large (1.5x)', 'X-Large (2x)'];
-const DEFAULT_LEVEL = 1; // Medium = 1.25x current
-
-// All px values used in CSS — must match token names in CineGenBaseGUI-tokens.css
-const TYPOGRAPHY_PX = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 24, 28, 40, 48];
-const SPACING_PX = [2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80];
-const RADIUS_PX = [2, 3, 4, 6];
+const DEFAULT_LEVEL = 1; // Medium = 1.25× current
 
 export function applyMagnification(level: number): void {
   const factor = SCALE_FACTORS[level] ?? 1.25;
   const root = document.documentElement;
 
-  // Store the factor for reference
+  // Core scale factor — all calc(Npx * var(--ui-scale)) tokens pick this up
   root.style.setProperty('--ui-scale', String(factor));
 
-  // Override typography tokens (exact decimals, no rounding)
-  TYPOGRAPHY_PX.forEach(px => {
-    root.style.setProperty(`--text-${px}px`, `${px * factor}px`);
-  });
+  // Keep --status-bar-scale in sync so the status bar scales with the UI
+  root.style.setProperty('--status-bar-scale', String(factor));
 
-  // Override spacing tokens (exact decimals)
-  SPACING_PX.forEach(px => {
-    root.style.setProperty(`--space-${px}px`, `${px * factor}px`);
-  });
-
-  // Override radius tokens — ROUND UP as requested
-  RADIUS_PX.forEach(px => {
+  // Radius tokens must round UP (CSS calc can't do ceil)
+  [2, 3, 4, 6].forEach(px => {
     root.style.setProperty(`--radius-${px}px`, `${Math.ceil(px * factor)}px`);
   });
 
-  // Dispatch event for components that need to react
   window.dispatchEvent(new CustomEvent('uichange', { detail: { type: 'magnification', level } }));
 }
 
@@ -41,9 +28,10 @@ export function setMagnification(level: number): void {
 }
 
 export function getMagnificationLevel(): number {
-  const scale = document.documentElement.style.getPropertyValue('--ui-scale');
-  const factor = parseFloat(scale) || 1.25;
-  return SCALE_FACTORS.indexOf(factor);
+  const raw = document.documentElement.style.getPropertyValue('--ui-scale');
+  const factor = parseFloat(raw) || 1.25;
+  const idx = SCALE_FACTORS.indexOf(factor);
+  return idx === -1 ? DEFAULT_LEVEL : idx;
 }
 
 export function initMagnification(prefs: { uiMagnificationLevel?: number }): void {
@@ -61,4 +49,9 @@ declare global {
   }
 }
 
-window.CineGenMagnification = { applyMagnification, setMagnification, getMagnificationLevel, SCALE_LABELS };
+window.CineGenMagnification = {
+  applyMagnification,
+  setMagnification,
+  getMagnificationLevel,
+  SCALE_LABELS,
+};

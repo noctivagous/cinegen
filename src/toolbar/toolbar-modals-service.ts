@@ -258,9 +258,9 @@ function launchSettingsAction(actionId: string): void {
     openProjectSettingsModal();
     return;
   }
-  if (actionId === 'ui-magnification') {
+  if (actionId === 'appearance') {
     closeSettingsModal();
-    openMagnificationModal();
+    openAppearanceModal();
     return;
   }
   if (actionId === 'ai-providers' || actionId === 'ai-api' || actionId === 'api-keys') {
@@ -457,7 +457,7 @@ export function registerToolbarModals(): void {
   registerModal({ id: 'guide-modal', bodyClass: 'guide-modal-open' });
   registerModal({ id: 'projects-modal' });
   registerModal({ id: 'settings-modal' });
-  registerModal({ id: 'magnification-modal' });
+  registerModal({ id: 'appearance-modal' });
   registerModal({ id: 'ai-assist-modal' });
   registerModal({ id: 'wizards-modal' });
   registerModal({ id: 'project-settings-modal' });
@@ -648,15 +648,16 @@ export function wireToolbarModalDismissals(): void {
 wireWizardNavigationAndActions(WIZARD_SLIDES, projectActions);
 }
 
-export function openMagnificationModal(): void {
+export function openAppearanceModal(): void {
   closeAllToolbarSplitMenus();
-  closeAllModalsExcept('magnification-modal');
-  openModal('magnification-modal');
+  closeAllModalsExcept('appearance-modal');
+  openModal('appearance-modal');
   updateMagnificationSelection();
+  updateFontSelectorSelections();
 }
 
-export function closeMagnificationModal(): void {
-  closeModal('magnification-modal');
+export function closeAppearanceModal(): void {
+  closeModal('appearance-modal');
 }
 
 function updateMagnificationSelection(): void {
@@ -668,7 +669,43 @@ function updateMagnificationSelection(): void {
   });
 }
 
-// Wire magnification modal buttons
+function applyFontPreference(prop: string, value: string): void {
+  document.documentElement.style.setProperty(prop, value);
+  const prefs: Record<string, string> = {};
+  // Map CSS custom property to preference key
+  const keyMap: Record<string, string> = {
+    '--font-titlebar': 'fontTitlebar',
+    '--font-body': 'fontBody',
+    '--font-screenplay': 'fontScreenplay',
+    '--font-btn': 'fontBtn',
+    '--font-mono': 'fontMono',
+  };
+  const key = keyMap[prop];
+  if (key) {
+    prefs[key] = value;
+    const { savePreferences } = window.CineGen ?? {};
+    if (savePreferences) savePreferences(prefs as any);
+  }
+}
+
+function updateFontSelectorSelections(): void {
+  const selects = document.querySelectorAll('.appearance-font-select') as NodeListOf<HTMLSelectElement>;
+  selects.forEach(select => {
+    const prop = select.getAttribute('data-font-prop');
+    if (!prop) return;
+    const current = document.documentElement.style.getPropertyValue(prop);
+    if (!current) return;
+    // Match the stored value (may not have quotes) to option values (have quotes)
+    for (const opt of select.options) {
+      if (opt.value === current) {
+        opt.selected = true;
+        break;
+      }
+    }
+  });
+}
+
+// Wire appearance modal controls
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   const levelBtn = target.closest('.magnification-selector .cg-segmented-segment') as HTMLElement;
@@ -677,7 +714,18 @@ document.addEventListener('click', (e) => {
     if (!isNaN(level)) {
       window.CineGenMagnification?.setMagnification(level);
       updateMagnificationSelection();
-      alertCG(`UI magnification set to: ${window.CineGenMagnification?.SCALE_LABELS[level]}`);
+      alertCG(`UI scale set to: ${window.CineGenMagnification?.SCALE_LABELS[level]}`);
+    }
+  }
+});
+
+// Wire font selector changes
+document.addEventListener('change', (e) => {
+  const select = e.target as HTMLSelectElement;
+  if (select.matches('.appearance-font-select')) {
+    const prop = select.getAttribute('data-font-prop');
+    if (prop) {
+      applyFontPreference(prop, select.value);
     }
   }
 });

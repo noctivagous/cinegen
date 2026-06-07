@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', 'Lucida Grande', Tahoma, sans-serif;
+  font-family: var(--font-body);
   font-size: var(--text-11px);
   color: var(--text-main);
   background: linear-gradient(to bottom, var(--bg-mid) 0%, var(--bg-dark) 100%);
@@ -45,15 +45,16 @@ body {
 
 /* Toolbar Buttons - Beveled Nuke/Flame Style */
 .toolbar-btn {
+  font-family: var(--font-btn);
   background: var(--chrome-btn-bg);
   border: 1px solid var(--chrome-border-outer);
   border-top-color: var(--chrome-border-highlight);
   border-left-color: var(--chrome-border-highlight);
   color: var(--text-main);
-  padding: var(--space-4px) 10px;
+  padding: var(--space-3px) 8px;
   margin: var(--space-2px);
   cursor: pointer;
-  font-size: var(--text-11px);
+  font-size: calc(var(--text-11px) * 1.2);
   text-shadow: 0 -1px 0 rgba(0,0,0,0.8);
   box-shadow: var(--chrome-inset-top), var(--chrome-drop-shadow);
   transition: none;
@@ -73,7 +74,7 @@ body {
   border-top-color: var(--chrome-active-border-top);
   border-left-color: var(--chrome-active-border-top);
   box-shadow: var(--chrome-active-inset);
-  padding: var(--space-5px) 10px 3px 10px;
+  padding: var(--space-4px) 8px 2px 8px;
 }
 
 .toolbar-btn i {
@@ -2208,6 +2209,8 @@ cg-panel-modal .cg-panel-modal-close {
 
 #project-hierarchy-sidebar .panel-header {
   font-size: 1em;
+  background: linear-gradient(to bottom, #2a2a2a 0%, #222 50%, #1e1e1e 51%, #202020 100%);
+  border-top-color: #2a2a2a;
 }
 
 #project-hierarchy-sidebar .project-tree-header-aspect {
@@ -2260,6 +2263,8 @@ cg-panel-modal .cg-panel-modal-close {
   font-weight: 600;
   padding-top: var(--space-5px);
   padding-bottom: var(--space-5px);
+  border-left: var(--space-3px) solid var(--tree-tone-l0);
+  padding-left: calc(24px - var(--space-3px));
 }
 
 #project-hierarchy-sidebar .tree-item.tree-item--toplevel > i {
@@ -2450,12 +2455,29 @@ cg-panel-modal .cg-panel-modal-close {
   color: rgba(255, 255, 255, 0.88);
 }
 
-.tree-container {
-  background: var(--bg-inset);
+.panel-content.tree-container {
+  background: #111111;
   border: 1px solid var(--border-dark);
   border-top-color: #1a1a1a;
   border-left-color: #1a1a1a;
   box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5);
+}
+
+.panel-content.tree-container::-webkit-scrollbar-track {
+  background: #0d0d0d;
+  border-left: var(--space-1px) solid #080808;
+  box-shadow: inset 1px 0 2px rgba(0,0,0,0.5);
+}
+
+.panel-content.tree-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #2a2a2a 0%, #1e1e1e 100%);
+  border: 1px solid #111;
+  border-left-color: #333;
+  border-top-color: #333;
+}
+
+.panel-content.tree-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to right, #323232 0%, #262626 100%);
 }
 
 /* Sidebar view-mode bar (mirrors .ov-header-bar) */
@@ -2479,6 +2501,7 @@ cg-panel-modal .cg-panel-modal-close {
 
 /* Sidebar view buttons — compact ov-mode-btn variant */
 .sidebar-view-btn {
+  font-family: var(--font-btn);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2648,6 +2671,12 @@ cg-panel-modal .cg-panel-modal-close {
   color: var(--tree-tone-l0);
 }
 
+/* Grid-item selected — section-tinted to match tree selection */
+#project-hierarchy-sidebar .hierarchy-grid-item[class*="tree-section-"].selected {
+  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  color: #fff;
+}
+
 .hierarchy-grid-item i {
   font-size: var(--text-18px);
   opacity: 0.92;
@@ -2780,6 +2809,18 @@ cg-panel-modal .cg-panel-modal-close {
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.75);
 }
 
+/* Grid+ card selected — section-tinted to match tree selection */
+#project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"].selected {
+  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  color: #fff;
+}
+
+/* Grid+ child-item selected */
+.hierarchy-grid-plus-child.selected {
+  background: linear-gradient(to bottom, #5a5a5a 0%, #484848 50%, #3e3e3e 51%, #424242 100%);
+  color: #fff;
+}
+
 #project-hierarchy-sidebar .hierarchy-grid-plus-card[class*="tree-section-"] .hierarchy-grid-plus-head i {
   color: var(--tree-tone-l1);
 }
@@ -2823,19 +2864,52 @@ cg-panel-modal .cg-panel-modal-close {
 }
 
 .tree-item {
-  padding: var(--space-3px) 4px 3px 20px;
+  padding: var(--space-3px) 4px 3px 24px;
   cursor: pointer;
   position: relative;
   color: var(--text-main);
   display: flex;
   align-items: center;
   gap: var(--space-4px);
-  font-size: var(--text-11px);
+  font-size: calc(var(--text-11px) * 1.1);
   line-height: var(--space-16px);
+}
+
+/* Depth-based background tinting — progressively darker at each nesting level */
+#project-hierarchy-sidebar .tree-item[data-tree-depth="2"] {
+  background: rgba(0, 0, 0, 0.04);
+}
+#project-hierarchy-sidebar .tree-item[data-tree-depth="3"] {
+  background: rgba(0, 0, 0, 0.07);
+}
+#project-hierarchy-sidebar .tree-item[data-tree-depth="4"],
+#project-hierarchy-sidebar .tree-item[data-tree-depth="5"],
+#project-hierarchy-sidebar .tree-item[data-tree-depth="6"] {
+  background: rgba(0, 0, 0, 0.10);
+}
+
+/* Section-level alternating stripe on top-level items */
+#project-hierarchy-sidebar .tree-item--toplevel:nth-child(odd of .tree-item--toplevel) {
+  background: rgba(255, 255, 255, 0.015);
+}
+#project-hierarchy-sidebar .tree-item--toplevel:nth-child(even of .tree-item--toplevel) {
+  background: rgba(0, 0, 0, 0.015);
 }
 
 .tree-item:hover {
   background: rgba(255,255,255,0.05);
+}
+
+/* Section-tinted hover — lightens background with a wash of the section color */
+#project-hierarchy-sidebar .tree-item[class*="tree-section-"]:hover {
+  background: color-mix(in srgb, var(--tree-tone-l1) 15%, rgba(255,255,255,0.08));
+}
+
+/* Section-tinted selected — same approach as hover but brighter to distinguish */
+#project-hierarchy-sidebar .tree-item[class*="tree-section-"].selected {
+  background: color-mix(in srgb, var(--tree-tone-l1) 22%, rgba(255,255,255,0.1));
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .tree-item.selected {
@@ -2882,6 +2956,7 @@ cg-panel-modal .cg-panel-modal-close {
 
 /* Panel Headers - After Effects CS4 Style */
 .panel-header {
+  font-family: var(--font-titlebar);
   background: linear-gradient(to bottom, #444 0%, #383838 50%, #333 51%, #353535 100%);
   border-bottom: var(--space-1px) solid #1a1a1a;
   border-top: var(--space-1px) solid #525252;
@@ -2927,6 +3002,7 @@ cg-panel-header.panel-header > .panel-header-actions {
 }
 
 .panel-header-title > * {
+  font-size: calc(var(--text-11px) * 1.2);
   display: inline-flex;
   align-items: center;
   gap: var(--space-6px);
@@ -3111,6 +3187,10 @@ cg-panel-header.panel-header > .panel-header-actions {
     inset 0 -1px 0 color-mix(in srgb, var(--workspace-header-tint) 8%, #1a1a1a);
 }
 
+#main-workspace-container[class*="workspace-section-"] #main-workspace .panel-content {
+  background: color-mix(in srgb, var(--workspace-header-tint) 5%, var(--bg-panel));
+}
+
 .panel-content {
   background: var(--bg-panel);
   flex: 1;
@@ -3155,7 +3235,7 @@ cg-panel-header.panel-header > .panel-header-actions {
 
 /* Script Editor - Fade In Pro Style */
 .script-editor {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-body);
   font-size: var(--script-editor-font-size, 18pt);
   line-height: 1.6;
   color: var(--text-main);

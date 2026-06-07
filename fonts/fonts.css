@@ -1,0 +1,230 @@
+/*
+ * CineGen — self-hosted font faces
+ *
+ * Gidole (OFL) — DIN substitute
+ *   https://github.com/larsenwork/Gidole
+ *
+ * Inter (OFL) — Body / panel / modal text
+ *   https://github.com/rsms/inter
+ *
+ * JetBrains Mono (OFL) — Monospace
+ *   https://github.com/JetBrains/JetBrainsMono
+ *
+ * Space Grotesk (OFL) — Titlebars / headers
+ *   https://github.com/floriankarsten/space-grotesk
+ *
+ * Source Sans 3 (OFL) — Screenplay text
+ *   https://github.com/adobe-fonts/source-sans
+ *
+ * Saira (OFL) — Button text
+ *   https://fonts.google.com/specimen/Saira
+ *
+ * Fira Sans (OFL) — Project hierarchy tree
+ *   https://github.com/mozilla/Fira
+ */
+
+/* ── Gidole ── */
+
+@font-face {
+  font-family: 'Gidole';
+  src: url('gidole/Gidole-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gidole';
+  src: url('gidole/Gidolinya-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Inter ── */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-MediumItalic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-SemiBoldItalic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('inter/Inter-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ── JetBrains Mono ── */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('jetbrains-mono/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('jetbrains-mono/JetBrainsMono-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('jetbrains-mono/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('jetbrains-mono/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('jetbrains-mono/JetBrainsMono-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ── Space Grotesk (titlebars / headers) ── */
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('space-grotesk/SpaceGrotesk[wght].woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Source Sans 3 (screenplay text) ── */
+
+@font-face {
+  font-family: 'Source Sans 3';
+  src: url('source-sans-3/SourceSans3[wght].woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  src: url('source-sans-3/SourceSans3-Italic[wght].woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ── Saira (button text) ── */
+
+@font-face {
+  font-family: 'Saira';
+  src: url('saira/Saira[wght].woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Fira Sans (project hierarchy tree) ── */
+
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('fira-sans/FiraSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('fira-sans/FiraSans-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('fira-sans/FiraSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('fira-sans/FiraSans-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Sans';
+  src: url('fira-sans/FiraSans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

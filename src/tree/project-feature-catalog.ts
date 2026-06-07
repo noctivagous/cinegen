@@ -180,7 +180,7 @@ export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
         BEATBOARD_CATALOG,
       ],
     };
-    _catalog = [...withoutScenes, studioSpace, scenes];
+    _catalog = [...withoutScenes, scenes, studioSpace];
   }
   return _catalog;
 }

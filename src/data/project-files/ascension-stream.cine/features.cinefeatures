@@ -159,6 +159,7 @@
     "ai-director/model-routing-rules",
     "ai-director/agent-logs",
     "ai-director/settings",
+    "scenes",
     "studio-space",
     "studio-space/global-assets",
     "studio-space/global-assets/footage",
@@ -169,7 +170,6 @@
     "studio-space/mood-boards",
     "studio-space/scratchpad",
     "studio-space/drafts",
-    "studio-space/beatboard",
-    "scenes"
+    "studio-space/beatboard"
   ]
 }

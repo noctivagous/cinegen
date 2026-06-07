@@ -33,7 +33,7 @@ export const HIERARCHY_SECTIONS: HierarchySectionTheme[] = [
     key: 'design',
     header: '#f0c898',
     item: '#d4a870',
-    treeNames: ['Production Design'],
+    treeNames: ['Production Design', 'Special Effects Department'],
   },
   {
     key: 'casting',

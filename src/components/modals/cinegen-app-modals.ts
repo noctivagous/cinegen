@@ -14,7 +14,7 @@ import { entryWizardModalsTemplate } from '@/components/modals/templates/entry-w
 import { sectionSettingsModalTemplate } from '@/components/modals/templates/section-settings-modal.template';
 import { projectFeaturesModalTemplate } from '@/components/modals/templates/project-features-modal.template';
 import { aiProviderInfoModalTemplate } from '@/components/modals/templates/ai-provider-info-modal.template';
-import { magnificationModalTemplate } from '@/components/modals/templates/magnification-modal.template';
+import { appearanceModalTemplate } from '@/components/modals/templates/appearance-modal.template';
 
 /** Toolbar / settings modals (markup only; open/close logic in toolbar-modals-service). */
 @customElement('cinegen-app-modals')
@@ -24,7 +24,7 @@ export class CinegenAppModals extends CgLightElement {
       ${guideModalTemplate}
       ${projectsModalTemplate}
       ${settingsModalTemplate}
-      ${magnificationModalTemplate}
+      ${appearanceModalTemplate}
       ${aiAssistModalTemplate}
       ${projectSettingsModalTemplate}
       ${aiProvidersModalTemplate}
