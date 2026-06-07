@@ -35,9 +35,17 @@ const escapeHtml = escHtml;
 
 function _sectionKeyForNode(node: TreeNode | null): string | null {
   if (!node) return null;
-  if (getTreeSectionKeyForNode) {
-    return getTreeSectionKeyForNode(node);
-  }
+  // Prefer the tree-registered lookup (handles ancestry correctly)
+  const treeKey = getTreeSectionKeyForNode(node);
+  if (treeKey) return treeKey;
+  // Fallback: map node type/view to HIERARCHY_SECTIONS key
+  if (node.type === 'moodboard' || node.view === 'moodboards') return 'studio';
+  if (node.type === 'moodboard-item') return 'studio';
+  if (node.type === 'storyboard-frame' || node.view === 'storyboard') return 'preprod';
+  if (node.type === 'scene-shot' || node.type === 'scene') return 'scenes';
+  if (node.type === 'script') return 'preprod';
+  if (node.view === 'treatment') return 'preprod';
+  if (node.view === 'overview') return null;
   return null;
 }
 

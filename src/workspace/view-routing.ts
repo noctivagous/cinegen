@@ -38,6 +38,11 @@ export function applyWorkspaceViewDom(
   if (viewName === 'preprod-workspace') {
     renderStoryboard();
   }
+
+  // Sync browser URL with current view
+  import('@/routing/project-routing').then(({ syncUrlFromView }) =>
+    syncUrlFromView(viewName, label || viewName, sectionKey)
+  );
 }
 
 /** Wait for the view's custom element module and first Lit render. */

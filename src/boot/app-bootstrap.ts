@@ -166,6 +166,9 @@ async function bootstrap(): Promise<void> {
     }
   }
 
+  const { initRouting } = await import('../routing/project-routing');
+  initRouting();
+
   initApp();
   markBootReady('app');
 
