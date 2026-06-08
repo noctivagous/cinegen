@@ -51,6 +51,13 @@
       }
     ]
   },
+  "production-references-bin": {
+    "layout": "grid",
+    "icon": "fa-image",
+    "desc": "Downloaded reference images from public archives",
+    "addLabel": "Add Reference",
+    "items": []
+  },
   "graphics-bin": {
     "layout": "grid",
     "icon": "fa-image",

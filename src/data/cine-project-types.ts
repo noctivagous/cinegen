@@ -85,6 +85,8 @@ export type CineProjectManifest = {
     scratchpad?: string;
     /** Drafts — append-only generative experiment entries */
     drafts?: string;
+    /** Production references — downloaded reference images */
+    productionReferences?: string;
   };
   settings?: Record<string, unknown>;
   tree?: Record<string, unknown>;
@@ -129,6 +131,7 @@ export type CineProjectFile = Omit<CineProjectManifest, 'documents'> & {
   annotations?: Record<string, unknown>;
   scratchPad?: Record<string, unknown>;
   drafts?: Record<string, unknown>;
+  productionReferences?: Record<string, unknown>;
   /** Sidebar feature visibility + order (`features.cinefeatures`). */
   projectFeatures?: import('@/services/project-features-service').ProjectFeaturesConfig;
 };

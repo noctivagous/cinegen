@@ -10,7 +10,7 @@ export const SETTINGS_PATH = path.join(__dirname, '..', 'settings.json');
 export const APP_STATE_PATH = path.join(__dirname, '..', 'app-state.json');
 export const PROJECTS_DIR = path.join(__dirname, '..', 'projects');
 
-export const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|cinescratchpad|cinedrafts|json)$/;
+export const CINE_DOC_RE = /^[a-zA-Z0-9._-]+\.(cinescript|cinetreatment|cinestoryboard|cinescenes|cinebreakdown|cinecharacters|cinelocations|cinereferenceimages|cinestyle|cinefeatures|cineshotlibrary|cinecamerapresets|cinespatialannotations|cinegenerationqueue|cinereviewqueue|cinecosttracking|cineagentlog|cinescratchpad|cinedrafts|cineproductionreferences|json)$/;
 
 export const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || 'null,http://localhost,http://127.0.0.1,file://').split(',').map((s) => s.trim());
 

@@ -328,6 +328,8 @@ export let timelineClips: any[] = [];
 export let locationLibrary: any[] = [];
 export let locationGuides: LocationGuide[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export let productionReferences: any[] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let assetLibrary: any = {
   characters: [],
   locations: [],
@@ -585,6 +587,9 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
   locationGuides = Array.isArray(applied.locationGuides)
     ? applied.locationGuides as LocationGuide[]
     : [];
+  productionReferences = Array.isArray(applied.productionReferences)
+    ? applied.productionReferences
+    : [];
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
   generationQueue = Array.isArray(applied.generationQueue)
@@ -783,6 +788,9 @@ export function installProjectDataGlobals(): void {
   });
   bindWindowData('locationGuides', () => locationGuides, (v) => {
     locationGuides = v as typeof locationGuides;
+  });
+  bindWindowData('productionReferences', () => productionReferences, (v) => {
+    productionReferences = v as typeof productionReferences;
   });
   bindWindowData('assetLibrary', () => assetLibrary, (v) => {
     assetLibrary = v as typeof assetLibrary;

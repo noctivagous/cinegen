@@ -696,6 +696,14 @@
               "desc": "Characters, locations, props, wardrobe, sets, and effects"
             },
             {
+              "name": "Production References",
+              "type": "bin",
+              "icon": "fa-image",
+              "view": "asset-detail",
+              "detailKey": "production-references-bin",
+              "desc": "Downloaded references from Internet Archive, Library of Congress, and Wikimedia Commons"
+            },
+            {
               "name": "Scrap Bin",
               "type": "scrap",
               "icon": "fa-trash-can",
@@ -703,6 +711,13 @@
               "desc": "Deleted storyboard frames and discarded takes"
             }
           ]
+        },
+        {
+          "name": "References Finder",
+          "type": "references-finder",
+          "icon": "fa-image",
+          "view": "references-finder",
+          "desc": "Search and download public domain reference images"
         },
         {
           "name": "Mood Boards",

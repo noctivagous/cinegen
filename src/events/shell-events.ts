@@ -27,6 +27,15 @@ export const CG_DRAFTS_CHANGED = 'cg-drafts-changed';
 /** Project: name or scene data changed (status bar refresh). */
 export const CG_PROJECT_NAME_CHANGED = 'cinegen:project-name-changed';
 
+/** Production references: context menu requested (right-click on a reference item). */
+export const CG_REF_CONTEXTMENU = 'cg-ref-contextmenu';
+
+/** Production references: action dispatched from context menu. */
+export const CG_PRODUCTION_REF_ACTION = 'cg-production-ref-action';
+
+/** Production references: list changed (added or removed). */
+export const CG_PRODUCTION_REFERENCES_CHANGED = 'cg-production-references-changed';
+
 export interface CgTreeNodeSelectDetail {
   name: string;
   type: string;

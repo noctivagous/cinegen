@@ -179,6 +179,9 @@ export function parseCineManifest(
   if (file.documents.scratchpad) assertDocExtension(file.documents.scratchpad, '.cinescratchpad', sourceLabel);
   if (file.documents.drafts) assertDocExtension(file.documents.drafts, '.cinedrafts', sourceLabel);
   if (file.documents.features) assertDocExtension(file.documents.features, '.cinefeatures', sourceLabel);
+  if (file.documents.productionReferences) {
+    assertDocExtension(file.documents.productionReferences, '.cineproductionreferences', sourceLabel);
+  }
   return file;
 }
 
@@ -689,6 +692,7 @@ export type AppliedCineProject = {
   projectAnnotations?: import('@/data/project-data').CineAnnotationsDoc;
   scratchPad?: Record<string, unknown>;
   drafts?: Record<string, unknown>;
+  productionReferences?: unknown[];
 };
 
 function screenplayFrom(doc: CineProjectFile): CineProjectScreenplay {
@@ -788,6 +792,11 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
     scratchPad: doc.scratchPad ?? { format: 'cine-scratchpad', version: 1, entries: [] },
     drafts: doc.drafts ?? { format: 'cine-drafts', version: 1, entries: [] },
     projectFeatures: doc.projectFeatures,
+    productionReferences: doc.productionReferences
+      ? (Array.isArray((doc.productionReferences as Record<string, unknown>).references)
+        ? (doc.productionReferences as Record<string, unknown>).references as unknown[]
+        : [])
+      : [],
   };
 }
 

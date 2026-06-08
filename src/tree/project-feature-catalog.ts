@@ -177,6 +177,14 @@ export function getProjectFeatureCatalog(): FeatureCatalogNode[] {
           view: 'drafts',
           desc: 'Generative sketchbook — experiment freely, promote to shots, boards, or references',
         },
+        {
+          id: 'studio-space/references-finder',
+          name: 'References Finder',
+          type: 'references-finder' as const,
+          icon: 'fa-image',
+          view: 'references-finder' as const,
+          desc: 'Search and download public domain reference images',
+        },
         BEATBOARD_CATALOG,
       ],
     };

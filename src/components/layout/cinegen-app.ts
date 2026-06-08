@@ -21,6 +21,8 @@ import {
   type CgWorkspaceSceneTabDetail,
   type CgWorkspaceViewChangeDetail,
 } from '@/events/shell-events';
+import type { ContextMenuItem } from '@/services/context-menu-types';
+import { CG_REF_CONTEXTMENU, CG_PRODUCTION_REF_ACTION } from '@/events/shell-events';
 import {
   appShellStore,
   initAppShellStore,
@@ -45,6 +47,7 @@ export class CinegenApp extends CgLightElement {
     this.addEventListener(CG_TREE_NODE_SELECT, this._onTreeNodeSelect);
     this.addEventListener(CG_WORKSPACE_VIEW_CHANGE, this._onWorkspaceViewChange);
     this.addEventListener(CG_WORKSPACE_SCENE_TAB, this._onWorkspaceSceneTab);
+    this.addEventListener(CG_REF_CONTEXTMENU, this._onRefContextMenu);
   }
 
   disconnectedCallback(): void {
@@ -52,6 +55,7 @@ export class CinegenApp extends CgLightElement {
     this.removeEventListener(CG_TREE_NODE_SELECT, this._onTreeNodeSelect);
     this.removeEventListener(CG_WORKSPACE_VIEW_CHANGE, this._onWorkspaceViewChange);
     this.removeEventListener(CG_WORKSPACE_SCENE_TAB, this._onWorkspaceSceneTab);
+    this.removeEventListener(CG_REF_CONTEXTMENU, this._onRefContextMenu);
   }
 
   private _onTreeNodeSelect = (e: Event): void => {
@@ -73,6 +77,37 @@ export class CinegenApp extends CgLightElement {
     const { tabIndex, sceneId } = (e as CustomEvent<CgWorkspaceSceneTabDetail>).detail;
     if (typeof tabIndex !== 'number' || Number.isNaN(tabIndex)) return;
     void sceneId;
+  };
+
+  private _onRefContextMenu = (e: Event): void => {
+    const { ref, x, y } = (e as CustomEvent).detail as { ref: Record<string, unknown>; x: number; y: number };
+    if (!ref) return;
+    const menu = this.renderRoot?.querySelector?.('#production-ref-context-menu') as
+      | (HTMLElement & { open: (opts: Record<string, unknown>) => void })
+      | null;
+    if (!menu || typeof menu.open !== 'function') return;
+
+    const items: ContextMenuItem[] = [
+      { id: 'assign-moodboard', label: 'Assign to Mood Board', icon: 'fa-images' },
+      { id: 'assign-beatboard', label: 'Assign to Beat Board', icon: 'fa-clapperboard' },
+      { id: 'assign-character', label: 'Assign to Character Reference', icon: 'fa-user' },
+      { id: 'assign-location', label: 'Assign to Location', icon: 'fa-location-dot' },
+      { id: 'remove', label: 'Remove', icon: 'fa-trash-can' },
+    ];
+
+    menu.open({
+      x,
+      y,
+      typeModifier: 'production-ref',
+      header: { label: String(ref.title || 'Reference'), caption: 'Production Reference' },
+      items,
+      onSelect: (actionId: string) => {
+        window.dispatchEvent(new CustomEvent(CG_PRODUCTION_REF_ACTION, {
+          bubbles: true,
+          detail: { action: actionId, refId: String(ref.id || '') },
+        }));
+      },
+    });
   };
 
   firstUpdated(): void {
@@ -119,6 +154,7 @@ export class CinegenApp extends CgLightElement {
       <cg-context-menu id="chip-context-menu"></cg-context-menu>
       <cg-context-menu id="storyboard-context-menu" class="storyboard-context-menu"></cg-context-menu>
       <cg-context-menu id="script-context-menu"></cg-context-menu>
+      <cg-context-menu id="production-ref-context-menu"></cg-context-menu>
       <cinegen-overview-preview></cinegen-overview-preview>
     `;
   }

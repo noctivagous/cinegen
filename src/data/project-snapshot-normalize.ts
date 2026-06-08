@@ -161,5 +161,6 @@ export function normalizeAppliedCineProject(applied: AppliedCineProject): Applie
     reviewQueue: asArray(applied.reviewQueue) as Record<string, unknown>[],
     agentLog: asArray(applied.agentLog) as Record<string, unknown>[],
     scratchPad: normalizeScratchPad(applied.scratchPad),
+    productionReferences: asArray(applied.productionReferences),
   };
 }

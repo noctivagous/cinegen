@@ -7,6 +7,7 @@ import {
   CINE_DOC_RE,
   json,
   corsHeaders,
+  readBody,
 } from './proxy-utils.js';
 
 export function writeDocumentsAtomic(dirPath, docs, manifest) {
@@ -67,6 +68,107 @@ export function writeDocumentsAtomic(dirPath, docs, manifest) {
   }
 
   return written;
+}
+
+const DATA_URL_RE = /^data:(image\/\w+);base64,(.+)$/;
+
+function generateAssetFilename(mimeType) {
+  const extMap = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+    'image/avif': '.avif',
+    'image/gif': '.gif',
+    'image/svg+xml': '.svg',
+  };
+  const ext = extMap[mimeType] || '.bin';
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return `references/${id}${ext}`;
+}
+
+export async function handleAssetUpload(req, res, projectId) {
+  try {
+    const body = await readBody(req);
+    const dataUrl = String(body.dataUrl || '');
+    if (!dataUrl) {
+      json(res, 400, { error: 'Missing dataUrl in body' });
+      return;
+    }
+
+    const m = dataUrl.match(DATA_URL_RE);
+    if (!m) {
+      json(res, 400, { error: 'Invalid dataUrl format' });
+      return;
+    }
+
+    const mimeType = m[1];
+    const base64 = m[2];
+    const buffer = Buffer.from(base64, 'base64');
+    if (buffer.length === 0) {
+      json(res, 400, { error: 'Empty image data' });
+      return;
+    }
+
+    const relativePath = generateAssetFilename(mimeType);
+    const dirPath = path.join(PROJECTS_DIR, `${projectId}.cine`);
+    const fullPath = path.join(dirPath, relativePath);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, buffer);
+
+    json(res, 200, { path: relativePath, mimeType, size: buffer.length });
+  } catch (e) {
+    json(res, 500, { error: 'Failed to upload asset', detail: e.message });
+  }
+}
+
+const MIME_TYPES = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.mp4': 'video/mp4',
+};
+
+export function handleAssetServe(req, res, projectId, assetPath) {
+  try {
+    const dirPath = path.join(PROJECTS_DIR, `${projectId}.cine`);
+    const requested = path.resolve(dirPath, assetPath);
+
+    if (!requested.startsWith(dirPath)) {
+      json(res, 403, { error: 'Path traversal denied' });
+      return;
+    }
+
+    if (!fs.existsSync(requested)) {
+      json(res, 404, { error: 'Asset not found', path: assetPath });
+      return;
+    }
+
+    const ext = path.extname(requested).toLowerCase();
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    const stat = fs.statSync(requested);
+
+    res.writeHead(200, {
+      ...corsHeaders('*'),
+      'Content-Type': contentType,
+      'Content-Length': stat.size,
+      'Cache-Control': 'private, max-age=86400',
+    });
+
+    const stream = fs.createReadStream(requested);
+    stream.pipe(res);
+    stream.on('error', () => {
+      if (!res.headersSent) json(res, 500, { error: 'Stream error' });
+    });
+  } catch (e) {
+    if (!res.headersSent) json(res, 500, { error: 'Failed to serve asset', detail: e.message });
+  }
 }
 
 function ensureProjectsDir() {
@@ -256,6 +358,7 @@ export function handleProjectsApi(req, res) {
       const refImagesDoc = readDoc(docs.referenceImages) || {};
       const styleDoc = readDoc(docs.style) || {};
       const featuresDoc = readDoc(docs.features) || null;
+      const productionReferencesDoc = readDoc(docs.productionReferences) || null;
 
       applied = {
         projectScreenplay: { format: 'fountain', text: screenplayDoc.text || '' },
@@ -288,6 +391,9 @@ export function handleProjectsApi(req, res) {
           activeMoodBoardId: refImagesDoc.activeMoodBoardId ?? null,
         },
         projectFeatures: featuresDoc && featuresDoc.version === 1 ? featuresDoc : undefined,
+        productionReferences: productionReferencesDoc
+          ? (Array.isArray(productionReferencesDoc.references) ? productionReferencesDoc.references : [])
+          : [],
       };
     } catch (e) {
       json(res, 500, { error: 'Failed to load project documents', detail: e.message });
@@ -539,6 +645,18 @@ export function handleProjectsApi(req, res) {
         json(res, 500, { error: 'Failed to import project', detail: e.message });
       }
     });
+    return;
+  }
+
+  const assetUploadMatch = url.match(/^\/api\/projects\/([^/]+)\/asset$/);
+  if (assetUploadMatch && method === 'POST') {
+    handleAssetUpload(req, res, assetUploadMatch[1]);
+    return;
+  }
+
+  const assetServeMatch = url.match(/^\/api\/projects\/([^/]+)\/asset\/(.+)$/);
+  if (assetServeMatch && method === 'GET') {
+    handleAssetServe(req, res, assetServeMatch[1], assetServeMatch[2]);
     return;
   }
 

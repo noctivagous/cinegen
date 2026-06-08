@@ -2,23 +2,33 @@ USER WORKFLOWS
 
 SCRIPT-FIRST USER WORKFLOW
 
+Script → Breakdown → Assets → Storyboard → Pre-Vis → Production
+
+
+
 The user wants to start with a script and in some
 combination have the AI assist, but there are many
-combinations and sequences possible.
+combinations and workflow sequences possible after
+the user pastes the script, so what the app will
+provide is a framework for user activity to happen
+in.
 
-The app will automatically take care of parsing
-the screenplay into scenes and characters into
-chips based on scene headings and character names,
-which it does right now. The app will be
-asset-forward which means that as soon as it sees
-it in the script it will add it as an entry in
-locations, characters, scenes, etc.
+	The app will automatically take care of parsing
+	the screenplay into scenes and characters into
+	chips in the script editor 
+	based on scene headings and character names,
+	which it does right now. The app will be
+	project-entity-forward which means that as soon as it sees
+	it in the script it will add it as an entry in
+	locations, characters, scenes, etc.
+
+	project entities: characters,locations,wardrobe items,
+	etc.
 
 If the user pastes parts of a script with new
-scenes, it can interact with the user to say,
+scenes, the app will notify the user to say
 "there is a new character and location".
-
-(requires addition of alertCGFlash() which is a
+(Note: requires addition of alertCGFlash() which is a
 flash alert box).
 
 What should the app take care of automatically and
@@ -28,22 +38,38 @@ The film production is in different states in the
 app different areas: - The screenplay is pasted,
 but where will the user want to go from there?
 
-1. User pastes script into script editor --> user
-has no shots and storyboard frames defined and set
-up --> user has shots and storyboard frames set up
+1. User pastes script into script editor
 
+A --> script editor was empty.
+user has no shots and storyboard frames defined and set up 
+
+B--> user has shots and storyboard frames set up
+from existing script (or script that was pasted over)
+
+Next step for app:
 	- App autoupdates scenes count, reconciles
 	differences from current scene count and asks
 	users how to resolve ambiguous changes from
 	state of script before paste operation.
+	It notifies the user with an update to the status
+	bar.
 
-
-		- Script editor has undo manager so that
+		(Note: - Script editor needs undo manager so that
 		if the user wants to go back, Command+z is
-		all that is needed -
+		all that is needed)
 
 2. User wants to make breakdown sheet/shot list
-for scenes. - Automatic: AI goes through script,
+for scenes. Has various options.
+
+	Issue:  Setting up the project entities
+	in the project file is different than having
+	the actual assets.  Generating and procuring
+	the actual assets.
+	
+	References Finder in the 
+
+
+- Automatic: AI goes through script,
 annotates with Char,Prop,Ward,SFX,Location,VFX. -
 Manual: User goes through script and annotates.
 

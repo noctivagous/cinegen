@@ -496,6 +496,7 @@ declare global {
     'cinegen-overview-view': import('@/components/panels/cinegen-overview-view').CinegenOverviewView;
     'cinegen-project-overview-view': import('@/components/panels/cinegen-project-overview-view').CinegenProjectOverviewView;
     'cinegen-asset-detail-view': import('@/components/panels/cinegen-asset-detail-view').CinegenAssetDetailView;
+    'cinegen-references-finder': import('@/components/panels/cinegen-references-finder').CinegenReferencesFinder;
     'cinegen-workspace-empty': import('@/components/panels/cinegen-workspace-empty').CinegenWorkspaceEmpty;
     // 'cinegen-console': import('@/console/console-element').CinegenConsole;
   }

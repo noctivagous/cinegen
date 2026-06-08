@@ -20,6 +20,21 @@ the app is to provide conditions for completely custom
 and altogether different movies that follow traditional
 filmmaking processes.
 
+
+
+REFERENCES FINDER
+
+	To be located as subsection in "Studio Space" and covers
+	finding image assets for everything: locations,
+	wardrobe, hairstyle, etc.
+	
+	In our first phase we will just have built-in tools
+	and build out api key related ones later.
+
+1. These are all called production-reference internally. 
+It has to download it to the .cine package and it will exist as general "Global Assets", tagged as downloaded-production-reference, until the user decides to right-click it (in "Global Assets") and assign it somewhere like mood board or beat board or a specific character's reference area.  The AI should tag files if it has image processing capabilities.  It should derive the color palette from the image as well and store that along with the production-reference entry.  2. classic search grid and masonry.  3. dedicated area. 
+
+
 Built-In access to IA/LoC/Wikimedia
 
 **For the Built-In assets search there will be

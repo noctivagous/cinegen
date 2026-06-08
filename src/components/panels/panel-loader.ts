@@ -24,6 +24,7 @@ const VIEW_CHUNK: Record<string, string> = {
   drafts: 'drafts',
   'beat-board': 'beatboard',
   'shot-designer': 'shot-designer',
+  'references-finder': 'references',
 };
 
 /** Custom element tag for each workspace view host (index.html light DOM). */
@@ -47,6 +48,7 @@ export const VIEW_HOST_TAG: Record<string, string> = {
   drafts: 'cinegen-drafts-panel',
   'beat-board': 'cinegen-beatboard-placeholder',
   'shot-designer': 'cinegen-shot-designer',
+  'references-finder': 'cinegen-references-finder',
   default: 'cinegen-workspace-empty',
 };
 
@@ -60,6 +62,7 @@ const chunkLoaders: Record<string, () => Promise<unknown>> = {
   drafts: () => import('@/components/panels/chunk-drafts'),
   beatboard: () => import('@/components/panels/chunk-beatboard-placeholder'),
   'shot-designer': () => import('@/components/panels/chunk-shot-designer'),
+  references: () => import('@/components/panels/chunk-references'),
 };
 
 const loadedChunks = new Set<string>(['preprod']);

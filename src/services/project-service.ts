@@ -47,6 +47,7 @@ import {
   timelineClips,
   generationQueue,
   locationGuides,
+  productionReferences,
 } from '@/data/project-data';
 import {
   LOCAL_PROJECTS_STORAGE_KEY,
@@ -120,6 +121,7 @@ function createBlankSnapshot(projectName: string): AppliedCineProject {
     timelineClips: [],
     locationLibrary: [],
     locationGuides: [],
+    productionReferences: [],
     assetLibrary: {
       characters: [],
       locations: [],
@@ -503,6 +505,7 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
     timelineClips: structuredClone(timelineClips),
     locationLibrary: structuredClone(locationLibrary),
     locationGuides: structuredClone(locationGuides),
+    productionReferences: structuredClone(productionReferences),
     assetLibrary: structuredClone(assetLibrary) as Record<string, unknown>,
     breakdownData: structuredClone(breakdownData),
     assetDetailData: structuredClone(assetDetailData) as Record<string, unknown>,

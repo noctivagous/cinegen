@@ -3,6 +3,7 @@ export const PREPROD_MODES = new Set(['script', 'storyboard', 'both']);
 export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] }> = {
   default: {},
   overview: {},
+  'references-finder': {},
   'project-overview': {},
   'preprod-workspace': {},
   breakdown: {},
@@ -50,4 +51,5 @@ export const LEGACY_NODE_VIEW_CONTRACT = [
   { nodeType: 'moodboard-item', view: 'moodboards', required: { boardId: '(board id)', itemId: '(item id)' } },
   { nodeType: 'shot-designer', view: 'shot-designer' },
   { nodeType: 'sfx', view: 'shot-designer' },
+  { nodeType: 'references-finder', view: 'references-finder' },
 ];
