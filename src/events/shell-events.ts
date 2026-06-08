@@ -36,6 +36,15 @@ export const CG_PRODUCTION_REF_ACTION = 'cg-production-ref-action';
 /** Production references: list changed (added or removed). */
 export const CG_PRODUCTION_REFERENCES_CHANGED = 'cg-production-references-changed';
 
+/** Assets: upload files requested. */
+export const CG_ASSETS_UPLOAD = 'cg-assets-upload';
+
+/** Assets: AI fetch assets requested. */
+export const CG_ASSETS_FETCH = 'cg-assets-fetch';
+
+/** Assets: AI generate asset requested. */
+export const CG_ASSETS_GENERATE = 'cg-assets-generate';
+
 export interface CgTreeNodeSelectDetail {
   name: string;
   type: string;

@@ -18,8 +18,10 @@
 
 | Service | API Key Required | Free Tier | Content Type | Notes |
 |---------|:-:|:-:|:-:|-------|
-| **Unsplash** | Yes (free) | 50 req/hr | Photos | Rich library, `GET /search/photos`, `GET /photos/:id`. Best general-purpose free image API. |
-| **Pexels** | Yes (free) | 200 req/hr, 20K req/mo | Photos + Video | Easiest all-purpose free API. Also returns video clips. |
+| **Unsplash** | Yes (free) | 50 req/hr | Photos | Rich library, `GET /search/photos`, `GET /photos/:id`. 
+Best general-purpose free image API. |
+| **Pexels** | Yes (free) | 200 req/hr, 20K req/mo | Photos + Video | Easiest all-purpose free API. 
+Also returns video clips. |
 | **Pixabay** | Yes (free) | ~5K req/hr | Photos + Video + Vectors | Allows downloading + caching + serving from own infra. Most permissive licensing. |
 | **Wikimedia Commons** | No | Unlimited | CC-licensed media | Truly API-key-free. REST API at `https://commons.wikimedia.org/w/api.php`. Images have various CC licenses. |
 

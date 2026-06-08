@@ -51,7 +51,8 @@ function characterMatchAliases(name: string): string[] {
   return uniqueByName(aliases);
 }
 
-function splitEntityValue(value: string): string[] {
+function splitEntityValue(value: string | undefined | null): string[] {
+  if (!value) return [];
   return value.split(',').map(normalizeEntityName).filter(Boolean);
 }
 

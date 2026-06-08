@@ -22,6 +22,10 @@ export const TREE_VIEW_REQUIREMENTS: Record<string, { requiredFields?: string[] 
   'review-queue': {},
   'beat-board': {},
   'shot-designer': {},
+  'sound-design': {},
+  'color-grade': {},
+  'wardrobe-design': {},
+  'props-design': {},
 };
 
 export const SUPPORTED_TREE_VIEWS = new Set(Object.keys(TREE_VIEW_REQUIREMENTS));
@@ -52,4 +56,8 @@ export const LEGACY_NODE_VIEW_CONTRACT = [
   { nodeType: 'shot-designer', view: 'shot-designer' },
   { nodeType: 'sfx', view: 'shot-designer' },
   { nodeType: 'references-finder', view: 'references-finder' },
+  { nodeType: 'sound-design', view: 'sound-design' },
+  { nodeType: 'color-grade', view: 'color-grade' },
+  { nodeType: 'wardrobe-design', view: 'wardrobe-design' },
+  { nodeType: 'props-design', view: 'props-design' },
 ];

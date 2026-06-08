@@ -1,3 +1,18 @@
+/**
+ * @AI-GUI — TARGET FOR REPLACEMENT
+ *
+ * Conventions for AI GUI replacement:
+ * - Lit 3 + TS decorators (experimentalDecorators: true, useDefineForClassFields: false)
+ * - Extend CgLightElement (Light DOM only — NO shadowRoot)
+ * - Global CSS classes only (cg-panel-header, cg-btn, flex, grid, gap-*, etc.)
+ * - CSS vars: --accent-blue, --text-dim, --bg-panel, --border-light
+ * - Font Awesome 6 via <i class="fa-solid fa-*"></i>
+ * - @/ path alias maps to src/
+ * - Event constants from events/shell-events.ts — NO raw custom-event strings
+ * - Keep @customElement('cinegen-moodboards-panel') tag unchanged
+ * - Replace ENTIRE file content; export the class
+ */
+
 import { html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';

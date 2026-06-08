@@ -1,3 +1,38 @@
+/**
+ * @AI-GUI — TARGET FOR REPLACEMENT
+ *
+ * Conventions for AI GUI replacement:
+ *
+ * Framework:
+ * - Lit 3 + TS decorators (experimentalDecorators: true, useDefineForClassFields: false)
+ * - Use @property() / @state() decorators — NOT class field initializers
+ * - Extend CgLightElement (Light DOM only — DO NOT create a shadowRoot)
+ *
+ * Styling:
+ * - Global CSS classes only (CineGenBaseGUI*.css) — no scoped/shadow styles
+ * - Use: cg-panel-header, cg-btn, cg-input, cg-grid, cg-card, cg-badge, toolbar-btn, flex, grid, gap-*, p-*, text-*, rounded, etc.
+ * - cg-panel-header provides title bar with slot="title"
+ * - See styleguide/CineGenBaseGUI-Controls-Styleguide.html
+ * - CSS vars: --accent-blue, --text-dim, --bg-panel, --border-light, --widget-border
+ * - Font Awesome 6 via <i class="fa-solid fa-*"></i>
+ *
+ * Imports:
+ * - @/ path alias maps to src/
+ * - Event constants from events/shell-events.ts — NO raw custom-event strings
+ * - Types from data/project-data.ts or relevant type files
+ *
+ * Architecture:
+ * - This panel is registered in panel-loader.ts, index.html, globals.d.ts,
+ *   tree-view-contract.ts, project-tree.cinetree, project-feature-catalog.ts
+ * - Keep @customElement('...') tag unchanged; chunk file is separate
+ * - No new window.* globals; export the class
+ *
+ * Integration:
+ * - Replace ENTIRE file content with new GUI implementation
+ * - Keep same @customElement decorator tag
+ * - Panel receives state via Lit properties/context
+ */
+
 import { html, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';

@@ -47,6 +47,7 @@ export class CinegenInspector extends CgLightElement {
   showSelection(type: InspectorType, data?: unknown): void {
     this._type = type;
     this._data = data ?? null;
+    this.requestUpdate();
   }
 
   private _chipsSection(
@@ -274,39 +275,95 @@ export class CinegenInspector extends CgLightElement {
     `;
   }
 
+  private _assetIcon(type: string): string {
+    if (type === 'Character') return 'fa-user';
+    if (type === 'Location') return 'fa-map';
+    if (type === 'Prop') return 'fa-box';
+    if (type === 'Vehicle') return 'fa-truck';
+    if (type === 'VFX') return 'fa-bolt';
+    if (type === 'Audio') return 'fa-music';
+    return 'fa-image';
+  }
+
   private _renderAsset(data: Record<string, unknown>) {
     const name = String(data.name || '');
-    const charEntry = Array.isArray(assetLibrary.characters)
-      ? (assetLibrary.characters as Record<string, unknown>[]).find(
-        (c) => String(c.name || '').toLowerCase() === name.toLowerCase()
-      )
-      : null;
-    const refs = charEntry?.references as Record<string, unknown> | undefined;
-    const hasRefs = refs && typeof refs === 'object';
+    const type = String(data.type || '');
+    const color = String(data.color || '#3b82f6');
+    const scenes = Array.isArray(data.scenes) ? data.scenes as string[] : [];
+    const tags = Array.isArray(data.tags) ? data.tags as string[] : [];
+    const related = Array.isArray(data.related) ? data.related as number[] : [];
+    const versions = Array.isArray(data.versions) ? data.versions as string[] : [];
+    const desc = String(data.desc || '');
 
     return html`
-      <div
-        style=${this._charDropActive ? 'outline:2px dashed var(--accent,#4fc3f7);outline-offset:2px;border-radius:4px;' : ''}
-        @dragover=${this._onCharDragOver}
-        @dragleave=${this._onCharDragLeave}
-        @drop=${(e: DragEvent) => void this._onCharDrop(e)}
-      >
-        <div class="text-center text-lg">${name}</div>
-        <p class="text-xs mt-2">Available in 12 scenes</p>
-        ${this._unsafeChips(this._extractChips([data.name, data.desc]), {
-        title: 'Chips in asset',
-      })}
-        ${hasRefs ? this._renderCharacterRefSlots(name, refs!) : ''}
-        <div class="mt-3 flex gap-2">
-          <button
-            type="button"
-            class="text-[10px] text-[var(--text-dim)] hover:text-emerald-400"
-            @click=${() => this._promoteAssetToShotRef(name, refs)}
-            ?disabled=${!hasRefs}
-            title=${hasRefs ? 'Assign this character as a shot reference' : 'No reference images to promote'}
-          >
-            <i class="fa-solid fa-crosshairs"></i> Use as Shot Reference
-          </button>
+      <div>
+        <div style="width:100%;aspect-ratio:16/9;border-radius:8px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, ${color}20, ${color}40);">
+          <i class="fa-solid ${this._assetIcon(type)}" style="font-size:48px;opacity:0.4"></i>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Name</div>
+          <div style="background:var(--bg-inset,#262626);border:1px solid var(--widget-border,#4b5563);border-radius:6px;padding:8px 12px;color:var(--text-main);font-size:13px;">${name}</div>
+        </div>
+        ${desc ? html`
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Description</div>
+            <div style="background:var(--bg-inset,#262626);border:1px solid var(--widget-border,#4b5563);border-radius:6px;padding:8px 12px;color:var(--text-main);font-size:13px;min-height:80px;">${desc}</div>
+          </div>
+        ` : ''}
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Type</div>
+          <div style="background:var(--bg-inset,#262626);border:1px solid var(--widget-border,#4b5563);border-radius:6px;padding:8px 12px;color:var(--text-main);font-size:13px;"><span class="badge badge-type" style="background:rgba(59,130,246,0.2);color:var(--accent-blue,#3b82f6);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">${type}</span></div>
+        </div>
+        ${tags.length ? html`
+          <div style="margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Tags</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${tags.map(tag => html`<span class="tag-pill" style="background:var(--bg-inset,#262626);border:1px solid var(--widget-border,#4b5563);padding:4px 10px;border-radius:12px;font-size:11px;">${tag}</span>`)}
+            </div>
+          </div>
+        ` : ''}
+        <div style="height:1px;background:var(--border-light,#374151);margin:20px 0;"></div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Scene Assignments (${scenes.length})</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${scenes.map(scene => html`
+              <div style="background:var(--bg-inset,#262626);border:1px solid var(--border-light,#374151);border-radius:6px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+                <span>${scene}</span>
+              </div>
+            `)}
+            ${scenes.length === 0 ? html`<p style="color:var(--text-dim,#9ca3af);font-size:12px;">Not used in any scene</p>` : ''}
+          </div>
+        </div>
+        <div style="height:1px;background:var(--border-light,#374151);margin:20px 0;"></div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Related Assets (${related.length})</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${related.map(rid => {
+              const assets = (assetLibrary as any)?.assets || [];
+              const rel = assets.find((a: any) => a.id === rid);
+              return rel ? html`
+                <div style="background:var(--bg-inset,#262626);border:1px solid var(--border-light,#374151);border-radius:6px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer;">
+                  <div style="display:flex;align-items:center;flex:1;">
+                    <div style="background:${rel.color}30;width:32px;height:32px;margin-right:10px;flex-shrink:0;border-radius:4px;"></div>
+                    <span>${rel.name}</span>
+                  </div>
+                  <span class="badge badge-type" style="background:rgba(59,130,246,0.2);color:var(--accent-blue,#3b82f6);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">${rel.type}</span>
+                </div>
+              ` : '';
+            })}
+            ${related.length === 0 ? html`<p style="color:var(--text-dim,#9ca3af);font-size:12px;">No related assets</p>` : ''}
+          </div>
+        </div>
+        <div style="height:1px;background:var(--border-light,#374151);margin:20px 0;"></div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:6px;">Version History</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${versions.map(v => html`
+              <div style="background:var(--bg-inset,#262626);border:1px solid var(--border-light,#374151);border-radius:6px;padding:10px 12px;font-size:13px;">
+                <span>${v}</span>
+              </div>
+            `)}
+          </div>
         </div>
       </div>
     `;

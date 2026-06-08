@@ -25,6 +25,10 @@ const VIEW_CHUNK: Record<string, string> = {
   'beat-board': 'beatboard',
   'shot-designer': 'shot-designer',
   'references-finder': 'references',
+  'sound-design': 'sound',
+  'color-grade': 'color-grade',
+  'wardrobe-design': 'wardrobe',
+  'props-design': 'props',
 };
 
 /** Custom element tag for each workspace view host (index.html light DOM). */
@@ -49,6 +53,10 @@ export const VIEW_HOST_TAG: Record<string, string> = {
   'beat-board': 'cinegen-beatboard-placeholder',
   'shot-designer': 'cinegen-shot-designer',
   'references-finder': 'cinegen-references-finder',
+  'sound-design': 'cinegen-sound-view',
+  'color-grade': 'cinegen-color-grade-view',
+  'wardrobe-design': 'cinegen-wardrobe-view',
+  'props-design': 'cinegen-props-view',
   default: 'cinegen-workspace-empty',
 };
 
@@ -63,6 +71,10 @@ const chunkLoaders: Record<string, () => Promise<unknown>> = {
   beatboard: () => import('@/components/panels/chunk-beatboard-placeholder'),
   'shot-designer': () => import('@/components/panels/chunk-shot-designer'),
   references: () => import('@/components/panels/chunk-references'),
+  sound: () => import('@/components/panels/chunk-sound'),
+  'color-grade': () => import('@/components/panels/chunk-color-grade'),
+  wardrobe: () => import('@/components/panels/chunk-wardrobe'),
+  props: () => import('@/components/panels/chunk-props'),
 };
 
 const loadedChunks = new Set<string>(['preprod']);

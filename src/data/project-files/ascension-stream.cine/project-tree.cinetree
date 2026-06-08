@@ -175,6 +175,13 @@
           "expanded": true,
           "children": [
             {
+              "name": "Prop Design",
+              "type": "props-design",
+              "icon": "fa-wand-magic-sparkles",
+              "view": "props-design",
+              "desc": "Prop catalog with scene assignments and visual references"
+            },
+            {
               "name": "Prop Library",
               "type": "production",
               "icon": "fa-boxes-stacked",
@@ -208,6 +215,13 @@
           "desc": "Character costumes, accessories, and hairstyles",
           "expanded": true,
           "children": [
+            {
+              "name": "Costume Design",
+              "type": "wardrobe-design",
+              "icon": "fa-vest",
+              "view": "wardrobe-design",
+              "desc": "Body-diagram costume design board with garment library"
+            },
             {
               "name": "Outfit Sets",
               "type": "production",
@@ -420,6 +434,13 @@
       "expanded": true,
       "children": [
         {
+          "name": "Sound Design",
+          "type": "sound-design",
+          "icon": "fa-sliders",
+          "view": "sound-design",
+          "desc": "Waveform-based sound editing: foley, SFX, music, effects chains"
+        },
+        {
           "name": "Production Sound",
           "type": "audio",
           "icon": "fa-microphone",
@@ -507,6 +528,13 @@
           "icon": "fa-timeline",
           "view": "timeline",
           "desc": "Drag shots onto timeline to assemble the cut"
+        },
+        {
+          "name": "Color Grade Workspace",
+          "type": "color-grade",
+          "icon": "fa-droplet",
+          "view": "color-grade",
+          "desc": "Dedicated color grading workstation with wheel and presets"
         },
         {
           "name": "Color Grade",

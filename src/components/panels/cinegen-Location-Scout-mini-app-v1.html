@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineGen Location Scout</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --accent-blue: #3b82f6;
+  --text-dim: #9ca3af;
+  --bg-panel: #1f2937;
+  --bg-deep: #111827;
+  --border-light: #374151;
+  --widget-border: #4b5563;
+  --widget-bg: #1f2937;
+  --text-main: #f9fafb;
+  --accent-green: #22c55e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Utility Classes */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.rounded { border-radius: 0.375rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+.cursor-pointer { cursor: pointer; }
+.cursor-move { cursor: move; }
+.cursor-crosshair { cursor: crosshair; }
+.select-none { user-select: none; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.overflow-hidden { overflow: hidden; }
+.overflow-y-auto { overflow-y: auto; }
+
+/* Panel Header */
+.cg-panel-header {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  flex-shrink: 0;
+}
+
+.cg-panel-header h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cg-panel-header i {
+  color: var(--accent-blue);
+}
+
+/* Main Layout */
+.cg-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.cg-sidebar {
+  width: 256px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.cg-sidebar-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.cg-search {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--widget-border);
+  color: var(--text-main);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.cg-search:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cg-search::placeholder {
+  color: var(--text-dim);
+}
+
+.cg-location-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.cg-location-card {
+  background: var(--bg-deep);
+  border: 1px solid var(--widget-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cg-location-card:hover {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.cg-location-card.active {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 1px var(--accent-blue);
+}
+
+.cg-location-card-header {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cg-location-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.cg-location-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cg-location-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cg-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.cg-badge {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.cg-badge-guide {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.cg-badge-tag {
+  background: rgba(156, 163, 175, 0.15);
+  color: var(--text-dim);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+/* Workspace */
+.cg-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+
+/* Plan View */
+.cg-plan-view {
+  height: 60%;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.cg-plan-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to bottom, rgba(17, 24, 39, 0.95), transparent);
+  padding: 0.75rem 1rem;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cg-plan-header h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.cg-plan-canvas {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  cursor: crosshair;
+  background-image: 
+    linear-gradient(rgba(75, 85, 99, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 85, 99, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.cg-plan-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 90%;
+  max-height: 90%;
+  opacity: 0.3;
+  pointer-events: none;
+  border: 2px solid var(--border-light);
+  border-radius: 0.5rem;
+}
+
+.cg-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.cg-empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Camera Markers */
+.cg-camera-marker {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  cursor: move;
+  z-index: 5;
+}
+
+.cg-camera-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: white;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s;
+}
+
+.cg-camera-marker.selected .cg-camera-dot {
+  box-shadow: 0 0 0 3px var(--accent-blue), 0 2px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
+}
+
+.cg-camera-marker:hover .cg-camera-dot {
+  transform: scale(1.1);
+}
+
+.cg-fov-cone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  transform-origin: center;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.cg-fov-cone svg {
+  width: 100%;
+  height: 100%;
+}
+
+.cg-shot-wide { background: #8b5cf6; }
+.cg-shot-medium { background: #3b82f6; }
+.cg-shot-close { background: #ef4444; }
+
+/* Camera Details */
+.cg-camera-details {
+  height: 40%;
+  background: var(--widget-bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cg-details-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 2rem;
+}
+
+.cg-details-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.cg-details-left {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-light);
+}
+
+.cg-details-right {
+  width: 320px;
+  padding: 1rem;
+  overflow-y: auto;
+  background: var(--bg-deep);
+}
+
+.cg-form-group {
+  margin-bottom: 1rem;
+}
+
+.cg-form-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.cg-input, .cg-select {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--widget-border);
+  color: var(--text-main);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.cg-input:focus, .cg-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cg-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cg-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-deep);
+  outline: none;
+}
+
+.cg-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cg-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cg-slider-value {
+  min-width: 48px;
+  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+
+.cg-btn {
+  background: var(--bg-deep);
+  border: 1px solid var(--widget-border);
+  color: var(--text-main);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cg-btn:hover {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.cg-btn-primary {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.cg-btn-primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.cg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cg-backdrop-preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--bg-panel);
+  border: 2px dashed var(--border-light);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.cg-backdrop-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cg-loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Shot Transformation Grid */
+.cg-shot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.cg-shot-btn {
+  background: var(--bg-panel);
+  border: 1px solid var(--widget-border);
+  color: var(--text-main);
+  padding: 0.75rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cg-shot-btn:hover {
+  border-color: var(--accent-blue);
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.cg-shot-btn i {
+  font-size: 1.25rem;
+  color: var(--accent-blue);
+}
+
+/* Bottom Bar */
+.cg-bottom-bar {
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-light);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Footer */
+.cg-footer {
+  background: var(--bg-deep);
+  border-top: 1px solid var(--border-light);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.cg-footer-stats {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.cg-footer-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cg-footer-stat i {
+  color: var(--accent-blue);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--widget-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+</style>
+</head>
+<body>
+  <div class="cg-panel-header">
+    <h1><i class="fa-solid fa-location-dot"></i> Location Scout</h1>
+  </div>
+
+  <div class="cg-container">
+    <div class="cg-sidebar">
+      <div class="cg-sidebar-header">
+        <input type="text" class="cg-search" id="searchInput" placeholder="Filter locations...">
+      </div>
+      <div class="cg-location-list" id="locationList"></div>
+    </div>
+
+    <div class="cg-workspace">
+      <div class="cg-plan-view">
+        <div class="cg-plan-header">
+          <h2 id="planTitle">Select a location</h2>
+        </div>
+        <div class="cg-plan-canvas" id="planCanvas">
+          <div class="cg-empty-state" id="emptyState">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <p class="text-sm">Select a location from the library<br>to begin scouting</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cg-camera-details">
+        <div class="cg-details-empty" id="detailsEmpty">
+          <div>
+            <i class="fa-solid fa-video" style="font-size: 2rem; opacity: 0.5; margin-bottom: 0.5rem;"></i>
+            <p class="text-sm">Select a camera to view details</p>
+          </div>
+        </div>
+        <div class="cg-details-content" id="detailsContent" style="display: none;">
+          <div class="cg-details-left">
+            <div class="cg-form-group">
+              <label class="cg-form-label">Camera Label</label>
+              <input type="text" class="cg-input" id="cameraLabel" placeholder="Camera 1">
+            </div>
+
+            <div class="cg-form-group">
+              <label class="cg-form-label">Shot Type</label>
+              <select class="cg-select" id="shotType">
+                <option value="wide">Wide Shot</option>
+                <option value="medium">Medium Shot</option>
+                <option value="close">Close-up</option>
+              </select>
+            </div>
+
+            <div class="cg-form-group">
+              <label class="cg-form-label">Camera Angle</label>
+              <select class="cg-select" id="cameraAngle">
+                <option value="eye">Eye Level</option>
+                <option value="high">High Angle</option>
+                <option value="low">Low Angle</option>
+                <option value="dutch">Dutch Angle</option>
+                <option value="bird">Bird's Eye</option>
+              </select>
+            </div>
+
+            <div class="cg-form-group">
+              <label class="cg-form-label">Rotation</label>
+              <div class="cg-slider-container">
+                <input type="range" class="cg-slider" id="rotationSlider" min="0" max="360" value="0">
+                <span class="cg-slider-value" id="rotationValue">0°</span>
+              </div>
+            </div>
+
+            <div class="cg-form-group">
+              <button class="cg-btn cg-btn-primary w-full" id="generateBackdropBtn">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Generate Backdrop
+              </button>
+            </div>
+          </div>
+
+          <div class="cg-details-right">
+            <div class="cg-form-group">
+              <label class="cg-form-label">Backdrop Preview</label>
+              <div class="cg-backdrop-preview" id="backdropPreview">
+                <i class="fa-solid fa-image" style="font-size: 2rem; opacity: 0.3;"></i>
+              </div>
+            </div>
+
+            <div class="cg-form-group">
+              <label class="cg-form-label">Shot Transformation</label>
+              <div class="cg-shot-grid">
+                <button class="cg-shot-btn" data-transform="push">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>Push In</span>
+                </button>
+                <button class="cg-shot-btn" data-transform="pull">
+                  <i class="fa-solid fa-minus"></i>
+                  <span>Pull Out</span>
+                </button>
+                <button class="cg-shot-btn" data-transform="pan-left">
+                  <i class="fa-solid fa-arrow-left"></i>
+                  <span>Pan Left</span>
+                </button>
+                <button class="cg-shot-btn" data-transform="pan-right">
+                  <i class="fa-solid fa-arrow-right"></i>
+                  <span>Pan Right</span>
+                </button>
+                <button class="cg-shot-btn" data-transform="tilt-up">
+                  <i class="fa-solid fa-arrow-up"></i>
+                  <span>Tilt Up</span>
+                </button>
+                <button class="cg-shot-btn" data-transform="tilt-down">
+                  <i class="fa-solid fa-arrow-down"></i>
+                  <span>Tilt Down</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cg-bottom-bar">
+    <button class="cg-btn" id="dropReferenceBtn">
+      <i class="fa-solid fa-file-arrow-up"></i>
+      Drop Reference
+    </button>
+    <button class="cg-btn">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      AI Fetch
+    </button>
+    <button class="cg-btn">
+      <i class="fa-solid fa-sparkles"></i>
+      AI Generate
+    </button>
+  </div>
+
+  <div class="cg-footer">
+    <div class="cg-footer-stats">
+      <div class="cg-footer-stat">
+        <i class="fa-solid fa-video"></i>
+        <span id="cameraCount">0 Cameras</span>
+      </div>
+      <div class="cg-footer-stat">
+        <i class="fa-solid fa-image"></i>
+        <span id="backdropCount">0 Backdrops</span>
+      </div>
+    </div>
+    <div class="cg-footer-stat">
+      <i class="fa-solid fa-clock"></i>
+      <span id="lastGenerated">No backdrops generated</span>
+    </div>
+  </div>
+
+<script>
+const mockLocations = [
+  {
+    id: 1,
+    name: 'Warehouse District',
+    icon: 'fa-warehouse',
+    tags: ['Industrial', 'Urban', 'Night'],
+    hasGuide: true,
+    planImage: 'data:image/svg+xml,%3Csvg width="800" height="600" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="800" height="600" fill="%23111827"/%3E%3Crect x="100" y="100" width="200" height="150" fill="%231f2937" stroke="%23374151" stroke-width="2"/%3E%3Crect x="500" y="150" width="180" height="200" fill="%231f2937" stroke="%23374151" stroke-width="2"/%3E%3Crect x="200" y="400" width="400" height="120" fill="%231f2937" stroke="%23374151" stroke-width="2"/%3E%3Ctext x="400" y="300" font-family="Arial" font-size="14" fill="%234b5563" text-anchor="middle"%3EWarehouse Floor Plan%3C/text%3E%3C/svg%3E',
+    cameras: []
+  },
+  {
+    id: 2,
+    name: 'Rooftop Garden',
+    icon: 'fa-building',
+    tags: ['Exterior', 'Day', 'City'],
+    hasGuide: false,
+    cameras: []
+  },
+  {
+    id: 3,
+    name: 'Subway Station',
+    icon: 'fa-train-subway',
+    tags: ['Underground', 'Public', 'Gritty'],
+    hasGuide: true,
+    planImage: 'data:image/svg+xml,%3Csvg width="800" height="600" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="800" height="600" fill="%23111827"/%3E%3Crect x="50" y="250" width="700" height="100" fill="%231f2937" stroke="%23374151" stroke-width="2"/%3E%3Crect x="350" y="150" width="100" height="200" fill="%23374151"/%3E%3Ctext x="400" y="310" font-family="Arial" font-size="14" fill="%234b5563" text-anchor="middle"%3ESubway Platform%3C/text%3E%3C/svg%3E',
+    cameras: []
+  }
+];
+
+let state = {
+  locations: [...mockLocations],
+  selectedLocationId: null,
+  selectedCameraId: null,
+  draggingCamera: null,
+  dragOffset: { x: 0, y: 0 },
+  backdropCounter: 0
+};
+
+// DOM Elements
+const locationList = document.getElementById('locationList');
+const searchInput = document.getElementById('searchInput');
+const planCanvas = document.getElementById('planCanvas');
+const planTitle = document.getElementById('planTitle');
+const emptyState = document.getElementById('emptyState');
+const detailsEmpty = document.getElementById('detailsEmpty');
+const detailsContent = document.getElementById('detailsContent');
+const cameraLabel = document.getElementById('cameraLabel');
+const shotType = document.getElementById('shotType');
+const cameraAngle = document.getElementById('cameraAngle');
+const rotationSlider = document.getElementById('rotationSlider');
+const rotationValue = document.getElementById('rotationValue');
+const generateBackdropBtn = document.getElementById('generateBackdropBtn');
+const backdropPreview = document.getElementById('backdropPreview');
+const cameraCount = document.getElementById('cameraCount');
+const backdropCount = document.getElementById('backdropCount');
+const lastGenerated = document.getElementById('lastGenerated');
+
+// Initialize
+function init() {
+  renderLocationList();
+  setupEventListeners();
+  updateFooterStats();
+}
+
+function renderLocationList(filter = '') {
+  const filtered = state.locations.filter(loc => 
+    loc.name.toLowerCase().includes(filter.toLowerCase()) ||
+    loc.tags.some(tag => tag.toLowerCase().includes(filter.toLowerCase()))
+  );
+
+  locationList.innerHTML = filtered.map(loc => `
+    <div class="cg-location-card ${loc.id === state.selectedLocationId ? 'active' : ''}" data-id="${loc.id}">
+      <div class="cg-location-card-header">
+        <div class="cg-location-icon">
+          <i class="fa-solid ${loc.icon}"></i>
+        </div>
+        <div class="cg-location-info">
+          <div class="cg-location-name">${loc.name}</div>
+          <div class="cg-badges">
+            ${loc.hasGuide ? '<span class="cg-badge cg-badge-guide">Guide</span>' : ''}
+            ${loc.tags.map(tag => `<span class="cg-badge cg-badge-tag">${tag}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectLocation(id) {
+  state.selectedLocationId = id;
+  state.selectedCameraId = null;
+  const location = state.locations.find(l => l.id === id);
+  
+  renderLocationList(searchInput.value);
+  renderPlanView(location);
+  showCameraDetails(null);
+  updateFooterStats();
+}
+
+function renderPlanView(location) {
+  planTitle.textContent = location.name;
+  emptyState.style.display = 'none';
+  
+  planCanvas.innerHTML = '';
+  
+  if (location.planImage) {
+    const img = document.createElement('img');
+    img.src = location.planImage;
+    img.className = 'cg-plan-image';
+    planCanvas.appendChild(img);
+  }
+  
+  location.cameras.forEach(cam => renderCameraMarker(cam));
+}
+
+function getShotColor(type) {
+  const colors = {
+    wide: '#8b5cf6',
+    medium: '#3b82f6',
+    close: '#ef4444'
+  };
+  return colors[type] || '#3b82f6';
+}
+
+function renderCameraMarker(camera) {
+  const marker = document.createElement('div');
+  marker.className = `cg-camera-marker ${camera.id === state.selectedCameraId ? 'selected' : ''}`;
+  marker.style.left = `${camera.x}%`;
+  marker.style.top = `${camera.y}%`;
+  marker.dataset.id = camera.id;
+  
+  const color = getShotColor(camera.shotType);
+  
+  marker.innerHTML = `
+    <div class="cg-fov-cone" style="transform: translate(-50%, -50%) rotate(${camera.rotation}deg);">
+      <svg viewBox="0 0 120 120">
+        <path d="M 60 60 L 20 10 L 100 10 Z" fill="${color}" opacity="0.3"/>
+        <path d="M 60 60 L 20 10" stroke="${color}" stroke-width="2" opacity="0.6"/>
+        <path d="M 60 60 L 100 10" stroke="${color}" stroke-width="2" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="cg-camera-dot cg-shot-${camera.shotType}">${camera.number}</div>
+  `;
+  
+  planCanvas.appendChild(marker);
+}
+
+function placeCamera(x, y) {
+  if (!state.selectedLocationId) return;
+  
+  const location = state.locations.find(l => l.id === state.selectedLocationId);
+  const rect = planCanvas.getBoundingClientRect();
+  const xPercent = ((x - rect.left) / rect.width) * 100;
+  const yPercent = ((y - rect.top) / rect.height) * 100;
+  
+  const newCamera = {
+    id: Date.now(),
+    number: location.cameras.length + 1,
+    x: xPercent,
+    y: yPercent,
+    label: `Camera ${location.cameras.length + 1}`,
+    shotType: 'medium',
+    angle: 'eye',
+    rotation: 0,
+    backdrop: null
+  };
+  
+  location.cameras.push(newCamera);
+  renderPlanView(location);
+  selectCamera(newCamera.id);
+  updateFooterStats();
+}
+
+function selectCamera(id) {
+  state.selectedCameraId = id;
+  const location = state.locations.find(l => l.id === state.selectedLocationId);
+  
+  // Update marker selection
+  document.querySelectorAll('.cg-camera-marker').forEach(m => {
+    m.classList.toggle('selected', parseInt(m.dataset.id) === id);
+  });
+  
+  if (id) {
+    const camera = location.cameras.find(c => c.id === id);
+    showCameraDetails(camera);
+  } else {
+    showCameraDetails(null);
+  }
+}
+
+function showCameraDetails(camera) {
+  if (!camera) {
+    detailsEmpty.style.display = 'flex';
+    detailsContent.style.display = 'none';
+    return;
+  }
+  
+  detailsEmpty.style.display = 'none';
+  detailsContent.style.display = 'flex';
+  
+  cameraLabel.value = camera.label;
+  shotType.value = camera.shotType;
+  cameraAngle.value = camera.angle;
+  rotationSlider.value = camera.rotation;
+  rotationValue.textContent = `${camera.rotation}°`;
+  
+  if (camera.backdrop) {
+    backdropPreview.innerHTML = `<img src="${camera.backdrop}" alt="Backdrop">`;
+  } else {
+    backdropPreview.innerHTML = '<i class="fa-solid fa-image" style="font-size: 2rem; opacity: 0.3;"></i>';
+  }
+}
+
+function updateCameraField(field, value) {
+  if (!state.selectedCameraId || !state.selectedLocationId) return;
+  
+  const location = state.locations.find(l => l.id === state.selectedLocationId);
+  const camera = location.cameras.find(c => c.id === state.selectedCameraId);
+  
+  camera[field] = value;
+  renderPlanView(location);
+}
+
+function generateBackdrop() {
+  if (!state.selectedCameraId || !state.selectedLocationId) return;
+  
+  const btn = generateBackdropBtn;
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner cg-loading"></i> Generating...';
+  
+  backdropPreview.innerHTML = '<i class="fa-solid fa-spinner cg-loading" style="font-size: 2rem;"></i>';
+  
+  setTimeout(() => {
+    const location = state.locations.find(l => l.id === state.selectedLocationId);
+    const camera = location.cameras.find(c => c.id === state.selectedCameraId);
+    
+    // Generate mock backdrop with gradient based on shot type
+    const colors = {
+      wide: ['#6366f1', '#8b5cf6'],
+      medium: ['#3b82f6', '#06b6d4'],
+      close: ['#ef4444', '#f97316']
+    };
+    const [c1, c2] = colors[camera.shotType];
+    const mockBackdrop = `data:image/svg+xml,%3Csvg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0%25" y1="0%25" x2="100%25" y2="100%25"%3E%3Cstop offset="0%25" style="stop-color:${c1};stop-opacity:1" /%3E%3Cstop offset="100%25" style="stop-color:${c2};stop-opacity:1" /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="1920" height="1080" fill="url(%23g)"/%3E%3Ctext x="960" y="540" font-family="Arial" font-size="60" font-weight="bold" fill="white" text-anchor="middle" opacity="0.3"%3E${camera.shotType.toUpperCase()} ${camera.angle.toUpperCase()}%3C/text%3E%3C/svg%3E`;
+    
+    camera.backdrop = mockBackdrop;
+    state.backdropCounter++;
+    showCameraDetails(camera);
+    
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    
+    updateFooterStats();
+    
+    const now = new Date();
+    lastGenerated.textContent = `Last: ${now.toLocaleTimeString()}`;
+  }, 1500);
+}
+
+function updateFooterStats() {
+  const location = state.selectedLocationId ? 
+    state.locations.find(l => l.id === state.selectedLocationId) : null;
+  
+  const camCount = location ? location.cameras.length : 0;
+  const bdCount = location ? location.cameras.filter(c => c.backdrop).length : 0;
+  
+  cameraCount.textContent = `${camCount} Camera${camCount !== 1 ? 's' : ''}`;
+  backdropCount.textContent = `${bdCount} Backdrop${bdCount !== 1 ? 's' : ''}`;
+}
+
+function setupEventListeners() {
+  // Location selection
+  locationList.addEventListener('click', (e) => {
+    const card = e.target.closest('.cg-location-card');
+    if (card) {
+      selectLocation(parseInt(card.dataset.id));
+    }
+  });
+  
+  // Search
+  searchInput.addEventListener('input', (e) => {
+    renderLocationList(e.target.value);
+  });
+  
+  // Plan canvas click to place camera
+  planCanvas.addEventListener('click', (e) => {
+    if (e.target === planCanvas || e.target.classList.contains('cg-plan-image')) {
+      if (!state.draggingCamera) {
+        placeCamera(e.clientX, e.clientY);
+      }
+    }
+  });
+  
+  // Camera marker drag
+  planCanvas.addEventListener('mousedown', (e) => {
+    const marker = e.target.closest('.cg-camera-marker');
+    if (marker) {
+      state.draggingCamera = parseInt(marker.dataset.id);
+      selectCamera(state.draggingCamera);
+      
+      const rect = marker.getBoundingClientRect();
+      state.dragOffset = {
+        x: e.clientX - rect.left - rect.width / 2,
+        y: e.clientY - rect.top - rect.height / 2
+      };
+      e.preventDefault();
+    }
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (state.draggingCamera && state.selectedLocationId) {
+      const location = state.locations.find(l => l.id === state.selectedLocationId);
+      const camera = location.cameras.find(c => c.id === state.draggingCamera);
+      const rect = planCanvas.getBoundingClientRect();
+      
+      const xPercent = ((e.clientX - rect.left - state.dragOffset.x) / rect.width) * 100;
+      const yPercent = ((e.clientY - rect.top - state.dragOffset.y) / rect.height) * 100;
+      
+      camera.x = Math.max(0, Math.min(100, xPercent));
+      camera.y = Math.max(0, Math.min(100, yPercent));
+      
+      renderPlanView(location);
+    }
+  });
+  
+  document.addEventListener('mouseup', () => {
+    state.draggingCamera = null;
+  });
+  
+  // Camera detail inputs
+  cameraLabel.addEventListener('input', (e) => updateCameraField('label', e.target.value));
+  shotType.addEventListener('change', (e) => updateCameraField('shotType', e.target.value));
+  cameraAngle.addEventListener('change', (e) => updateCameraField('angle', e.target.value));
+  
+  rotationSlider.addEventListener('input', (e) => {
+    rotationValue.textContent = `${e.target.value}°`;
+    updateCameraField('rotation', parseInt(e.target.value));
+  });
+  
+  generateBackdropBtn.addEventListener('click', generateBackdrop);
+  
+  // Shot transformation buttons
+  document.querySelectorAll('.cg-shot-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const transform = btn.dataset.transform;
+      console.log(`Shot transformation: ${transform}`);
+      
+      btn.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        btn.style.transform = '';
+      }, 150);
+    });
+  });
+  
+  // Drop Reference
+  document.getElementById('dropReferenceBtn').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      if (e.target.files[0]) {
+        console.log('Reference uploaded:', e.target.files[0].name);
+      }
+    };
+    input.click();
+  });
+}
+
+// Start app
+init();
+</script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>

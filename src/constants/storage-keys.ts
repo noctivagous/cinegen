@@ -34,3 +34,5 @@ export const STORYBOARD_GENERATION_MODE_STORAGE_KEY = 'cinegen.storyboard.genera
 export const SECTION_VISIBILITY_STORAGE_KEY = 'cinegen-section-visibility';
 /** Developer console command history. */
 export const CONSOLE_HISTORY_STORAGE_KEY = 'cg:console:history';
+/** Image API keys for Unsplash, Pexels, Pixabay (stored as JSON object). */
+export const IMAGE_API_KEYS_STORAGE_KEY = 'cinegen.imageApiKeys';

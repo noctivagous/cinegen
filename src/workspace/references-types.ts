@@ -1,4 +1,4 @@
-export type ReferenceSource = 'internet-archive' | 'library-of-congress' | 'wikimedia-commons';
+export type ReferenceSource = 'internet-archive' | 'openverse' | 'library-of-congress' | 'wikimedia-commons' | 'met-museum' | 'unsplash' | 'pexels' | 'pixabay';
 
 export interface SearchParams {
   query: string;
