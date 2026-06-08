@@ -41,6 +41,7 @@ const CHIP_NAV_CONFIG = {
     defaultDest: 'location-scout',
     destinations: [
       { id: 'location-scout', label: 'Virtual Location Scout', icon: 'fa-map' },
+      { id: 'location-guide', label: 'Location Guide', icon: 'fa-compass' },
       { id: 'global', label: 'Global view — all mentions', icon: 'fa-globe' },
       { id: 'script', label: 'Script', icon: 'fa-scroll' },
       { id: 'breakdown', label: 'Breakdown Sheets', icon: 'fa-table-list' },
@@ -389,6 +390,7 @@ function navigateChipDestination(destId, chipType, label, mentionMeta) {
     'script-info': 'Script',
     breakdown: 'Breakdown Sheets',
     'location-scout': 'Virtual Location Scout',
+    'location-guide': 'Virtual Location Scout',
     'prop-library': 'Prop Library',
     'outfit-sets': 'Outfit Sets',
     'sound-sfx': 'Sound Design & SFX',
@@ -437,6 +439,14 @@ function navigateChipDestination(destId, chipType, label, mentionMeta) {
 
   const treeName = treeTargets[destId];
   if (treeName) activateTreeNodeByName(treeName);
+
+  // Auto-switch to guide tab when navigating via location-guide destination
+  if (destId === 'location-guide') {
+    queueMicrotask(() => {
+      const scoutView = document.querySelector('cinegen-location-scout-view') as any;
+      if (scoutView?.switchToGuide) scoutView.switchToGuide();
+    });
+  }
 }
 
 function navigateChipDefault(chipType, label) {

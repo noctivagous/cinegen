@@ -1,0 +1,66 @@
+USER WORKFLOWS
+
+SCRIPT-FIRST USER WORKFLOW
+
+The user wants to start with a script and in some
+combination have the AI assist, but there are many
+combinations and sequences possible.
+
+The app will automatically take care of parsing
+the screenplay into scenes and characters into
+chips based on scene headings and character names,
+which it does right now. The app will be
+asset-forward which means that as soon as it sees
+it in the script it will add it as an entry in
+locations, characters, scenes, etc.
+
+If the user pastes parts of a script with new
+scenes, it can interact with the user to say,
+"there is a new character and location".
+
+(requires addition of alertCGFlash() which is a
+flash alert box).
+
+What should the app take care of automatically and
+how should it guide the user?
+
+The film production is in different states in the
+app different areas: - The screenplay is pasted,
+but where will the user want to go from there?
+
+1. User pastes script into script editor --> user
+has no shots and storyboard frames defined and set
+up --> user has shots and storyboard frames set up
+
+	- App autoupdates scenes count, reconciles
+	differences from current scene count and asks
+	users how to resolve ambiguous changes from
+	state of script before paste operation.
+
+
+		- Script editor has undo manager so that
+		if the user wants to go back, Command+z is
+		all that is needed -
+
+2. User wants to make breakdown sheet/shot list
+for scenes. - Automatic: AI goes through script,
+annotates with Char,Prop,Ward,SFX,Location,VFX. -
+Manual: User goes through script and annotates.
+
+	MINIMUM REQUIREMENTS: Before any storyboard
+	frame is generated in a scene, the app should
+	require a minimum set of settings, including
+	uploaded or generated images for 1) location
+	guide for the scene - backdrops informing the
+	scene from all necessary angles 2) character
+	guide for the scene - full-body portrait and
+	profile, and close-up with wardrobe and
+	hairstyle 3) Time of day (analyzed by the AI
+	as to whether it is applicable) 4) Weather
+	(analyzed by the AI as to whether it is
+	applicable)
+
+
+3. User wants to make storyboard frames -
+Automatic: AI goes through shots and decides how
+many storyboard frames per shot

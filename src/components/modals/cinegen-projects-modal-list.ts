@@ -8,7 +8,9 @@ import { projectRegistry } from '@/data/project-data';
 import { appShellStoreContext } from '@/context/app-shell-context';
 import { appShellStore, type AppShellStore } from '@/stores/app-shell-store';
 import { bindAppShellToHost } from '@/stores/bind-app-shell-host';
-import { duplicateBundledProject, exportProject } from '@/services/project-service';
+import { duplicateBundledProject, exportProject, deleteServerProject } from '@/services/project-service';
+import { getChipContextMenu } from '@/services/context-menu-host';
+import type { ContextMenuItem } from '@/services/context-menu-types';
 
 export const CG_PROJECT_OPEN = 'cg-project-open';
 
@@ -20,7 +22,24 @@ export type ProjectListItem = {
   file?: string;
   writable?: boolean;
   lastModified?: string;
+  lastOpened?: string;
 };
+
+function formatTimestamp(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  return date.toLocaleDateString();
+}
 
 /** Recent projects list in the projects hub modal. */
 @customElement('cinegen-projects-modal-list')
@@ -38,6 +57,7 @@ export class CinegenProjectsModalList extends CgLightElement {
     this.classList.add('projects-modal-project-list');
     this.id = 'projects-modal-list';
     this._shellUnsub = bindAppShellToHost(this, () => this._shellStore ?? appShellStore);
+    this.addEventListener('click', this._onOutsideClick);
     this.refresh();
   }
 
@@ -45,19 +65,18 @@ export class CinegenProjectsModalList extends CgLightElement {
     super.disconnectedCallback();
     this._shellUnsub?.();
     this._shellUnsub = null;
+    this.removeEventListener('click', this._onOutsideClick);
   }
 
   async refresh(): Promise<void> {
-    // Registry now contains bundled samples (have .file) + any flat local projects (no .file)
     const registryItems: ProjectListItem[] = projectRegistry.map((p) => ({
       id: p.id,
       name: p.name,
       file: p.file,
-      // Writable unless it's a Vite-bundled sample file
       writable: !p.file,
+      lastOpened: p.lastOpened,
     }));
 
-    // Fetch server-resident .cine projects (writable)
     let server: ProjectListItem[] = [];
     try {
       this._loading = true;
@@ -72,12 +91,10 @@ export class CinegenProjectsModalList extends CgLightElement {
         }));
       }
     } catch {
-      // network fail — continue with registry items only
     } finally {
       this._loading = false;
     }
 
-    // Merge preferring server list (authoritative for .cine dirs), then registry; de-dupe
     const byId = new Map<string, ProjectListItem>();
     for (const p of [...server, ...registryItems]) {
       if (!byId.has(p.id)) byId.set(p.id, p);
@@ -131,6 +148,46 @@ export class CinegenProjectsModalList extends CgLightElement {
     }
   }
 
+  private _onProjectContextMenu(e: MouseEvent, proj: ProjectListItem): void {
+    e.preventDefault();
+    if (!proj.writable) return;
+    const menu = getChipContextMenu();
+    if (!menu) return;
+
+    const items: ContextMenuItem[] = [
+      { id: 'delete', label: 'Delete', icon: 'fa-trash-can' },
+    ];
+
+    menu.open({
+      x: e.clientX,
+      y: e.clientY,
+      items,
+      header: { label: proj.name, caption: 'Project' },
+      onSelect: (actionId) => {
+        if (actionId === 'delete') void this._deleteProject(proj);
+      },
+    });
+  }
+
+  private async _deleteProject(proj: ProjectListItem): Promise<void> {
+    if (!proj.writable) return;
+    const confirmed = confirm(`Delete "${proj.name}"?\n\nThis cannot be undone.`);
+    if (!confirmed) return;
+    const result = await deleteServerProject(proj.id);
+    if (!result.ok) {
+      const { alertCG } = await import('@/utils/alert-cg');
+      alertCG(`Delete failed: ${result.error || 'Unknown error'}`);
+      return;
+    }
+    const idx = projectRegistry.findIndex((p) => p.id === proj.id);
+    if (idx !== -1) projectRegistry.splice(idx, 1);
+    await this.refresh();
+  }
+
+  private _onOutsideClick(): void {
+    getChipContextMenu()?.close();
+  }
+
   render() {
     const activeId = (this._shellStore ?? appShellStore).activeProjectId;
 
@@ -139,6 +196,7 @@ export class CinegenProjectsModalList extends CgLightElement {
         <button
           type="button"
           class="toolbar-btn text-xs"
+          data-cg-testid="import-project"
           @click=${() => this._triggerImport()}
         >
           <i class="fa-solid fa-file-import"></i> Import Project…
@@ -151,22 +209,30 @@ export class CinegenProjectsModalList extends CgLightElement {
         const isActive = proj.id === activeId;
         const isWritable = !!proj.writable;
         const statusLabel = isWritable ? 'Local' : 'Sample';
+        const lastModifiedLabel = proj.lastModified ? formatTimestamp(proj.lastModified) : '';
+        const lastOpenedLabel = proj.lastOpened ? formatTimestamp(proj.lastOpened) : '';
+        const showLastModified = isWritable && lastModifiedLabel && !isActive;
+        const showLastOpened = lastOpenedLabel && !isActive;
         return html`
             <div
               class=${classMap({
           'projects-modal-project-card': true,
           'is-active': isActive,
+          'writable': isWritable,
         })}
               aria-current=${isActive ? 'true' : 'false'}
+              data-cg-testid="project-card-${proj.id}"
+              @contextmenu=${(e: MouseEvent) => this._onProjectContextMenu(e, proj)}
             >
               <button
                 type="button"
                 class="projects-modal-project-card-main"
+                data-cg-testid="open-project-${proj.id}"
                 @click=${() => this._openProject(proj.id)}
               >
                 <div class="projects-modal-thumb" aria-hidden="true"></div>
                 <div class="projects-modal-project-meta">
-                  <span class="projects-modal-project-name">${proj.name}</span>
+                  <span class="projects-modal-project-name" data-cg-testid="project-list-name">${proj.name}</span>
                   <span class="projects-modal-project-hint"
                     >${isActive ? 'Currently open' : 'Open this production'}</span
                   >
@@ -178,6 +244,14 @@ export class CinegenProjectsModalList extends CgLightElement {
         })}
                     title=${isWritable ? 'Writable local project' : 'Read-only bundled sample'}
                   >${statusLabel}</span>
+                  ${showLastModified || showLastOpened
+            ? html`
+                      <span class="projects-modal-project-time">
+                        ${showLastModified ? html`<span class="projects-modal-project-time-modified">Modified ${lastModifiedLabel}</span>` : ''}
+                        ${showLastOpened ? html`<span class="projects-modal-project-time-opened">Opened ${lastOpenedLabel}</span>` : ''}
+                      </span>
+                    `
+            : ''}
                 </div>
               </button>
               ${!isWritable
@@ -185,6 +259,7 @@ export class CinegenProjectsModalList extends CgLightElement {
                     <button
                       type="button"
                       class="projects-modal-project-duplicate-btn"
+                      data-cg-testid="duplicate-project-${proj.id}"
                       title="Duplicate as writable local project"
                       @click=${() => this._duplicateProject(proj.id)}
                     >
@@ -195,6 +270,7 @@ export class CinegenProjectsModalList extends CgLightElement {
                     <button
                       type="button"
                       class="projects-modal-project-download-btn"
+                      data-cg-testid="download-project-${proj.id}"
                       title="Download project as .cine.zip"
                       @click=${(e: Event) => { e.stopPropagation(); void this._downloadProject(proj.id); }}
                     >
@@ -209,6 +285,10 @@ export class CinegenProjectsModalList extends CgLightElement {
   }
 
   private _openProject(projectId: string): void {
+    const entry = projectRegistry.find((p) => p.id === projectId);
+    if (entry) {
+      entry.lastOpened = new Date().toISOString();
+    }
     this.dispatchEvent(
       new CustomEvent<CgProjectOpenDetail>(CG_PROJECT_OPEN, {
         bubbles: true,

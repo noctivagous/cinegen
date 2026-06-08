@@ -659,6 +659,7 @@ export type AppliedCineProject = {
   };
   timelineClips: unknown[];
   locationLibrary: unknown[];
+  locationGuides: unknown[];
   assetLibrary: Record<string, unknown>;
   breakdownData: unknown[];
   assetDetailData: Record<string, unknown>;
@@ -757,6 +758,7 @@ export function applyCineProject(doc: CineProjectFile): AppliedCineProject {
     },
     timelineClips: doc.timeline ?? [],
     locationLibrary: doc.locations ?? [],
+    locationGuides: doc.locationGuides ?? [],
     assetLibrary: assets,
     breakdownData: doc.breakdown ?? [],
     assetDetailData: (doc.assetDetails && typeof doc.assetDetails === 'object' ? doc.assetDetails : {}) as Record<string, unknown>,

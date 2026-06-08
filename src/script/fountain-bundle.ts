@@ -6,6 +6,7 @@ import {
 import { closeToolbarSplitMenu } from '@/services/toolbar-split-service';
 import { getCinegenScriptEditor } from '@/panels/panel-hosts';
 import { alertCG } from '@/utils/alert-cg';
+import { syncBreakdownFromScript } from '@/script/script-to-project';
 import {
   renderPrevisMargin,
   handlePrevisMarginClick,
@@ -182,6 +183,18 @@ export function hydrateScriptEditorFromProject(): void {
   host.setDocument(getProjectFountainText());
 }
 
+/** Set script content in the CM6 editor and trigger scene parsing. */
+export function setScriptContent(text: string): void {
+  const host = getCinegenScriptEditor();
+  if (!host) return;
+  host.setDocument(text);
+  // The host.setDocument will trigger scheduleProjectSync which updates projectScreenplay
+  // Trigger scene parsing
+  void import('@/script/script-to-project').then(({ syncBreakdownFromScript }) => {
+    syncBreakdownFromScript();
+  });
+}
+
 /** Persist the current CM6 document to project screenplay storage. */
 export function syncScriptEditorToProject(): void {
   const host = getCinegenScriptEditor();
@@ -354,6 +367,8 @@ export function installFountainBundleGlobals(): void {
   w.hydrateScriptEditorFromProject = hydrateScriptEditorFromProject;
   w.syncScriptEditorToProject = syncScriptEditorToProject;
   w.scheduleScriptEditorProjectSync = scheduleScriptEditorProjectSync;
+  w.setScriptContent = setScriptContent;
+  w.syncBreakdownFromScript = syncBreakdownFromScript;
   w.initScriptFountainInsertSplit = initScriptFountainInsertSplit;
   w.insertFountainSnippet = insertFountainSnippet;
   w.classifyFountainLine = classifyFountainLine;

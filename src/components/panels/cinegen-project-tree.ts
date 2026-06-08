@@ -154,6 +154,7 @@ export class CinegenProjectTree extends CgLightElement {
         data-section=${section ?? nothing}
         data-scene-id=${node.sceneId ?? nothing}
         data-preprod-mode=${node.preprodMode ?? nothing}
+        data-cg-testid=${node.type === 'view' ? `view-${node.view}` : (node.type === 'scene' ? `scene-${node.sceneId}` : nothing)}
         @click=${(e: Event) => this._onItemClick(node, section, e)}
         @dblclick=${hasChildren ? (e: Event) => this._onItemDblClick(node, e) : nothing}
       >

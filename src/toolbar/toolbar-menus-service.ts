@@ -123,6 +123,7 @@ async function switchProject(projectId: string): Promise<void> {
   primePersistedProjectTreeUi(projectId);
   queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
   closeToolbarSplitMenu('projects-split');
+  if (proj) proj.lastOpened = new Date().toISOString();
   alertCG(`Opened project: ${proj.name}\n\nAll references and AI locks restored.`);
 }
 

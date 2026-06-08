@@ -416,6 +416,7 @@ declare global {
     hydrateScriptEditorFromProject?: () => void;
     syncScriptEditorToProject?: () => void;
     scheduleScriptEditorProjectSync?: () => void;
+    setScriptContent?: (text: string) => void;
     getProjectFountainText?: () => string;
     setProjectFountainText?: (text: string) => void;
     syncScriptRenderScroll?: () => void;
@@ -480,6 +481,9 @@ declare global {
     'cinegen-scene-detail-view': import('@/components/panels/cinegen-scene-detail-view').CinegenSceneDetailView;
     'cinegen-timeline-view': import('@/components/panels/cinegen-timeline-view').CinegenTimelineView;
     'cinegen-location-scout-view': import('@/components/panels/cinegen-location-scout-view').CinegenLocationScoutView;
+    'cinegen-location-guide-view': import('@/components/panels/cinegen-location-guide-view').CinegenLocationGuideView;
+    'cinegen-location-plan-view': import('@/components/panels/cinegen-location-plan-view').CinegenLocationPlanView;
+    'cinegen-location-camera-editor': import('@/components/panels/cinegen-location-camera-editor').CinegenLocationCameraEditor;
     'cinegen-assets-view': import('@/components/panels/cinegen-assets-view').CinegenAssetsView;
     'cinegen-camera-lighting-view': import('@/components/panels/cinegen-camera-lighting-view').CinegenCameraLightingView;
     'cinegen-casting-view': import('@/components/panels/cinegen-casting-view').CinegenCastingView;

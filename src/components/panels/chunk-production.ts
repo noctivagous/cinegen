@@ -6,5 +6,6 @@ import './cinegen-timeline';
 import './cinegen-timeline-view';
 import './cinegen-location-scout';
 import './cinegen-location-scout-view';
+import './cinegen-location-guide-view';
 import './cinegen-camera-lighting-view';
 import './cinegen-casting-view';

@@ -16,6 +16,7 @@ import type {
 import { loadMoodBoardsOverlay, persistMoodBoardsAutosave } from '@/moodboards/moodboard-persistence';
 import { syncProjectShotFrameLinks } from '@/workspace/shot-frame-bridge';
 import { normalizeAppliedCineProject } from '@/data/project-snapshot-normalize';
+import type { LocationGuide } from '@/workspace/location-types';
 
 /** Screenplay storage — plain Fountain text plus format tag for future rich/structured exports */
 export type ProjectScreenplay = {
@@ -325,6 +326,7 @@ export let previsSelectionState: PrevisSelectionState = {
 export let timelineClips: any[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let locationLibrary: any[] = [];
+export let locationGuides: LocationGuide[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export let assetLibrary: any = {
   characters: [],
@@ -580,6 +582,9 @@ function applyMutableProjectState(applied: AppliedCineProject): void {
   locationLibrary = Array.isArray(applied.locationLibrary)
     ? applied.locationLibrary
     : (assetLibrary.locations as any[]);
+  locationGuides = Array.isArray(applied.locationGuides)
+    ? applied.locationGuides as LocationGuide[]
+    : [];
   breakdownData = applied.breakdownData;
   assetDetailData = applied.assetDetailData;
   generationQueue = Array.isArray(applied.generationQueue)
@@ -775,6 +780,9 @@ export function installProjectDataGlobals(): void {
   });
   bindWindowData('locationLibrary', () => locationLibrary, (v) => {
     locationLibrary = v as typeof locationLibrary;
+  });
+  bindWindowData('locationGuides', () => locationGuides, (v) => {
+    locationGuides = v as typeof locationGuides;
   });
   bindWindowData('assetLibrary', () => assetLibrary, (v) => {
     assetLibrary = v as typeof assetLibrary;

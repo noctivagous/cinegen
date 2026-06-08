@@ -27,6 +27,7 @@ declare const projectRegistry: Array<{
   name: string;
   settings?: Record<string, unknown>;
   file?: string;
+  lastOpened?: string;
 }>;
 declare const projectData: { name: string };
 declare const loadProjectFromCineFile: (filename: string) => void;
@@ -85,6 +86,7 @@ async function openProjectFromProjectsHub(projectId: string): Promise<void> {
     window.renderProjectsMenu?.();
     primePersistedProjectTreeUi(projectId);
     queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
+    _touchLastOpened(projectId);
     closeProjectsModal();
     return;
   }
@@ -112,7 +114,13 @@ async function openProjectFromProjectsHub(projectId: string): Promise<void> {
   window.renderProjectsMenu?.();
   primePersistedProjectTreeUi(projectId);
   queueMicrotask(() => activatePersistedProjectTreeSelection(projectId));
+  _touchLastOpened(projectId);
   closeProjectsModal();
+}
+
+function _touchLastOpened(projectId: string): void {
+  const entry = projectRegistry.find((p) => p.id === projectId);
+  if (entry) entry.lastOpened = new Date().toISOString();
 }
 
 export function wireProjectsModalList(): void {

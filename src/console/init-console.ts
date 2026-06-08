@@ -202,6 +202,125 @@ function buildCommands(): void {
   });
 
   registerConsoleCommand({
+    name: 'script',
+    description: 'Script actions: get, set, state',
+    usage: 'script <action> [args...]',
+    handler: async (args) => {
+      const action = args[0]?.toLowerCase();
+      const w = window as any;
+      if (action === 'get' || !action) {
+        const content = w.projectScreenplay ?? null;
+        return { ok: true, action: 'get', content: typeof content === 'string' ? content.slice(0, 2000) : content };
+      }
+      if (action === 'set') {
+        const content = args.slice(1).join(' ');
+        if (!content) return { error: 'Usage: script set <content>' };
+        if (typeof w.setScriptContent === 'function') {
+          w.setScriptContent(content);
+        } else {
+          // Fallback
+          w.projectScreenplay = { format: 'fountain', text: content };
+          const editor = document.querySelector('cinegen-script-editor');
+          if (editor && typeof (editor as any).setDocument === 'function') {
+            (editor as any).setDocument(content);
+          }
+          w.dispatchEvent?.(new CustomEvent('script-changed'));
+          try {
+            const { syncBreakdownFromScript } = await import('@/script/script-to-project');
+            syncBreakdownFromScript();
+          } catch {}
+        }
+        return { ok: true, action: 'set', length: content.length };
+      }
+      if (action === 'state') {
+        // Get content from editor for accurate state
+        let content = '';
+        const editor = document.querySelector('cinegen-script-editor');
+        if (editor && editor.editorView) {
+          content = editor.editorView.state.doc.toString();
+        } else if (w.projectScreenplay) {
+          content = w.projectScreenplay.text ?? w.projectScreenplay ?? '';
+        }
+        
+        // Get scene count from syncBreakdownFromScript
+        let sceneCount = 0;
+        try {
+          if (typeof w.syncBreakdownFromScript === 'function') {
+            const syncResult = w.syncBreakdownFromScript();
+            if (syncResult && typeof syncResult.sceneCount === 'number') {
+              sceneCount = syncResult.sceneCount;
+            }
+          }
+        } catch {}
+        
+        return {
+          ok: true,
+          action: 'state',
+          hasContent: content.length > 0,
+          contentLength: content.length,
+          sceneCount,
+        };
+      }
+      return { error: `Unknown script action: ${action}. Try: get, set, state` };
+    },
+  });
+
+  registerConsoleCommand({
+    name: 'storyboard',
+    description: 'Storyboard actions: get, state',
+    usage: 'storyboard <action>',
+    handler: (args) => {
+      const action = args[0]?.toLowerCase();
+      const frames = window.storyboardFrames as any[] | undefined;
+      if (action === 'get' || !action) {
+        return {
+          ok: true,
+          action: 'get',
+          frameCount: frames?.length ?? 0,
+          frames: frames?.map((f: any) => ({
+            id: f.id,
+            label: f.label,
+            sceneId: f.sceneId,
+            generatingStatus: f.generatingStatus,
+          })) ?? [],
+        };
+      }
+      if (action === 'state') {
+        const generating = frames?.filter((f: any) => f.generatingStatus === 'pending' || f.generatingStatus === 'generating')?.length ?? 0;
+        return {
+          ok: true,
+          action: 'state',
+          frameCount: frames?.length ?? 0,
+          generating,
+          completed: frames?.filter((f: any) => f.imageUrl)?.length ?? 0,
+        };
+      }
+      return { error: `Unknown storyboard action: ${action}. Try: get, state` };
+    },
+  });
+
+  registerConsoleCommand({
+    name: 'waitFor',
+    description: 'Wait for a condition to be true (polling). Usage: waitFor <expression> [timeoutMs]',
+    usage: 'waitFor <expression> [timeoutMs]',
+    handler: async (args) => {
+      const expr = args[0];
+      const timeoutMs = parseInt(args[1] ?? '5000', 10);
+      if (!expr) return { error: 'Usage: waitFor <expression> [timeoutMs]' };
+      const start = Date.now();
+      const interval = 100;
+      while (Date.now() - start < timeoutMs) {
+        try {
+          const result = (0, eval)(expr);
+          if (result) return { ok: true, elapsedMs: Date.now() - start, result };
+        } catch { /* ignore eval errors */ }
+        await new Promise((r) => setTimeout(r, interval));
+      }
+      return { error: `Timeout waiting for: ${expr}`, timeoutMs };
+    },
+  });
+
+  registerConsoleCommand({
     name: 'clear',
     description: 'Clear the console',
     handler: () => {

@@ -542,5 +542,23 @@ export function handleProjectsApi(req, res) {
     return;
   }
 
+  const deleteMatch = url.match(/^\/api\/projects\/([^/]+)$/);
+  if (deleteMatch && method === 'DELETE') {
+    const id = deleteMatch[1];
+    const proj = listServerProjects().find((p) => p.id === id);
+    if (!proj) {
+      json(res, 404, { error: 'Project not found' });
+      return;
+    }
+    const dirPath = path.join(PROJECTS_DIR, proj.dir);
+    try {
+      fs.rmSync(dirPath, { recursive: true, force: true });
+      json(res, 200, { ok: true, id });
+    } catch (e) {
+      json(res, 500, { error: 'Failed to delete project', detail: e.message });
+    }
+    return;
+  }
+
   json(res, 405, { error: 'Method not allowed for projects API' });
 }

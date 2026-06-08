@@ -46,6 +46,7 @@ import {
   styleGuide,
   timelineClips,
   generationQueue,
+  locationGuides,
 } from '@/data/project-data';
 import {
   LOCAL_PROJECTS_STORAGE_KEY,
@@ -118,6 +119,7 @@ function createBlankSnapshot(projectName: string): AppliedCineProject {
     },
     timelineClips: [],
     locationLibrary: [],
+    locationGuides: [],
     assetLibrary: {
       characters: [],
       locations: [],
@@ -259,6 +261,9 @@ export async function restoreActiveProjectOnBoot(projectId: string): Promise<boo
   hydrateProjectRegistryFromPersistence();
   prepareActiveProjectTreeUiForSwitch();
   resetProjectTreeUiRestoreFlag();
+
+  const bootEntry = projectRegistry.find((p) => p.id === projectId);
+  if (bootEntry) bootEntry.lastOpened = new Date().toISOString();
 
   const serverResult = await loadServerProject(projectId);
   if (serverResult) {
@@ -497,6 +502,7 @@ export function captureRuntimeProjectSnapshot(): AppliedCineProject {
     previsSelectionState: structuredClone(previsSelectionState),
     timelineClips: structuredClone(timelineClips),
     locationLibrary: structuredClone(locationLibrary),
+    locationGuides: structuredClone(locationGuides),
     assetLibrary: structuredClone(assetLibrary) as Record<string, unknown>,
     breakdownData: structuredClone(breakdownData),
     assetDetailData: structuredClone(assetDetailData) as Record<string, unknown>,
@@ -783,6 +789,18 @@ export async function fetchExportManifest(
     return (await res.json()) as Record<string, unknown>;
   } catch {
     return null;
+  }
+}
+
+/** Delete a server-resident .cine project by ID (removes the directory from disk). */
+export async function deleteServerProject(projectId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data.error || `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

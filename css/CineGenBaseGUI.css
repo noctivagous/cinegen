@@ -1386,6 +1386,40 @@ cg-panel-modal .cg-panel-modal-close {
   box-shadow: inset 0 0 0 1px rgba(90, 140, 214, 0.35);
 }
 
+.projects-modal-project-card.writable {
+  cursor: context-menu;
+}
+
+.projects-modal-project-time {
+  display: flex;
+  gap: var(--space-8px);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 2px;
+}
+
+.projects-modal-project-time-modified::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(90, 140, 214, 0.5);
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.projects-modal-project-time-opened::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(100, 200, 100, 0.5);
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
 /* Debug modal */
 .debug-modal {
   position: fixed;

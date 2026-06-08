@@ -15,9 +15,9 @@ import { getPackageLoadErrors } from '@/data/cine-project-loader';
 import { preloadPanelChunksIdle, ensurePanelForView } from '@/components/panels/panel-loader';
 import { alertCG } from '@/utils/alert-cg';
 import { initKeybindings } from '@/keybindings/init-keybindings';
-// import { initConsoleCommands } from '@/console/init-console';
+import { initConsoleCommands } from '@/console/init-console';
 import { initDebugModule } from '@/debug/init-debug';
-// import { initMcpBridge } from '@/console/mcp-bridge';
+import { initMcpBridge } from '@/console/mcp-bridge';
 import { initStateSync } from '@/services/state-sync';
 import { subscribeModalSync, loadModalState } from '@/services/modal-manager';
 import { applyBootWorkspaceVisibility } from '@/workspace/boot-workspace-visibility';
@@ -153,8 +153,12 @@ async function bootstrap(): Promise<void> {
   initKeybindings();
   markBootReady('keybindings');
 
+  initConsoleCommands();
+
   initDebugModule();
   markBootReady('debug');
+
+  initMcpBridge();
 
   const bootProjectId =
     appShellStore.activeProjectId || appShellStore.preferences.activeProjectId;

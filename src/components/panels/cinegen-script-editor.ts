@@ -246,7 +246,7 @@ export class CinegenScriptEditor extends CgLightElement {
       <div class="script-editor-layout">
         <div class="script-previs-margin"></div>
         <div class="script-editor-main">
-          <div class="cm-host" style="flex:1;min-height:0;min-width:0;"></div>
+          <div class="cm-host" data-cg-testid="script-editor-host" style="flex:1;min-height:0;min-width:0;"></div>
         </div>
       </div>
     `;

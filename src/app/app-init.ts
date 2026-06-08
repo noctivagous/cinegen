@@ -35,6 +35,7 @@ declare global {
   function syncInspectorToggleButton(visible: boolean): void;
   function activateProjectTreeNode(node: string): void;
   function checkFirstLaunchSetup(): void;
+  function setScriptContent(text: string): void;
 }
 
 const App = {

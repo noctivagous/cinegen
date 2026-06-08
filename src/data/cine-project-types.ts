@@ -40,8 +40,9 @@ export type CineProjectManifest = {
     scenes?: string;
     timeline?: string;
     outputs?: string;
-    locations?: string;
-    breakdown?: string;
+  locations?: string;
+  locationGuides?: string;
+  breakdown?: string;
     assetDetails?: string;
     characters?: string;
     props?: string;
@@ -90,6 +91,7 @@ export type CineProjectManifest = {
   scenes?: Record<string, unknown>;
   timeline?: unknown[];
   locations?: unknown[];
+  locationGuides?: unknown[];
   breakdown?: unknown[];
   assetDetails?: Record<string, unknown>;
 };
@@ -137,4 +139,6 @@ export type ProjectRegistryEntry = {
   settings: Record<string, unknown>;
   /** Basename of the `.cine` package directory in `project-files/` (e.g. `ascension-stream.cine`). */
   file?: string;
+  /** ISO timestamp of when the project was last opened. */
+  lastOpened?: string;
 };

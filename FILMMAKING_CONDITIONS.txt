@@ -1,7 +1,7 @@
 
 - The app is supposed to provide the user basic unit
 building blocks and components that can be configured,
-e.g. MCU, CU, ECU, MLS, MS can be configuredf with different
+e.g. MCU, CU, ECU, MLS, MS can be configured with different
 lenses.
 
 - The user should refrain from, and the app should

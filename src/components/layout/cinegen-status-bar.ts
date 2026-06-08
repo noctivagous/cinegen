@@ -91,17 +91,17 @@ export class CinegenStatusBar extends CgLightElement {
       <cinegen-model-status-bar></cinegen-model-status-bar>
 
       <div class="status-item">
-        <span id="project-name">Project: ${this._projectName}</span>
+        <span id="project-name" data-cg-testid="project-name">Project: ${this._projectName}</span>
       </div>
       <div class="status-item">
         <span>Scenes: ${this._sceneCount} • Takes rendered: ${this._takeCount}</span>
       </div>
       <div class="status-item" id="save-status-item" title="Autosave status for server-resident projects">
-        <span id="save-status-badge" class="save-status-badge save-status-idle"></span>
+        <span id="save-status-badge" data-cg-testid="save-status-badge" class="save-status-badge save-status-idle"></span>
       </div>
       <div class="flex-1"></div>
       <div class="status-item">
-        <span id="current-view-label">${this._viewLabel}</span>
+        <span id="current-view-label" data-cg-testid="current-view-label">${this._viewLabel}</span>
       </div>
       <div class="status-item">
         <span class="text-emerald-400">CineGen v0.2</span>

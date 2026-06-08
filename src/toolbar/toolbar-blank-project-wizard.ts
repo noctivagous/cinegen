@@ -99,7 +99,7 @@ function renderBlankProjectSlide0(): void {
       <div class="cg-accordion-body">
         <div class="cg-accordion-row">
           <label for="bw-name">Project name</label>
-          <input id="bw-name" class="cg-field" type="text" maxlength="120" value="${escHtml(name)}">
+          <input id="bw-name" data-cg-testid="wizard-project-name" class="cg-field" type="text" maxlength="120" value="${escHtml(name)}">
         </div>
       </div>
     </details>
@@ -109,7 +109,7 @@ function renderBlankProjectSlide0(): void {
         <div class="cg-accordion-row">
           <label for="bw-aspect">Aspect ratio</label>
           <div class="cg-nspopup-wrap">
-            <select id="bw-aspect" class="cg-nspopup">
+            <select id="bw-aspect" data-cg-testid="wizard-aspect-ratio" class="cg-nspopup">
               <option value="16:9">16:9 HD / UHD</option>
               <option value="9:16">9:16 Vertical (social)</option>
               <option value="1:1">1:1 Square</option>
@@ -125,13 +125,13 @@ function renderBlankProjectSlide0(): void {
         <div class="cg-accordion-row">
           <label for="bw-resolution">Default resolution <small>(480p or 720p; matches aspect)</small></label>
           <div class="cg-nspopup-wrap">
-            <select id="bw-resolution" class="cg-nspopup" aria-label="Default resolution by aspect"></select>
+            <select id="bw-resolution" data-cg-testid="wizard-resolution" class="cg-nspopup" aria-label="Default resolution by aspect"></select>
           </div>
         </div>
         <div class="cg-accordion-row">
           <label for="bw-colorspace">Working color</label>
           <div class="cg-nspopup-wrap">
-            <select id="bw-colorspace" class="cg-nspopup">
+            <select id="bw-colorspace" data-cg-testid="wizard-colorspace" class="cg-nspopup">
               <option value="Rec.709" selected>Rec. 709</option>
               <option value="Rec.2020">Rec. 2020 / HDR pass-through</option>
               <option value="ACEScg">ACES cg (proxy)</option>
@@ -147,7 +147,7 @@ function renderBlankProjectSlide0(): void {
         <div class="cg-accordion-row">
           <label for="bw-fps">Frame rate</label>
           <div class="cg-nspopup-wrap">
-            <select id="bw-fps" class="cg-nspopup">
+            <select id="bw-fps" data-cg-testid="wizard-fps" class="cg-nspopup">
               <option value="23.976">23.976 (24p NTSC)</option>
               <option value="24" selected>24.000</option>
               <option value="25">25 (PAL)</option>
@@ -164,7 +164,7 @@ function renderBlankProjectSlide0(): void {
         <div class="cg-accordion-row">
           <label for="bw-tc">Timecode</label>
           <div class="cg-nspopup-wrap">
-            <select id="bw-tc" class="cg-nspopup">
+            <select id="bw-tc" data-cg-testid="wizard-timecode" class="cg-nspopup">
               <option value="ndf" selected>Non-drop frame</option>
               <option value="df">Drop frame (29.97 / 59.94)</option>
             </select>
@@ -256,10 +256,10 @@ function renderBwFooter(): void {
   if (!footer) return;
   const total = 2;
   const current = bwSlide + 1;
-  footer.innerHTML = `<button type="button" class="toolbar-btn" id="bw-prev"><i class="fa-solid fa-chevron-left"></i> Back</button>
+  footer.innerHTML = `<button type="button" class="toolbar-btn" id="bw-prev" data-cg-testid="wizard-back"><i class="fa-solid fa-chevron-left"></i> Back</button>
 <span id="bw-progress" class="guide-modal-progress entry-wizard-progress" style="margin-left:12px;">${current} of ${total}</span>
-<button type="button" class="toolbar-btn btn-ai" id="bw-next" style="margin-left:auto;">Next <i class="fa-solid fa-chevron-right"></i></button>
-<button type="button" class="toolbar-btn" id="bw-close" style="margin-left:8px;" data-cg-close="projects-modal">Close</button>`;
+<button type="button" class="toolbar-btn btn-ai" id="bw-next" style="margin-left:auto;" data-cg-testid="wizard-next">Next <i class="fa-solid fa-chevron-right"></i></button>
+<button type="button" class="toolbar-btn" id="bw-close" style="margin-left:8px;" data-cg-close="projects-modal" data-cg-testid="wizard-close">Close</button>`;
   document.getElementById('bw-prev')?.addEventListener('click', () => bwStep(-1));
   document.getElementById('bw-next')?.addEventListener('click', () => bwStep(1));
   document.getElementById('bw-close')?.addEventListener('click', () => {

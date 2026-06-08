@@ -148,6 +148,7 @@ export function normalizeAppliedCineProject(applied: AppliedCineProject): Applie
     },
     timelineClips: asArray(applied.timelineClips),
     locationLibrary: asArray(applied.locationLibrary),
+    locationGuides: asArray(applied.locationGuides),
     assetLibrary: normalizeAssetLibrary(applied.assetLibrary),
     breakdownData: asArray(applied.breakdownData),
     assetDetailData: asObject(applied.assetDetailData),

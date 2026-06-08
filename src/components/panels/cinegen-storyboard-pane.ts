@@ -20,6 +20,7 @@ export class CinegenStoryboardPane extends CgLightElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.id = 'preprod-story-pane';
+    this.setAttribute('data-cg-testid', 'storyboard-pane');
     this.classList.add('split-pane');
     if (!this.style.width) this.style.width = '50%';
     whenBootReady('preferences', () => this._applyLayoutPrefs());

@@ -27,6 +27,7 @@ export class CinegenPreprodWorkspace extends CgLightElement {
             class="toolbar-btn btn-ai"
             style="padding: 2px 8px; font-size: 10px;"
             data-ws-action="generateStoryboardReferences"
+            data-cg-testid="generate-references"
           >
             <i class="fa-solid fa-id-card"></i> Generate References
           </button>
@@ -35,6 +36,7 @@ export class CinegenPreprodWorkspace extends CgLightElement {
             style="padding: 2px 8px; font-size: 10px;"
             data-ws-action="generateBoards"
             id="generate-scene-frames-btn"
+            data-cg-testid="generate-scene-frames"
           >
             <i class="fa-solid fa-image"></i> Generate Scene Frames
           </button>
